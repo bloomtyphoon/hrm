@@ -66,7 +66,10 @@ public sealed class DataScopingService : IDataScopingService
             );
         }
 
-        var scopeLevel = _currentUserService.ScopeLevel ?? ScopeLevel.Employee;
+        // ScopeLevel removed from ICurrentUserService (not an Identity concern).
+        // This deprecated service defaults to Employee scope.
+        // Use IDataScopeService + DataScopeRuleProvider instead.
+        var scopeLevel = ScopeLevel.Employee;
 
         var assignments = await LoadActiveAssignmentsAsync(employeeId.Value, cancellationToken);
 

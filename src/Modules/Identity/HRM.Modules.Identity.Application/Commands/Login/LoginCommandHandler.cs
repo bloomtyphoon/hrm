@@ -123,7 +123,7 @@ public sealed class LoginCommandHandler
         var refreshToken = _tokenService.GenerateRefreshToken(refreshTokenExpiry);
 
         // 9. Store refresh token
-        var refreshTokenEntity = RefreshToken.Create(
+        var refreshTokenEntity = Domain.Entities.RefreshToken.Create(
             account.AccountType,
             account.Id,
             refreshToken,
