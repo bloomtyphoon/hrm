@@ -4,15 +4,15 @@ using HRM.BuildingBlocks.Domain.Abstractions.Security;
 namespace HRM.BuildingBlocks.Infrastructure.Security;
 
 /// <summary>
-/// Translates DataScopeRule to SQL WHERE clause
+/// Translates DataScopeRule to SQL WHERE clause.
 ///
 /// IMPORTANT: This class contains NO business logic.
-/// It only translates the rule to SQL format.
-/// All business logic is in IDataScopeRuleProvider.
+/// It only translates the level-based rule to SQL format.
+/// All business logic is in IDataScopeService / IDataScopeRuleProvider.
 ///
 /// Usage:
 /// <code>
-/// var rule = await ruleProvider.GetRuleAsync(context);
+/// var rule = await dataScopeService.GetScopeRuleAsync(userId, permission);
 /// var parameters = new DynamicParameters();
 /// var where = SqlScopeWhereBuilder.Build(rule, parameters);
 /// var sql = $"SELECT * FROM Employees e WHERE 1=1 {where}";
@@ -22,8 +22,7 @@ namespace HRM.BuildingBlocks.Infrastructure.Security;
 public static class SqlScopeWhereBuilder
 {
     /// <summary>
-    /// Build SQL WHERE clause fragment with standard column names
-    /// Assumes: CompanyId, DepartmentId, PositionId, OwnerId columns
+    /// Build SQL WHERE clause fragment with standard column names.
     /// </summary>
     public static string Build(DataScopeRule rule, DynamicParameters parameters)
     {
@@ -31,50 +30,32 @@ public static class SqlScopeWhereBuilder
     }
 
     /// <summary>
-    /// Build SQL WHERE clause with custom column mapping
+    /// Build SQL WHERE clause with custom column mapping.
     /// </summary>
     public static string Build(DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
-        // Global access - no filtering
-        if (rule.IsGlobal)
+        return rule.Level switch
         {
-            return string.Empty; // No WHERE clause needed
-        }
+            DataScopeLevel.Global => string.Empty,
 
-        // Self-scoped - only own data
-        if (rule.IsSelfScoped && rule.UserId.HasValue)
-        {
-            parameters.Add("@ScopeUserId", rule.UserId.Value);
-            return $"AND {columns.OwnerColumn} = @ScopeUserId";
-        }
+            DataScopeLevel.Company => BuildDimensionFilter(
+                rule.DimensionIds, parameters, columns.CompanyColumn, "@ScopeCompanyIds"),
 
-        // Position-scoped
-        if (rule.IsPositionScoped && rule.PositionIds.Count > 0)
-        {
-            parameters.Add("@ScopePositionIds", rule.PositionIds);
-            return $"AND {columns.PositionColumn} IN @ScopePositionIds";
-        }
+            DataScopeLevel.Department => BuildDimensionFilter(
+                rule.DimensionIds, parameters, columns.DepartmentColumn, "@ScopeDepartmentIds"),
 
-        // Department-scoped
-        if (rule.IsDepartmentScoped && rule.DepartmentIds.Count > 0)
-        {
-            parameters.Add("@ScopeDepartmentIds", rule.DepartmentIds);
-            return $"AND {columns.DepartmentColumn} IN @ScopeDepartmentIds";
-        }
+            DataScopeLevel.Position => BuildDimensionFilter(
+                rule.DimensionIds, parameters, columns.PositionColumn, "@ScopePositionIds"),
 
-        // Company-scoped
-        if (rule.IsCompanyScoped && rule.CompanyIds.Count > 0)
-        {
-            parameters.Add("@ScopeCompanyIds", rule.CompanyIds);
-            return $"AND {columns.CompanyColumn} IN @ScopeCompanyIds";
-        }
+            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue => BuildSelfFilter(
+                rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn),
 
-        // No access
-        return "AND 1 = 0";
+            _ => "AND 1 = 0"
+        };
     }
 
     /// <summary>
-    /// Build for employee-based queries with join to EmployeeAssignments
+    /// Build for employee-based queries with join to EmployeeAssignments.
     /// </summary>
     public static string BuildWithAssignments(
         DataScopeRule rule,
@@ -82,79 +63,86 @@ public static class SqlScopeWhereBuilder
         string employeeAlias = "e",
         string assignmentAlias = "ea")
     {
-        if (rule.IsGlobal)
+        return rule.Level switch
         {
-            return string.Empty;
-        }
+            DataScopeLevel.Global => string.Empty,
 
-        if (rule.IsSelfScoped && rule.EmployeeId.HasValue)
-        {
-            parameters.Add("@ScopeEmployeeId", rule.EmployeeId.Value);
-            return $"AND {employeeAlias}.Id = @ScopeEmployeeId";
-        }
+            DataScopeLevel.Company => BuildDimensionFilter(
+                rule.DimensionIds, parameters, $"{assignmentAlias}.CompanyId", "@ScopeCompanyIds"),
 
-        if (rule.IsPositionScoped && rule.PositionIds.Count > 0)
-        {
-            parameters.Add("@ScopePositionIds", rule.PositionIds);
-            return $"AND {assignmentAlias}.PositionId IN @ScopePositionIds";
-        }
+            DataScopeLevel.Department => BuildDimensionFilter(
+                rule.DimensionIds, parameters, $"{assignmentAlias}.DepartmentId", "@ScopeDepartmentIds"),
 
-        if (rule.IsDepartmentScoped && rule.DepartmentIds.Count > 0)
-        {
-            parameters.Add("@ScopeDepartmentIds", rule.DepartmentIds);
-            return $"AND {assignmentAlias}.DepartmentId IN @ScopeDepartmentIds";
-        }
+            DataScopeLevel.Position => BuildDimensionFilter(
+                rule.DimensionIds, parameters, $"{assignmentAlias}.PositionId", "@ScopePositionIds"),
 
-        if (rule.IsCompanyScoped && rule.CompanyIds.Count > 0)
-        {
-            parameters.Add("@ScopeCompanyIds", rule.CompanyIds);
-            return $"AND {assignmentAlias}.CompanyId IN @ScopeCompanyIds";
-        }
+            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue => BuildSelfFilter(
+                rule.SelfEmployeeId.Value, parameters, $"{employeeAlias}.Id", "@ScopeEmployeeId"),
 
-        return "AND 1 = 0";
+            _ => "AND 1 = 0"
+        };
     }
 
     /// <summary>
-    /// Build standalone WHERE clause (without leading AND)
+    /// Build standalone WHERE clause (without leading AND).
     /// </summary>
     public static string BuildStandalone(DataScopeRule rule, DynamicParameters parameters)
     {
-        if (rule.IsGlobal)
+        return rule.Level switch
         {
-            return "1 = 1";
-        }
+            DataScopeLevel.Global => "1 = 1",
 
-        if (rule.IsSelfScoped && rule.UserId.HasValue)
-        {
-            parameters.Add("@ScopeUserId", rule.UserId.Value);
-            return "OwnerId = @ScopeUserId";
-        }
+            DataScopeLevel.Company => BuildStandaloneDimension(
+                rule.DimensionIds, parameters, "CompanyId", "@ScopeCompanyIds"),
 
-        if (rule.IsPositionScoped && rule.PositionIds.Count > 0)
-        {
-            parameters.Add("@ScopePositionIds", rule.PositionIds);
-            return "PositionId IN @ScopePositionIds";
-        }
+            DataScopeLevel.Department => BuildStandaloneDimension(
+                rule.DimensionIds, parameters, "DepartmentId", "@ScopeDepartmentIds"),
 
-        if (rule.IsDepartmentScoped && rule.DepartmentIds.Count > 0)
-        {
-            parameters.Add("@ScopeDepartmentIds", rule.DepartmentIds);
-            return "DepartmentId IN @ScopeDepartmentIds";
-        }
+            DataScopeLevel.Position => BuildStandaloneDimension(
+                rule.DimensionIds, parameters, "PositionId", "@ScopePositionIds"),
 
-        if (rule.IsCompanyScoped && rule.CompanyIds.Count > 0)
-        {
-            parameters.Add("@ScopeCompanyIds", rule.CompanyIds);
-            return "CompanyId IN @ScopeCompanyIds";
-        }
+            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+                BuildStandaloneSelf(rule.SelfEmployeeId.Value, parameters, "OwnerId"),
 
-        return "1 = 0";
+            _ => "1 = 0"
+        };
+    }
+
+    private static string BuildDimensionFilter(
+        IReadOnlyCollection<Guid> ids, DynamicParameters parameters,
+        string column, string paramName)
+    {
+        parameters.Add(paramName, ids);
+        return $"AND {column} IN {paramName}";
+    }
+
+    private static string BuildSelfFilter(
+        Guid employeeId, DynamicParameters parameters,
+        string column, string paramName = "@ScopeEmployeeId")
+    {
+        parameters.Add(paramName, employeeId);
+        return $"AND {column} = {paramName}";
+    }
+
+    private static string BuildStandaloneDimension(
+        IReadOnlyCollection<Guid> ids, DynamicParameters parameters,
+        string column, string paramName)
+    {
+        parameters.Add(paramName, ids);
+        return $"{column} IN {paramName}";
+    }
+
+    private static string BuildStandaloneSelf(
+        Guid employeeId, DynamicParameters parameters, string column)
+    {
+        parameters.Add("@ScopeEmployeeId", employeeId);
+        return $"{column} = @ScopeEmployeeId";
     }
 }
 
 /// <summary>
-/// Column name mapping for SQL scope queries
-/// Override defaults when table uses different column names
+/// Column name mapping for SQL scope queries.
+/// Override defaults when table uses different column names.
 /// </summary>
 public sealed class SqlScopeColumnMapping
 {

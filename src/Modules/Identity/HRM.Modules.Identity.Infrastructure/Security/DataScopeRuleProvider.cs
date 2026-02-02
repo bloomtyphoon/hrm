@@ -146,7 +146,7 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             "Company scope for user {UserId}: {CompanyCount} companies",
             context.UserId, companyIds.Count);
 
-        return DataScopeRule.ForCompanies(companyIds, context.UserId);
+        return DataScopeRule.Company(companyIds);
     }
 
     private async Task<DataScopeRule> BuildDepartmentScopeRuleAsync(
@@ -175,7 +175,7 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             "Department scope for user {UserId}: {DepartmentCount} departments",
             context.UserId, departmentIds.Count);
 
-        return DataScopeRule.ForDepartments(departmentIds, context.UserId);
+        return DataScopeRule.Department(departmentIds);
     }
 
     private async Task<DataScopeRule> BuildPositionScopeRuleAsync(
@@ -204,7 +204,7 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             "Position scope for user {UserId}: {PositionCount} positions",
             context.UserId, positionIds.Count);
 
-        return DataScopeRule.ForPositions(positionIds, context.UserId);
+        return DataScopeRule.Position(positionIds);
     }
 
     private DataScopeRule BuildEmployeeScopeRule(DataScopeContext context)
@@ -213,7 +213,15 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             "Employee scope for user {UserId}, employeeId {EmployeeId}",
             context.UserId, context.EmployeeId);
 
-        return DataScopeRule.ForSelf(context.UserId, context.EmployeeId);
+        if (!context.EmployeeId.HasValue)
+        {
+            _logger.LogWarning(
+                "Self scope requested but no EmployeeId for user {UserId}",
+                context.UserId);
+            return DataScopeRule.None();
+        }
+
+        return DataScopeRule.Self(context.EmployeeId.Value);
     }
 
     private async Task<List<EmployeeAssignmentDto>> LoadEmployeeAssignmentsAsync(

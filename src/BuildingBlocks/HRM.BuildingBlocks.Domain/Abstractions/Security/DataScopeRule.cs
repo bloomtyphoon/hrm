@@ -1,133 +1,100 @@
 namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 
 /// <summary>
-/// Pure business model representing data scope rules
-/// NO EF, NO SQL - just business logic representation
+/// Immutable, level-based data scope rule — the "compiled filter instruction".
 ///
-/// This is the Single Source of Truth for scope decisions.
-/// EfScopeExpressionBuilder and SqlScopeWhereBuilder only translate this to their formats.
+/// Design principles:
+/// - Exactly ONE dimension per rule (no ambiguous multi-boolean states)
+/// - Hierarchy encoded in DataScopeLevel enum (enables >= comparisons)
+/// - Factory methods enforce valid construction (illegal states are unrepresentable)
+/// - No identity info (UserId) — only filter-relevant data
 ///
-/// Hierarchy (from widest to narrowest):
-/// Global > Company > Department > Position > Self
+/// Architecture layers:
+///   Organization module → resolves scope logic → produces DataScopeRule
+///   EfScopeExpressionBuilder → translates rule to EF Expression
+///   SqlScopeWhereBuilder → translates rule to SQL WHERE clause
 ///
 /// Usage:
 /// <code>
-/// var rule = ruleProvider.GetRule(context);
+/// var rule = await dataScopeService.GetScopeRuleAsync(userId, permission);
 ///
-/// // For EF Core
-/// var expression = efBuilder.Build&lt;Employee&gt;(rule);
-/// query.Where(expression);
+/// // EF Core
+/// var expr = EfScopeExpressionBuilder.Build&lt;Employee&gt;(rule);
+/// query.Where(expr);
 ///
-/// // For Dapper/SQL
-/// var where = sqlBuilder.Build(rule, parameters);
-/// sql += where;
+/// // Dapper/SQL
+/// var where = SqlScopeWhereBuilder.Build(rule, parameters);
 /// </code>
 /// </summary>
 public sealed class DataScopeRule
 {
     /// <summary>
-    /// User has global access (no filtering)
-    /// Typically for super admin or system accounts
+    /// The scope level (dimension) this rule filters on.
     /// </summary>
-    public bool IsGlobal { get; init; }
+    public DataScopeLevel Level { get; }
 
     /// <summary>
-    /// User is scoped to specific companies
+    /// IDs for the current dimension (CompanyIds, DepartmentIds, or PositionIds).
+    /// Empty for Global, None, and Self levels.
     /// </summary>
-    public bool IsCompanyScoped { get; init; }
+    public IReadOnlyCollection<Guid> DimensionIds { get; }
 
     /// <summary>
-    /// User is scoped to specific departments
+    /// Employee ID for Self scope filtering.
+    /// Only set when Level == Self.
     /// </summary>
-    public bool IsDepartmentScoped { get; init; }
+    public Guid? SelfEmployeeId { get; }
 
     /// <summary>
-    /// User is scoped to specific positions
+    /// Whether this rule grants any data access.
     /// </summary>
-    public bool IsPositionScoped { get; init; }
+    public bool HasAccess => Level != DataScopeLevel.None;
 
-    /// <summary>
-    /// User can only see their own data
-    /// </summary>
-    public bool IsSelfScoped { get; init; }
-
-    /// <summary>
-    /// Allowed company IDs (for company scope)
-    /// </summary>
-    public IReadOnlyList<Guid> CompanyIds { get; init; } = [];
-
-    /// <summary>
-    /// Allowed department IDs (for department scope)
-    /// </summary>
-    public IReadOnlyList<Guid> DepartmentIds { get; init; } = [];
-
-    /// <summary>
-    /// Allowed position IDs (for position scope)
-    /// </summary>
-    public IReadOnlyList<Guid> PositionIds { get; init; } = [];
-
-    /// <summary>
-    /// Current user ID (for self scope)
-    /// </summary>
-    public Guid? UserId { get; init; }
-
-    /// <summary>
-    /// Current user's employee ID (for employee-based filtering)
-    /// </summary>
-    public Guid? EmployeeId { get; init; }
-
-    /// <summary>
-    /// Create a global access rule (no filtering)
-    /// </summary>
-    public static DataScopeRule Global() => new() { IsGlobal = true };
-
-    /// <summary>
-    /// Create a deny-all rule (no access)
-    /// </summary>
-    public static DataScopeRule None() => new();
-
-    /// <summary>
-    /// Create a company-scoped rule
-    /// </summary>
-    public static DataScopeRule ForCompanies(IEnumerable<Guid> companyIds, Guid userId) => new()
+    private DataScopeRule(
+        DataScopeLevel level,
+        IEnumerable<Guid>? dimensionIds = null,
+        Guid? selfEmployeeId = null)
     {
-        IsCompanyScoped = true,
-        CompanyIds = companyIds.ToList(),
-        UserId = userId
-    };
+        // Guard: Self requires employeeId
+        if (level == DataScopeLevel.Self && selfEmployeeId is null)
+            throw new ArgumentException("Self scope requires selfEmployeeId.", nameof(selfEmployeeId));
 
-    /// <summary>
-    /// Create a department-scoped rule
-    /// </summary>
-    public static DataScopeRule ForDepartments(IEnumerable<Guid> departmentIds, Guid userId) => new()
-    {
-        IsDepartmentScoped = true,
-        DepartmentIds = departmentIds.ToList(),
-        UserId = userId
-    };
+        // Guard: Company/Department/Position require at least one ID
+        if (level is DataScopeLevel.Company or DataScopeLevel.Department or DataScopeLevel.Position)
+        {
+            var ids = dimensionIds?.ToArray() ?? [];
+            if (ids.Length == 0)
+                throw new ArgumentException($"{level} scope requires at least one dimension ID.", nameof(dimensionIds));
+            DimensionIds = ids;
+        }
+        else
+        {
+            DimensionIds = Array.Empty<Guid>();
+        }
 
-    /// <summary>
-    /// Create a position-scoped rule
-    /// </summary>
-    public static DataScopeRule ForPositions(IEnumerable<Guid> positionIds, Guid userId) => new()
-    {
-        IsPositionScoped = true,
-        PositionIds = positionIds.ToList(),
-        UserId = userId
-    };
+        Level = level;
+        SelfEmployeeId = selfEmployeeId;
+    }
 
-    /// <summary>
-    /// Create a self-only rule
-    /// </summary>
-    public static DataScopeRule ForSelf(Guid userId, Guid? employeeId = null) => new()
-    {
-        IsSelfScoped = true,
-        UserId = userId,
-        EmployeeId = employeeId
-    };
+    /// <summary>Global access — no filtering.</summary>
+    public static DataScopeRule Global() => new(DataScopeLevel.Global);
 
-    /// <summary>
-    /// Check if this rule allows any access
-    /// </summary>
-    public bool HasAccess => IsGlobal || IsCompanyScoped || IsDepartmentScoped || IsPositionScoped || IsSelfScoped;
+    /// <summary>Explicit deny — no access to any data.</summary>
+    public static DataScopeRule None() => new(DataScopeLevel.None);
+
+    /// <summary>Company scope — filter by company IDs.</summary>
+    public static DataScopeRule Company(IEnumerable<Guid> companyIds)
+        => new(DataScopeLevel.Company, companyIds);
+
+    /// <summary>Department scope — filter by department IDs.</summary>
+    public static DataScopeRule Department(IEnumerable<Guid> departmentIds)
+        => new(DataScopeLevel.Department, departmentIds);
+
+    /// <summary>Position scope — filter by position IDs.</summary>
+    public static DataScopeRule Position(IEnumerable<Guid> positionIds)
+        => new(DataScopeLevel.Position, positionIds);
+
+    /// <summary>Self scope — filter to employee's own data only.</summary>
+    public static DataScopeRule Self(Guid employeeId)
+        => new(DataScopeLevel.Self, selfEmployeeId: employeeId);
 }

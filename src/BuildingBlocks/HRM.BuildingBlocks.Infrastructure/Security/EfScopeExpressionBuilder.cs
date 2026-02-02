@@ -4,15 +4,15 @@ using HRM.BuildingBlocks.Domain.Abstractions.Security;
 namespace HRM.BuildingBlocks.Infrastructure.Security;
 
 /// <summary>
-/// Translates DataScopeRule to EF Core Expression
+/// Translates DataScopeRule to EF Core Expression.
 ///
 /// IMPORTANT: This class contains NO business logic.
-/// It only translates the rule to Expression format.
-/// All business logic is in IDataScopeRuleProvider.
+/// It only translates the level-based rule to Expression format.
+/// All business logic is in IDataScopeService / IDataScopeRuleProvider.
 ///
 /// Usage:
 /// <code>
-/// var rule = await ruleProvider.GetRuleAsync(context);
+/// var rule = await dataScopeService.GetScopeRuleAsync(userId, permission);
 /// var expression = EfScopeExpressionBuilder.Build&lt;Employee&gt;(rule);
 /// var filtered = query.Where(expression);
 /// </code>
@@ -20,92 +20,67 @@ namespace HRM.BuildingBlocks.Infrastructure.Security;
 public static class EfScopeExpressionBuilder
 {
     /// <summary>
-    /// Build filter expression for IScopedEntity
+    /// Build filter expression for IScopedEntity.
+    /// Switches on rule.Level to select the correct dimension.
     /// </summary>
     public static Expression<Func<T, bool>> Build<T>(DataScopeRule rule)
         where T : class, IScopedEntity
     {
-        // Global access - no filtering
-        if (rule.IsGlobal)
+        return rule.Level switch
         {
-            return _ => true;
-        }
+            DataScopeLevel.Global => _ => true,
 
-        // Self-scoped - only own data
-        if (rule.IsSelfScoped && rule.UserId.HasValue)
-        {
-            var userId = rule.UserId.Value;
-            return x => x.OwnerId == userId;
-        }
+            DataScopeLevel.Company => BuildContains<T>(
+                rule.DimensionIds, x => x.CompanyId),
 
-        // Position-scoped
-        if (rule.IsPositionScoped && rule.PositionIds.Count > 0)
-        {
-            var positionIds = rule.PositionIds;
-            return x => x.PositionId != null && positionIds.Contains(x.PositionId.Value);
-        }
+            DataScopeLevel.Department => BuildContains<T>(
+                rule.DimensionIds, x => x.DepartmentId),
 
-        // Department-scoped
-        if (rule.IsDepartmentScoped && rule.DepartmentIds.Count > 0)
-        {
-            var departmentIds = rule.DepartmentIds;
-            return x => x.DepartmentId != null && departmentIds.Contains(x.DepartmentId.Value);
-        }
+            DataScopeLevel.Position => BuildContains<T>(
+                rule.DimensionIds, x => x.PositionId),
 
-        // Company-scoped
-        if (rule.IsCompanyScoped && rule.CompanyIds.Count > 0)
-        {
-            var companyIds = rule.CompanyIds;
-            return x => x.CompanyId != null && companyIds.Contains(x.CompanyId.Value);
-        }
+            DataScopeLevel.Self => BuildSelfScope<T>(rule.SelfEmployeeId!.Value),
 
-        // No access
-        return _ => false;
+            // None or unknown → deny all
+            _ => _ => false
+        };
     }
 
     /// <summary>
-    /// Build filter expression for company-scoped entities only
+    /// Build filter expression for company-scoped entities only.
     /// </summary>
     public static Expression<Func<T, bool>> BuildCompanyScope<T>(DataScopeRule rule)
         where T : class, ICompanyScopedEntity
     {
-        if (rule.IsGlobal)
+        return rule.Level switch
         {
-            return _ => true;
-        }
-
-        if (rule.IsCompanyScoped && rule.CompanyIds.Count > 0)
-        {
-            var companyIds = rule.CompanyIds;
-            return x => x.CompanyId != null && companyIds.Contains(x.CompanyId.Value);
-        }
-
-        return _ => false;
+            DataScopeLevel.Global => _ => true,
+            DataScopeLevel.Company => BuildContains<T>(
+                rule.DimensionIds, x => x.CompanyId),
+            _ when rule.Level > DataScopeLevel.Company => _ => true,
+            _ => _ => false
+        };
     }
 
     /// <summary>
-    /// Build filter expression for owned entities only
+    /// Build filter expression for owned entities only.
     /// </summary>
     public static Expression<Func<T, bool>> BuildOwnerScope<T>(DataScopeRule rule)
         where T : class, IOwnedEntity
     {
-        if (rule.IsGlobal)
+        return rule.Level switch
         {
-            return _ => true;
-        }
-
-        if (rule.IsSelfScoped && rule.UserId.HasValue)
-        {
-            var userId = rule.UserId.Value;
-            return x => x.OwnerId == userId;
-        }
-
-        return _ => false;
+            DataScopeLevel.Global => _ => true,
+            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+                BuildOwnerEquals<T>(rule.SelfEmployeeId.Value),
+            _ when rule.Level > DataScopeLevel.Self => _ => true,
+            _ => _ => false
+        };
     }
 
     /// <summary>
-    /// Build custom filter expression with entity-specific logic
-    /// Use this when entity doesn't implement IScopedEntity
+    /// Build custom filter expression with entity-specific selectors.
+    /// Use when entity doesn't implement IScopedEntity.
     /// </summary>
     public static Expression<Func<T, bool>> BuildCustom<T>(
         DataScopeRule rule,
@@ -115,74 +90,100 @@ public static class EfScopeExpressionBuilder
         Expression<Func<T, Guid>> ownerSelector)
         where T : class
     {
-        if (rule.IsGlobal)
-        {
-            return _ => true;
-        }
-
-        // Build expression based on rule
-        // This is more complex but allows flexibility for non-standard entities
         var parameter = Expression.Parameter(typeof(T), "x");
 
-        if (rule.IsSelfScoped && rule.UserId.HasValue)
+        return rule.Level switch
         {
-            var ownerBody = ReplacementVisitor.Replace(
-                ownerSelector.Body, ownerSelector.Parameters[0], parameter);
-            var userIdConstant = Expression.Constant(rule.UserId.Value);
-            var equals = Expression.Equal(ownerBody, userIdConstant);
-            return Expression.Lambda<Func<T, bool>>(equals, parameter);
-        }
+            DataScopeLevel.Global => _ => true,
 
-        if (rule.IsPositionScoped && rule.PositionIds.Count > 0)
-        {
-            return BuildContainsExpression(parameter, positionSelector, rule.PositionIds);
-        }
+            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+                BuildEqualsExpression(parameter, ownerSelector, rule.SelfEmployeeId.Value),
 
-        if (rule.IsDepartmentScoped && rule.DepartmentIds.Count > 0)
-        {
-            return BuildContainsExpression(parameter, departmentSelector, rule.DepartmentIds);
-        }
+            DataScopeLevel.Position =>
+                BuildContainsExpression(parameter, positionSelector, rule.DimensionIds),
 
-        if (rule.IsCompanyScoped && rule.CompanyIds.Count > 0)
-        {
-            return BuildContainsExpression(parameter, companySelector, rule.CompanyIds);
-        }
+            DataScopeLevel.Department =>
+                BuildContainsExpression(parameter, departmentSelector, rule.DimensionIds),
 
-        return _ => false;
+            DataScopeLevel.Company =>
+                BuildContainsExpression(parameter, companySelector, rule.DimensionIds),
+
+            _ => _ => false
+        };
+    }
+
+    private static Expression<Func<T, bool>> BuildSelfScope<T>(Guid employeeId)
+        where T : class, IScopedEntity
+    {
+        return x => x.OwnerId == employeeId;
+    }
+
+    private static Expression<Func<T, bool>> BuildOwnerEquals<T>(Guid employeeId)
+        where T : class, IOwnedEntity
+    {
+        return x => x.OwnerId == employeeId;
+    }
+
+    private static Expression<Func<T, bool>> BuildContains<T>(
+        IReadOnlyCollection<Guid> ids,
+        Expression<Func<T, Guid?>> selector)
+        where T : class
+    {
+        var idList = ids;
+        var parameter = Expression.Parameter(typeof(T), "x");
+        var selectorBody = ReplacementVisitor.Replace(
+            selector.Body, selector.Parameters[0], parameter);
+
+        var notNull = Expression.NotEqual(selectorBody, Expression.Constant(null, typeof(Guid?)));
+        var getValue = Expression.Property(selectorBody, "Value");
+
+        var containsMethod = typeof(Enumerable).GetMethods()
+            .First(m => m.Name == "Contains" && m.GetParameters().Length == 2)
+            .MakeGenericMethod(typeof(Guid));
+
+        var idsConstant = Expression.Constant(idList);
+        var contains = Expression.Call(containsMethod, idsConstant, getValue);
+        var combined = Expression.AndAlso(notNull, contains);
+
+        return Expression.Lambda<Func<T, bool>>(combined, parameter);
+    }
+
+    private static Expression<Func<T, bool>> BuildEqualsExpression<T>(
+        ParameterExpression parameter,
+        Expression<Func<T, Guid>> selector,
+        Guid value)
+        where T : class
+    {
+        var body = ReplacementVisitor.Replace(
+            selector.Body, selector.Parameters[0], parameter);
+        var constant = Expression.Constant(value);
+        var equals = Expression.Equal(body, constant);
+        return Expression.Lambda<Func<T, bool>>(equals, parameter);
     }
 
     private static Expression<Func<T, bool>> BuildContainsExpression<T>(
         ParameterExpression parameter,
         Expression<Func<T, Guid?>> selector,
-        IReadOnlyList<Guid> ids)
+        IReadOnlyCollection<Guid> ids)
         where T : class
     {
         var selectorBody = ReplacementVisitor.Replace(
             selector.Body, selector.Parameters[0], parameter);
 
-        // Check for null
         var notNull = Expression.NotEqual(selectorBody, Expression.Constant(null, typeof(Guid?)));
-
-        // Get value from nullable
         var getValue = Expression.Property(selectorBody, "Value");
 
-        // Contains check
         var containsMethod = typeof(Enumerable).GetMethods()
             .First(m => m.Name == "Contains" && m.GetParameters().Length == 2)
             .MakeGenericMethod(typeof(Guid));
 
         var idsConstant = Expression.Constant(ids);
         var contains = Expression.Call(containsMethod, idsConstant, getValue);
-
-        // Combine: x.PropertyId != null && ids.Contains(x.PropertyId.Value)
         var combined = Expression.AndAlso(notNull, contains);
 
         return Expression.Lambda<Func<T, bool>>(combined, parameter);
     }
 
-    /// <summary>
-    /// Helper to replace parameter in expression
-    /// </summary>
     private sealed class ReplacementVisitor : ExpressionVisitor
     {
         private readonly Expression _oldValue;
