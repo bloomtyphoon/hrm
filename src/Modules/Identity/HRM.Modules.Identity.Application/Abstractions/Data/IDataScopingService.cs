@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Application.Abstractions.Data;
@@ -6,7 +7,7 @@ namespace HRM.Modules.Identity.Application.Abstractions.Data;
 /// [DEPRECATED] Service for applying data scoping filters based on user's scope level.
 /// Use IDataScopeRuleProvider + SqlScopeWhereBuilder instead.
 ///
-/// Lives in Identity module — uses Identity-specific vocabulary (AccountType, ScopeLevel).
+/// Lives in Identity module — uses Identity-specific vocabulary (AccountType, DataScopeLevel).
 /// </summary>
 [Obsolete("Use IDataScopeRuleProvider + SqlScopeWhereBuilder instead")]
 public interface IDataScopingService
@@ -33,7 +34,7 @@ public sealed class DataScopeContext
 #pragma warning restore CS0618
 
     public required Guid UserId { get; init; }
-    public ScopeLevel? ScopeLevel { get; init; }
+    public DataScopeLevel? ScopeLevel { get; init; }
     public List<Guid> AllowedCompanyIds { get; init; } = new();
     public List<Guid> AllowedDepartmentIds { get; init; } = new();
     public List<Guid> AllowedPositionIds { get; init; } = new();

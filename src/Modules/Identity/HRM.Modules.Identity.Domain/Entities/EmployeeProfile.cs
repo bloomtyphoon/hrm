@@ -1,5 +1,5 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
-using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
@@ -36,10 +36,10 @@ public class EmployeeProfile : AuditableEntity
     /// Default scope level for this employee's permissions.
     /// Can be overridden per-permission via RolePermissions.
     ///
-    /// Note: ScopeLevel is an authorization vocabulary internal to Identity module.
-    /// Other modules receive DataScopeRule (contract), not ScopeLevel directly.
+    /// Uses DataScopeLevel from BuildingBlocks (shared contract).
+    /// Other modules receive DataScopeRule, not DataScopeLevel directly.
     /// </summary>
-    public ScopeLevel DefaultScopeLevel { get; private set; } = ScopeLevel.Employee;
+    public DataScopeLevel DefaultScopeLevel { get; private set; } = DataScopeLevel.Self;
 
     /// <summary>
     /// Primary company ID (for multi-company scenarios)
@@ -77,7 +77,7 @@ public class EmployeeProfile : AuditableEntity
     public static EmployeeProfile Create(
         Guid accountId,
         Guid employeeId,
-        ScopeLevel defaultScopeLevel = ScopeLevel.Employee,
+        DataScopeLevel defaultScopeLevel = DataScopeLevel.Self,
         Guid? primaryCompanyId = null,
         Guid? primaryDepartmentId = null,
         Guid? primaryPositionId = null)
@@ -112,7 +112,7 @@ public class EmployeeProfile : AuditableEntity
     /// <summary>
     /// Update default scope level
     /// </summary>
-    public void UpdateDefaultScopeLevel(ScopeLevel scopeLevel)
+    public void UpdateDefaultScopeLevel(DataScopeLevel scopeLevel)
     {
         DefaultScopeLevel = scopeLevel;
         MarkAsModified();
