@@ -3,7 +3,7 @@ using HRM.BuildingBlocks.Domain.Abstractions.Events;
 using HRM.BuildingBlocks.Domain.Abstractions.SoftDelete;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.BuildingBlocks.Domain.Entities;
-using HRM.BuildingBlocks.Domain.Outbox;
+using HRM.BuildingBlocks.Infrastructure.Outbox;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
