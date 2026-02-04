@@ -63,13 +63,13 @@ public sealed class DataScopeService : IDataScopeService
 
         // Step 2: Handle system accounts and edge cases
         if (grant.IsSystemAccount || grant.Level == DataScopeLevel.Global)
-            return DataScopeRule.Global;
+            return DataScopeRule.Global();
 
         if (grant.Level == DataScopeLevel.None)
-            return DataScopeRule.None;
+            return DataScopeRule.None();
 
         if (!grant.EmployeeId.HasValue)
-            return DataScopeRule.None;
+            return DataScopeRule.None();
 
         var employeeId = grant.EmployeeId.Value;
 
@@ -91,7 +91,7 @@ public sealed class DataScopeService : IDataScopeService
             DataScopeLevel.Company =>
                 await ResolveCompanyScopeAsync(employeeId, cancellationToken),
 
-            _ => DataScopeRule.None
+            _ => DataScopeRule.None()
         };
     }
 
@@ -115,7 +115,7 @@ public sealed class DataScopeService : IDataScopeService
 
         return positionIds.Count > 0
             ? DataScopeRule.Position(positionIds)
-            : DataScopeRule.None;
+            : DataScopeRule.None();
     }
 
     private async Task<DataScopeRule> ResolveDepartmentScopeAsync(
@@ -126,7 +126,7 @@ public sealed class DataScopeService : IDataScopeService
 
         return departmentIds.Count > 0
             ? DataScopeRule.Department(departmentIds)
-            : DataScopeRule.None;
+            : DataScopeRule.None();
     }
 
     private async Task<DataScopeRule> ResolveCompanyScopeAsync(
@@ -137,7 +137,7 @@ public sealed class DataScopeService : IDataScopeService
 
         return companyIds.Count > 0
             ? DataScopeRule.Company(companyIds)
-            : DataScopeRule.None;
+            : DataScopeRule.None();
     }
 }
 
@@ -176,9 +176,9 @@ public sealed class DataScopePolicyService
 
         foreach (var level in grantedLevels.Distinct())
         {
-            var rule = level switch
+            DataScopeRule? rule = level switch
             {
-                DataScopeLevel.Global => DataScopeRule.Global,
+                DataScopeLevel.Global => DataScopeRule.Global(),
                 DataScopeLevel.Self => DataScopeRule.Self(employeeId),
                 DataScopeLevel.EmployeeSet => await ResolveEmployeeSetAsync(employeeId, cancellationToken),
                 DataScopeLevel.Position when dimensions.PositionIds.Count > 0 =>
@@ -196,12 +196,12 @@ public sealed class DataScopePolicyService
 
         // If any rule is Global, return Global policy
         if (rules.Any(r => r.Level == DataScopeLevel.Global))
-            return DataScopePolicy.Or(DataScopeRule.Global);
+            return DataScopePolicy.Or(DataScopeRule.Global());
 
         // Combine all rules with OR
         return rules.Count > 0
             ? DataScopePolicy.Or(rules.ToArray())
-            : DataScopePolicy.Or(DataScopeRule.None);
+            : DataScopePolicy.Or(DataScopeRule.None());
     }
 
     private async Task<DataScopeRule> ResolveEmployeeSetAsync(
