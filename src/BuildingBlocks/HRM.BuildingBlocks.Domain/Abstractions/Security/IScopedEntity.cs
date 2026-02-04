@@ -30,20 +30,9 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 /// EfScopeExpressionBuilder discovers dimension properties at startup
 /// via reflection and caches the selectors for runtime use.
 /// </summary>
-public interface IScopedEntity
+public interface IScopedEntity : IOwnedEntity
 {
-    /// <summary>
-    /// Entity's primary key.
-    /// </summary>
-    Guid Id { get; }
-
-    /// <summary>
-    /// Owner of this entity (for Self scope).
-    /// Returns the user/employee ID who owns this data.
-    /// For Employee entity, typically returns Id (self-owned).
-    /// For related entities (Timesheet, Leave), returns EmployeeId.
-    /// </summary>
-    Guid OwnerId { get; }
+    // Id and OwnerId inherited from IOwnedEntity
 }
 
 /// <summary>
