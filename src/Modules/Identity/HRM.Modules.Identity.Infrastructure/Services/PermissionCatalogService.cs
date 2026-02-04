@@ -24,7 +24,6 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// </summary>
 public sealed class PermissionCatalogService : IPermissionCatalogService
 {
-    private const string XmlNamespace = "http://hrm.system/permissions";
     private const string CatalogCacheKey = "PermissionCatalog";
     private readonly IEnumerable<IPermissionCatalogSource> _sources;
     private readonly IMemoryCache _cache;
