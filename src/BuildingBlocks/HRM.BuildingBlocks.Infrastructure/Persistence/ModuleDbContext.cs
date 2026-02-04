@@ -26,7 +26,7 @@ namespace HRM.BuildingBlocks.Infrastructure.Persistence;
 /// {
 ///     public override string ModuleName => "Identity";
 ///
-///     public DbSet<Operator> Operators => Set<Operator>();
+///     public DbSet<Account> Accounts => Set<Account>();
 ///     public DbSet<User> Users => Set<User>();
 ///
 ///     public IdentityDbContext(DbContextOptions<IdentityDbContext> options, IPublisher publisher)
@@ -100,7 +100,7 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     /// T+2ms:   Dispatch event to handlers
     /// T+5ms:   Handler creates OperatorRegisteredIntegrationEvent
     /// T+6ms:   Handler creates OutboxMessage
-    /// T+7ms:   SaveChanges() saves Operator + OutboxMessage
+    /// T+7ms:   SaveChanges() saves Account + OutboxMessage
     /// T+10ms:  Clear domain events
     /// T+11ms:  Return success
     ///
@@ -124,7 +124,7 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
         }
 
         // Step 3: Save all changes atomically
-        // - Domain entities (Operator, User, Employee, etc.)
+        // - Domain entities (Account, Employee, etc.)
         // - OutboxMessages created by domain event handlers
         // - All in SINGLE database transaction
         var result = await base.SaveChangesAsync(cancellationToken);

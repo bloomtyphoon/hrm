@@ -89,8 +89,8 @@ This API uses **.NET 10 native OpenAPI** (minimal approach):
 
 **Option 2: HTTP Files (VS Code / Rider)**
 ```http
-### Register Operator
-POST http://localhost:5000/api/identity/operators/register
+### Register Account
+POST http://localhost:5000/api/identity/accounts/register
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -117,9 +117,9 @@ https://editor.swagger.io/
 
 ### Identity Module
 
-#### Register Operator
+#### Register Account
 ```http
-POST /api/identity/operators/register
+POST /api/identity/accounts/register
 Authorization: Bearer {admin_token}
 Content-Type: application/json
 
@@ -149,9 +149,9 @@ Content-Type: application/json
 }
 ```
 
-#### Activate Operator
+#### Activate Account
 ```http
-POST /api/identity/operators/{id}/activate
+POST /api/identity/accounts/{id}/activate
 Authorization: Bearer {admin_token}
 ```
 
@@ -237,7 +237,7 @@ All errors follow **Problem Details (RFC 7807)** format:
 
 ```json
 {
-  "code": "Operator.UsernameAlreadyExists",
+  "code": "Account.UsernameAlreadyExists",
   "message": "Username 'john.doe' is already taken. Please choose a different username.",
   "status": 409
 }

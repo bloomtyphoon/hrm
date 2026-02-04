@@ -42,7 +42,7 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///         var hashedPassword = _passwordHasher.HashPassword(command.Password);
 ///
 ///         // Create operator with hashed password
-///         var @operator = Operator.Register(
+///         var account = Account.Create(
 ///             command.Username,
 ///             command.Email,
 ///             hashedPassword // ← Hashed, never plaintext

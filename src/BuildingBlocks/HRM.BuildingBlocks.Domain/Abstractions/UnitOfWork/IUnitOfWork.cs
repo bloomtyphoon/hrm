@@ -22,11 +22,11 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 /// - No partial commits (all or nothing)
 /// - Database consistency maintained
 /// 
-/// Example Flow - Register Operator:
+/// Example Flow - Register Account:
 /// 
 /// 1. Application Layer (Command Handler):
 ///    <code>
-///    var operator = Operator.Register(username, email, hashedPassword);
+///    var account = Account.Create(username, email, hashedPassword);
 ///    // Domain event raised: OperatorRegisteredDomainEvent
 ///    
 ///    await _operatorRepository.AddAsync(operator);
@@ -52,7 +52,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 ///    
 ///    // Step 4: Save everything (atomic)
 ///    await base.SaveChangesAsync();
-///    // Commits: Operator + OutboxMessage
+///    // Commits: Account + OutboxMessage
 ///    
 ///    // Step 5: Clear events
 ///    foreach (var entity in ChangeTracker.Entries<Entity>())
@@ -60,7 +60,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 ///    </code>
 /// 
 /// 3. Result:
-///    ✅ Operator saved to [identity].[Operators]
+///    ✅ Account saved to [identity].[Accounts]
 ///    ✅ OutboxMessage saved to [identity].[OutboxMessages]
 ///    ✅ Both in SAME transaction (atomic!)
 ///    ✅ Background service will publish integration event later
@@ -140,7 +140,7 @@ public interface IUnitOfWork : IModuleContext
     /// 4. Save All Changes (Atomic Transaction):
     ///    - Call base.SaveChangesAsync()
     ///    - Commits ALL tracked changes:
-    ///      * Domain entities (Operator, User, Employee, etc.)
+    ///      * Domain entities (Account, Employee, etc.)
     ///      * OutboxMessages
     ///      * Any entities created by domain event handlers
     ///    - All in SINGLE database transaction

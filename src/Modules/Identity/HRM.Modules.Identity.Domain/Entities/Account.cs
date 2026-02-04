@@ -21,7 +21,7 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// - TwoFactorChangedAtUtc: When 2FA was enabled/disabled
 /// - StatusChangedAtUtc: When account status was changed
 ///
-/// This replaces the separate Operator entity for a unified auth experience.
+/// Unified authentication entity for all account types (System, Employee).
 /// </summary>
 public class Account : AuditableEntity, ISecurityAuditable
 {

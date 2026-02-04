@@ -56,7 +56,7 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
     /// <summary>
     /// Whether this role is for operators (true) or users (false)
     ///
-    /// Operator Roles:
+    /// Account Roles:
     /// - Global access without scope restrictions
     /// - For internal staff/admins
     /// - Example: "System Administrator", "Support Engineer"

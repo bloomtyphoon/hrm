@@ -33,7 +33,7 @@ public interface IPermissionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if user has permission by key (e.g., "Identity.Operator.View")
+    /// Check if user has permission by key (e.g., "Identity.Account.View")
     /// </summary>
     Task<bool> HasPermissionAsync(
         string userId,

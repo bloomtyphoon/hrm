@@ -2,53 +2,47 @@
 <PermissionCatalog Version="1.0" xmlns="http://hrm.system/permissions">
   <!--
     Identity Module Permission Catalog
-    Defines all permissions for identity management (users, operators, roles)
-
-    This file is embedded as a resource and loaded via IPermissionCatalogSourceFactory
+    Defines all permissions for identity management (accounts, roles)
 
     Structure: Module > Entity > Action > Scopes
-    Each module provides its own PermissionCatalog.xml
-
-    Scope Hierarchy (wider access = lower number):
-    - Global (0): System-wide access (super admin)
-    - Company (1): Whole company access
-    - Department (2): Same department only
-    - Position (3): Position/Team level
-    - Self/Employee (4): Only own data
   -->
 
   <Permissions>
 
     <Module name="Identity" displayName="Quản lý danh tính">
 
-      <!-- User Entity - External users (future module) -->
-      <Entity name="User" displayName="Người dùng">
+      <!-- Account Entity - Unified authentication accounts -->
+      <Entity name="Account" displayName="Tài khoản">
 
-        <Action name="View" displayName="Xem người dùng" defaultScope="Department">
+        <Action name="View" displayName="Xem tài khoản" defaultScope="Global">
           <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
             <Scope value="Company" displayName="Toàn công ty" />
             <Scope value="Department" displayName="Cùng phòng ban" />
             <Scope value="Self" displayName="Chỉ bản thân" />
           </Scopes>
         </Action>
 
-        <Action name="Create" displayName="Tạo người dùng" defaultScope="Department">
+        <Action name="Create" displayName="Tạo tài khoản" defaultScope="Global">
           <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
             <Scope value="Company" displayName="Toàn công ty" />
             <Scope value="Department" displayName="Cùng phòng ban" />
           </Scopes>
         </Action>
 
-        <Action name="Update" displayName="Cập nhật người dùng" defaultScope="Department">
+        <Action name="Update" displayName="Cập nhật tài khoản" defaultScope="Global">
           <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
             <Scope value="Company" displayName="Toàn công ty" />
             <Scope value="Department" displayName="Cùng phòng ban" />
             <Scope value="Self" displayName="Chỉ bản thân" />
           </Scopes>
         </Action>
 
-        <Action name="Delete" displayName="Xóa người dùng" defaultScope="Department">
+        <Action name="Delete" displayName="Xóa tài khoản" defaultScope="Global">
           <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
             <Scope value="Company" displayName="Toàn công ty" />
             <Scope value="Department" displayName="Cùng phòng ban" />
           </Scopes>
@@ -56,58 +50,18 @@
 
         <Action name="ResetPassword" displayName="Đặt lại mật khẩu" defaultScope="Self">
           <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
             <Scope value="Company" displayName="Toàn công ty" />
             <Scope value="Department" displayName="Cùng phòng ban" />
             <Scope value="Self" displayName="Chỉ bản thân" />
           </Scopes>
         </Action>
 
-        <Action name="AssignRole" displayName="Gán vai trò cho người dùng" defaultScope="Department">
+        <Action name="AssignRole" displayName="Gán vai trò cho tài khoản" defaultScope="Global">
           <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
             <Scope value="Company" displayName="Toàn công ty" />
             <Scope value="Department" displayName="Cùng phòng ban" />
-          </Scopes>
-        </Action>
-
-      </Entity>
-
-      <!-- Operator Entity - Internal system administrators -->
-      <!-- Operators are system-level, Global scope only -->
-      <Entity name="Operator" displayName="Quản trị viên">
-
-        <Action name="View" displayName="Xem quản trị viên" defaultScope="Global">
-          <Scopes>
-            <Scope value="Global" displayName="Toàn hệ thống" />
-          </Scopes>
-        </Action>
-
-        <Action name="Create" displayName="Tạo quản trị viên" defaultScope="Global">
-          <Scopes>
-            <Scope value="Global" displayName="Toàn hệ thống" />
-          </Scopes>
-        </Action>
-
-        <Action name="Update" displayName="Cập nhật quản trị viên" defaultScope="Global">
-          <Scopes>
-            <Scope value="Global" displayName="Toàn hệ thống" />
-          </Scopes>
-        </Action>
-
-        <Action name="Delete" displayName="Xóa quản trị viên" defaultScope="Global">
-          <Scopes>
-            <Scope value="Global" displayName="Toàn hệ thống" />
-          </Scopes>
-        </Action>
-
-        <Action name="ResetPassword" displayName="Đặt lại mật khẩu quản trị viên" defaultScope="Global">
-          <Scopes>
-            <Scope value="Global" displayName="Toàn hệ thống" />
-          </Scopes>
-        </Action>
-
-        <Action name="AssignRole" displayName="Gán vai trò cho quản trị viên" defaultScope="Global">
-          <Scopes>
-            <Scope value="Global" displayName="Toàn hệ thống" />
           </Scopes>
         </Action>
 

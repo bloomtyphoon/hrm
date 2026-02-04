@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
-using HRM.Modules.Identity.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 
 namespace HRM.Modules.Identity.Infrastructure.Authentication;
@@ -78,39 +77,9 @@ public sealed class CurrentUserService : ICurrentUserService
                 return accountType;
             }
 
-#pragma warning disable CS0618
-            if (Enum.TryParse<UserType>(userTypeClaim, ignoreCase: true, out var userType))
-            {
-                return userType.ToAccountType();
-            }
-#pragma warning restore CS0618
-
             return AccountType.Employee;
         }
     }
-
-#pragma warning disable CS0618
-    /// <inheritdoc />
-    public UserType UserType
-    {
-        get
-        {
-            var userTypeClaim = User?.FindFirst("UserType")?.Value;
-
-            if (string.IsNullOrEmpty(userTypeClaim))
-            {
-                return Domain.Enums.UserType.User;
-            }
-
-            if (Enum.TryParse<UserType>(userTypeClaim, ignoreCase: true, out var userType))
-            {
-                return userType;
-            }
-
-            return Domain.Enums.UserType.User;
-        }
-    }
-#pragma warning restore CS0618
 
     /// <inheritdoc />
     public Guid? EmployeeId
@@ -189,11 +158,4 @@ public sealed class CurrentUserService : ICurrentUserService
     /// <inheritdoc />
     public bool IsEmployeeAccount() => AccountType == AccountType.Employee;
 
-    /// <inheritdoc />
-    [Obsolete("Use IsSystemAccount() instead")]
-    public bool IsOperator() => AccountType == AccountType.System;
-
-    /// <inheritdoc />
-    [Obsolete("Use IsEmployeeAccount() instead")]
-    public bool IsUser() => AccountType == AccountType.Employee;
 }

@@ -10,8 +10,8 @@ namespace HRM.Web.Services;
 /// </summary>
 public interface IApiClient
 {
-    Task<ApiResponse<OperatorResponse>> RegisterOperatorAsync(
-        RegisterOperatorRequest request,
+    Task<ApiResponse<AccountResponse>> RegisterAccountAsync(
+        RegisterAccountRequest request,
         CancellationToken cancellationToken = default);
 
     Task<ApiResponse<LoginResponse>> LoginAsync(
@@ -21,7 +21,7 @@ public interface IApiClient
     Task<ApiResponse<object>> LogoutAsync(
         CancellationToken cancellationToken = default);
 
-    Task<ApiResponse<PagedResult<OperatorSummary>>> GetOperatorsAsync(
+    Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
         int pageNumber = 1,
@@ -45,8 +45,8 @@ public sealed class ApiClient : IApiClient
     /// <summary>
     /// Register a new operator via HRM.Api
     /// </summary>
-    public async Task<ApiResponse<OperatorResponse>> RegisterOperatorAsync(
-        RegisterOperatorRequest request,
+    public async Task<ApiResponse<AccountResponse>> RegisterAccountAsync(
+        RegisterAccountRequest request,
         CancellationToken cancellationToken = default)
     {
         try
@@ -64,14 +64,14 @@ public sealed class ApiClient : IApiClient
             };
 
             var response = await httpClient.PostAsJsonAsync(
-                "/api/identity/operators/register",
+                "/api/identity/accounts/register",
                 apiRequest,
                 cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
-                var data = await response.Content.ReadFromJsonAsync<OperatorResponse>(cancellationToken);
-                return new ApiResponse<OperatorResponse>
+                var data = await response.Content.ReadFromJsonAsync<AccountResponse>(cancellationToken);
+                return new ApiResponse<AccountResponse>
                 {
                     IsSuccess = true,
                     Data = data
@@ -90,7 +90,7 @@ public sealed class ApiClient : IApiClient
                 };
 
                 var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
-                return new ApiResponse<OperatorResponse>
+                return new ApiResponse<AccountResponse>
                 {
                     IsSuccess = false,
                     ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
@@ -103,7 +103,7 @@ public sealed class ApiClient : IApiClient
                 _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
 
                 // Fallback if not ProblemDetails format
-                return new ApiResponse<OperatorResponse>
+                return new ApiResponse<AccountResponse>
                 {
                     IsSuccess = false,
                     ErrorCode = "ApiError",
@@ -114,7 +114,7 @@ public sealed class ApiClient : IApiClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Network error while calling HRM.Api");
-            return new ApiResponse<OperatorResponse>
+            return new ApiResponse<AccountResponse>
             {
                 IsSuccess = false,
                 ErrorCode = "NetworkError",
@@ -124,7 +124,7 @@ public sealed class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while calling HRM.Api");
-            return new ApiResponse<OperatorResponse>
+            return new ApiResponse<AccountResponse>
             {
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",
@@ -299,7 +299,7 @@ public sealed class ApiClient : IApiClient
     /// <summary>
     /// Get paginated list of operators via HRM.Api
     /// </summary>
-    public async Task<ApiResponse<PagedResult<OperatorSummary>>> GetOperatorsAsync(
+    public async Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
         int pageNumber = 1,
@@ -320,7 +320,7 @@ public sealed class ApiClient : IApiClient
             queryParams.Add($"pageSize={pageSize}");
 
             var queryString = string.Join("&", queryParams);
-            var url = $"/api/identity/operators?{queryString}";
+            var url = $"/api/identity/accounts?{queryString}";
 
             var response = await httpClient.GetAsync(url, cancellationToken);
 
@@ -330,11 +330,11 @@ public sealed class ApiClient : IApiClient
                 {
                     PropertyNameCaseInsensitive = true
                 };
-                var data = await response.Content.ReadFromJsonAsync<PagedResult<OperatorSummary>>(jsonOptions, cancellationToken);
-                return new ApiResponse<PagedResult<OperatorSummary>>
+                var data = await response.Content.ReadFromJsonAsync<PagedResult<AccountSummary>>(jsonOptions, cancellationToken);
+                return new ApiResponse<PagedResult<AccountSummary>>
                 {
                     IsSuccess = true,
-                    Data = data ?? new PagedResult<OperatorSummary>()
+                    Data = data ?? new PagedResult<AccountSummary>()
                 };
             }
 
@@ -349,11 +349,11 @@ public sealed class ApiClient : IApiClient
                 };
 
                 var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
-                return new ApiResponse<PagedResult<OperatorSummary>>
+                return new ApiResponse<PagedResult<AccountSummary>>
                 {
                     IsSuccess = false,
                     ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
-                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve operators",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve accounts",
                     ValidationErrors = apiError?.GetValidationErrors()
                 };
             }
@@ -361,7 +361,7 @@ public sealed class ApiClient : IApiClient
             {
                 _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
 
-                return new ApiResponse<PagedResult<OperatorSummary>>
+                return new ApiResponse<PagedResult<AccountSummary>>
                 {
                     IsSuccess = false,
                     ErrorCode = "ApiError",
@@ -372,7 +372,7 @@ public sealed class ApiClient : IApiClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Network error while calling HRM.Api");
-            return new ApiResponse<PagedResult<OperatorSummary>>
+            return new ApiResponse<PagedResult<AccountSummary>>
             {
                 IsSuccess = false,
                 ErrorCode = "NetworkError",
@@ -382,7 +382,7 @@ public sealed class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while calling HRM.Api");
-            return new ApiResponse<PagedResult<OperatorSummary>>
+            return new ApiResponse<PagedResult<AccountSummary>>
             {
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",

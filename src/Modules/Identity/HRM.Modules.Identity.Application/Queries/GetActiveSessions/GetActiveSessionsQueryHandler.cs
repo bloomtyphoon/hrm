@@ -20,13 +20,13 @@ namespace HRM.Modules.Identity.Application.Queries.GetActiveSessions;
 /// 5. Project to SessionInfo DTO
 ///
 /// Performance:
-/// - Indexed query (composite index on OperatorId, RevokedAt, ExpiresAt)
+/// - Indexed query (composite index on AccountId, RevokedAt, ExpiresAt)
 /// - Small result set (1-10 sessions typically)
 /// - No joins needed (all data in RefreshTokens)
 /// - Fast query (~1-5ms)
 ///
 /// Security:
-/// - Only returns sessions for specified OperatorId
+/// - Only returns sessions for specified AccountId
 /// - Cannot access other users' sessions
 /// - No sensitive data in response
 /// </summary>
@@ -44,10 +44,10 @@ public sealed class GetActiveSessionsQueryHandler
         GetActiveSessionsQuery request,
         CancellationToken cancellationToken)
     {
-        // Query active sessions from repository (System account - Operator)
+        // Query active sessions from repository
         var activeTokens = await _refreshTokenRepository.GetActiveSessionsAsync(
-            AccountType.System,     // System account (Operator)
-            request.OperatorId,
+            AccountType.System,     // System account
+            request.AccountId,
             cancellationToken);
 
         // Project to SessionInfo DTOs

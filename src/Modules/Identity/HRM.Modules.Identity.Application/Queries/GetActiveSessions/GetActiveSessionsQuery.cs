@@ -25,12 +25,12 @@ namespace HRM.Modules.Identity.Application.Queries.GetActiveSessions;
 /// - User can only see their own sessions
 ///
 /// Security:
-/// - OperatorId from authenticated user context
+/// - AccountId from authenticated user context
 /// - Cannot query other users' sessions
 /// - Current token identification for UI hints
 ///
 /// Performance:
-/// - Indexed query (OperatorId, RevokedAt, ExpiresAt)
+/// - Indexed query (AccountId, RevokedAt, ExpiresAt)
 /// - Typically 1-10 rows per user
 /// - Fast query (~1-5ms)
 ///
@@ -60,10 +60,10 @@ namespace HRM.Modules.Identity.Application.Queries.GetActiveSessions;
 /// ]
 /// </code>
 /// </summary>
-/// <param name="OperatorId">Operator ID (from authenticated context)</param>
+/// <param name="AccountId">Account ID (from authenticated context)</param>
 /// <param name="CurrentRefreshToken">Current refresh token to mark as IsCurrent (optional)</param>
 public sealed record GetActiveSessionsQuery(
-    Guid OperatorId,
+    Guid AccountId,
     string? CurrentRefreshToken = null
 ) : IQuery<Result<List<SessionInfo>>>;
 

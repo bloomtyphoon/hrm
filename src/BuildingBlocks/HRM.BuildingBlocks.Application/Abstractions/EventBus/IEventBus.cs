@@ -23,7 +23,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.EventBus;
 /// Event Flow:
 /// <code>
 /// 1. Domain Event Raised:
-///    Operator.Register() → OperatorRegisteredDomainEvent
+///    Account.Create() → AccountCreatedDomainEvent
 /// 
 /// 2. Domain Event Handler (synchronous, in transaction):
 ///    OperatorRegisteredDomainEventHandler

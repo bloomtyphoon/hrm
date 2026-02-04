@@ -39,11 +39,11 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 /// public sealed class DeleteOperatorCommandHandler 
 ///     : ICommandHandler&lt;DeleteOperatorCommand&gt;
 /// {
-///     private readonly IOperatorRepository _repository;
+///     private readonly IAccountRepository _repository;
 ///     private readonly ILogger&lt;DeleteOperatorCommandHandler&gt; _logger;
 ///     
 ///     public DeleteOperatorCommandHandler(
-///         IOperatorRepository repository,
+///         IAccountRepository repository,
 ///         ILogger&lt;DeleteOperatorCommandHandler&gt; logger)
 ///     {
 ///         _repository = repository;
@@ -56,21 +56,21 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 ///     {
 ///         // 1. Load entity from repository
 ///         var @operator = await _repository.GetByIdAsync(
-///             command.OperatorId,
+///             command.AccountId,
 ///             cancellationToken
 ///         );
 ///         
 ///         if (@operator is null)
 ///         {
 ///             _logger.LogWarning(
-///                 "Operator {OperatorId} not found for deletion",
-///                 command.OperatorId
+///                 "Account {AccountId} not found for deletion",
+///                 command.AccountId
 ///             );
 ///             
 ///             return Result.Failure(
 ///                 new NotFoundError(
-///                     "Operator.NotFound",
-///                     $"Operator with ID {command.OperatorId} not found"
+///                     "Account.NotFound",
+///                     $"Account with ID {command.AccountId} not found"
 ///                 )
 ///             );
 ///         }
@@ -80,12 +80,12 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 ///         {
 ///             _logger.LogWarning(
 ///                 "Attempt to delete system operator {OperatorId}",
-///                 command.OperatorId
+///                 command.AccountId
 ///             );
 ///             
 ///             return Result.Failure(
 ///                 new ForbiddenError(
-///                     "Operator.CannotDeleteSystem",
+///                     "Account.CannotDeleteSystem",
 ///                     "System operators cannot be deleted"
 ///                 )
 ///             );
@@ -96,8 +96,8 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 ///         _repository.Remove(@operator);
 ///         
 ///         _logger.LogInformation(
-///             "Operator {OperatorId} marked for deletion",
-///             command.OperatorId
+///             "Account {AccountId} marked for deletion",
+///             command.AccountId
 ///         );
 ///         
 ///         // 4. Return success
@@ -139,12 +139,12 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 /// public sealed class RegisterOperatorCommandHandler 
 ///     : ICommandHandler&lt;RegisterOperatorCommand, Guid&gt;
 /// {
-///     private readonly IOperatorRepository _repository;
+///     private readonly IAccountRepository _repository;
 ///     private readonly IPasswordHasher _passwordHasher;
 ///     private readonly ILogger&lt;RegisterOperatorCommandHandler&gt; _logger;
 ///     
 ///     public RegisterOperatorCommandHandler(
-///         IOperatorRepository repository,
+///         IAccountRepository repository,
 ///         IPasswordHasher passwordHasher,
 ///         ILogger&lt;RegisterOperatorCommandHandler&gt; logger)
 ///     {
@@ -167,7 +167,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///             
 ///             return Result.Failure&lt;Guid&gt;(
 ///                 new ConflictError(
-///                     "Operator.DuplicateUsername",
+///                     "Account.DuplicateUsername",
 ///                     $"Username '{command.Username}' is already taken"
 ///                 )
 ///             );
@@ -183,7 +183,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///             
 ///             return Result.Failure&lt;Guid&gt;(
 ///                 new ConflictError(
-///                     "Operator.DuplicateEmail",
+///                     "Account.DuplicateEmail",
 ///                     $"Email '{command.Email}' is already registered"
 ///                 )
 ///             );
@@ -193,7 +193,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///         var hashedPassword = _passwordHasher.HashPassword(command.Password);
 ///         
 ///         // 4. Execute domain logic (aggregate method)
-///         var @operator = Operator.Register(
+///         var account = Account.Create(
 ///             command.Username,
 ///             command.Email,
 ///             hashedPassword
@@ -206,7 +206,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///         await _repository.AddAsync(@operator, cancellationToken);
 ///         
 ///         _logger.LogInformation(
-///             "Operator {OperatorId} registered successfully with username {Username}",
+///             "Account {AccountId} registered successfully with username {Username}",
 ///             @operator.Id,
 ///             command.Username
 ///         );
@@ -218,7 +218,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///         // 1. Collect domain events from @operator entity
 ///         // 2. Dispatch OperatorRegisteredDomainEvent synchronously
 ///         // 3. Domain event handler creates OutboxMessage
-///         // 4. Commit both Operator and OutboxMessage atomically
+///         // 4. Commit both Account and OutboxMessage atomically
 ///         // 5. Clear domain events from entity
 ///     }
 /// }
@@ -232,7 +232,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 /// - Avoid returning full entities (use queries instead)
 /// 
 /// Integration with Domain Events:
-/// - Domain events raised in entity methods (e.g., Operator.Register)
+/// - Domain events raised in entity methods (e.g., Account.Create)
 /// - Events stored in entity's internal collection
 /// - UnitOfWork collects and dispatches events before commit
 /// - Domain event handlers create OutboxMessages

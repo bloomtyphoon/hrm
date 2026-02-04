@@ -13,8 +13,8 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Results;
 /// Error Code Convention:
 /// Format: "{Entity}.{ErrorName}"
 /// Examples:
-/// - "Operator.NotFound"
-/// - "Operator.UsernameAlreadyExists"
+/// - "Account.NotFound"
+/// - "Account.UsernameAlreadyExists"
 /// - "Employee.InvalidHireDate"
 ///
 /// HTTP Mapping:
@@ -26,10 +26,10 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Results;
 /// public static class OperatorErrors
 /// {
 ///     public static NotFoundError NotFound(Guid id) =>
-///         new("Operator.NotFound", $"Operator with ID '{id}' not found");
+///         new("Account.NotFound", $"Account with ID '{id}' not found");
 ///
 ///     public static ConflictError UsernameAlreadyExists(string username) =>
-///         new("Operator.UsernameAlreadyExists", $"Username '{username}' already exists");
+///         new("Account.UsernameAlreadyExists", $"Username already exists");
 /// }
 /// </code>
 ///
@@ -80,7 +80,7 @@ public abstract record DomainError
 /// - Reference to non-existent entity
 ///
 /// Examples:
-/// - Operator not found
+/// - Account not found
 /// - Employee not found
 /// - Department not found
 /// </summary>

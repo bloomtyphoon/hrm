@@ -12,7 +12,7 @@ namespace HRM.Api.DependencyInjection;
 ///
 /// Architecture:
 /// - BuildingBlocks: Shared infrastructure (MediatR, Authentication, EventBus, etc.)
-/// - Identity Module: Authentication and authorization (Operators, Users)
+/// - Identity Module: Authentication and authorization (Accounts)
 /// - Personnel Module: Employee management (future)
 /// - Attendance Module: Time tracking (future)
 ///
@@ -64,17 +64,17 @@ public static class ModuleExtensions
 
         // 3. Identity Module Application Layer
         // Register module-specific handlers and validators
-        // - Command handlers (RegisterOperatorCommandHandler, etc.)
-        // - Query handlers (GetOperatorByIdQueryHandler, etc.)
-        // - Domain event handlers (OperatorRegisteredDomainEventHandler, etc.)
-        // - FluentValidation validators (RegisterOperatorCommandValidator, etc.)
+        // - Command handlers (RegisterAccountCommandHandler, etc.)
+        // - Query handlers (GetAccountByIdQueryHandler, etc.)
+        // - Domain event handlers (AccountCreatedDomainEventHandler, etc.)
+        // - FluentValidation validators (RegisterAccountCommandValidator, etc.)
         services.AddIdentityApplication();
 
         // 4. Identity Module Infrastructure Layer
         // Register module-specific technical implementations
         // - IdentityDbContext (SQL Server, schema: Identity)
         // - IModuleUnitOfWork → IdentityDbContext (for UnitOfWorkBehavior)
-        // - Repositories (IOperatorRepository → OperatorRepository)
+        // - Repositories (IAccountRepository → AccountRepository)
         // - Authentication services (IPasswordHasher, ITokenService)
         // - Background services (IdentityOutboxProcessor)
         services.AddIdentityInfrastructure(configuration);
@@ -97,8 +97,8 @@ public static class ModuleExtensions
     public static IEndpointRouteBuilder MapModuleEndpoints(this IEndpointRouteBuilder app)
     {
         // Map Identity module endpoints
-        // - POST /api/identity/operators/register
-        // - POST /api/identity/operators/{id}/activate
+        // - POST /api/identity/accounts/register
+        // - POST /api/identity/accounts/{id}/activate
         app.MapIdentityEndpoints();
 
         // Future module endpoints:
