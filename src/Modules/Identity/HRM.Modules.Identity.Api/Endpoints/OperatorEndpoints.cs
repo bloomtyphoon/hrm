@@ -1,8 +1,10 @@
-using HRM.BuildingBlocks.Infrastructure.Authorization;
+using HRM.BuildingBlocks.Application.Pagination;
+using HRM.Modules.Identity.Domain.Entities;
 using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Identity.Api.Contracts;
 using HRM.Modules.Identity.Application.Commands.ActivateOperator;
 using HRM.Modules.Identity.Application.Commands.RegisterOperator;
+using HRM.Modules.Identity.Application.Queries.GetOperators;
 using HRM.Modules.Identity.Domain.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -31,10 +33,11 @@ namespace HRM.Modules.Identity.Api.Endpoints;
 ///    - Activate pending operator (admin-only)
 ///    - Returns: 200 OK with OperatorResponse
 ///
-/// Authorization:
-/// - All endpoints require authentication (Bearer JWT)
-/// - RequireAuthorization() adds [Authorize] behavior
-/// - Policy-based: "AdminOnly" policy (role = Admin)
+/// Authorization Architecture:
+/// - Single Source of Truth: RouteSecurityMap.xml
+/// - .RequireAuthorization() only for OpenAPI docs (lock icon) and basic auth check
+/// - Actual permission checks: RoutePermissionMiddleware (reads from XML)
+/// - DO NOT use [HasPermission] attributes or role policies - deprecated
 ///
 /// Error Handling:
 /// - ResultExtensions.ToHttpResultAsync() maps DomainError → HTTP
@@ -62,17 +65,18 @@ public static class OperatorEndpoints
     public static IEndpointRouteBuilder MapOperatorEndpoints(this IEndpointRouteBuilder app)
     {
         // Create route group: /api/identity/operators
+        // RequireAuthorization() is for OpenAPI docs only - actual permission checks
+        // are done by RoutePermissionMiddleware using RouteSecurityMap.xml
         var group = app.MapGroup("/api/identity/operators")
             .WithTags("Operators")
-            .RequireAuthorization(); // All endpoints require authentication
+            .RequireAuthorization();
 
         // 1. Register operator
-        // Permission: Identity.Operator.Create
+        // Permission enforced by RoutePermissionMiddleware: Identity.Operator.Create
         group.MapPost("/register", RegisterOperator)
             .WithName("RegisterOperator")
             .WithSummary("Register a new operator")
             .WithDescription("Create a new operator account in Pending status. Requires Identity.Operator.Create permission.")
-            .RequireAuthorization(new HasPermissionAttribute("Identity", "Operator", "Create"))
             .Produces<OperatorResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -80,17 +84,26 @@ public static class OperatorEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         // 2. Activate operator
-        // Permission: Identity.Operator.Update
+        // Permission enforced by RoutePermissionMiddleware: Identity.Operator.Update
         group.MapPost("/{id:guid}/activate", ActivateOperator)
             .WithName("ActivateOperator")
             .WithSummary("Activate a pending operator")
             .WithDescription("Change operator status from Pending to Active. Requires Identity.Operator.Update permission.")
-            .RequireAuthorization(new HasPermissionAttribute("Identity", "Operator", "Update"))
             .Produces<OperatorResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // 3. Get operators (paginated list)
+        // Permission enforced by RoutePermissionMiddleware: Identity.Operator.View
+        group.MapGet("/", GetOperators)
+            .WithName("GetOperators")
+            .WithSummary("Get paginated list of operators")
+            .WithDescription("Retrieve operators with search, filter, and pagination. Requires Identity.Operator.View permission.")
+            .Produces<PagedResult<OperatorSummaryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         return app;
     }
@@ -205,5 +218,38 @@ public static class OperatorEndpoints
         // Map error using ResultExtensions
         // This handles all DomainError types (NotFoundError, ValidationError, etc.)
         return result.ToHttpResult();
+    }
+
+    /// <summary>
+    /// GET /api/identity/operators
+    /// Get paginated list of operators with search and filter support.
+    /// </summary>
+    private static async Task<IResult> GetOperators(
+        ISender sender,
+        string? searchTerm = null,
+        OperatorStatus? status = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        // Validate pagination parameters
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // Create query
+        var query = new GetOperatorsQuery
+        {
+            SearchTerm = searchTerm,
+            Status = status,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        // Execute query via MediatR
+        var result = await sender.Send(query, cancellationToken);
+
+        // Return paginated result
+        return Results.Ok(result);
     }
 }

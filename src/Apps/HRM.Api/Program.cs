@@ -1,6 +1,7 @@
+using System.Text.Json.Serialization;
 using HRM.Api.DependencyInjection;
-using HRM.BuildingBlocks.Infrastructure.Authorization;
 using HRM.BuildingBlocks.Infrastructure.DependencyInjection;
+using HRM.BuildingBlocks.Infrastructure.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add Controllers and Minimal API support
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure JSON serialization options for Minimal APIs
+// - Serialize enums as strings (e.g., "Active" instead of 1)
+// - Use camelCase for property names
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 // Configure OpenAPI (.NET 10 Native - Minimal Approach)
 // Security is auto-detected from .RequireAuthorization() on endpoints
@@ -49,27 +58,16 @@ builder.Services.AddCors(options =>
 // before modules that depend on it
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
-// Add Authorization with policies
-builder.Services.AddAuthorization(options =>
-{
-    // Admin-only policy for operator management
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"));
-
-    // Manager policy for department/employee management
-    options.AddPolicy("Manager", policy =>
-        policy.RequireRole("Admin", "Manager"));
-
-    // Authenticated user policy
-    options.AddPolicy("User", policy =>
-        policy.RequireAuthenticatedUser());
-});
-
-// Add Permission-based Authorization
-// - Registers PermissionPolicyProvider for dynamic policy creation
-// - Registers PermissionAuthorizationHandler for handling [HasPermission] attributes
-// - Policies are created on-demand from permission strings (e.g., "Permission:Identity.Operator.Create")
-builder.Services.AddPermissionAuthorization();
+// Add Authorization (minimal - infrastructure only)
+// NOTE: Business endpoint authorization is handled by RoutePermissionMiddleware
+// which reads permissions from RouteSecurityMap.xml (single source of truth)
+//
+// ASP.NET Authorization is only used for:
+// - Infrastructure endpoints (health, openapi) via .AllowAnonymous()
+// - Basic [Authorize] attribute for OpenAPI documentation
+//
+// DO NOT add business policies here - use RouteSecurityMap.xml instead
+builder.Services.AddAuthorization();
 
 // Register all HRM modules (BuildingBlocks + Identity + future modules)
 // This registers:
@@ -100,8 +98,10 @@ app.UseCors("AllowFrontend");
 // IMPORTANT: Order matters!
 // 1. UseAuthentication() - validates JWT and populates HttpContext.User
 // 2. UseAuthorization() - checks [Authorize] attributes and policies
+// 3. UseRoutePermissions() - checks route-level permissions from RouteSecurityMap.xml
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRoutePermissions();
 
 // Map all module endpoints
 // - Identity: POST /api/identity/operators/register, POST /api/identity/operators/{id}/activate

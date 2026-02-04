@@ -1,6 +1,5 @@
 using System.Xml.Linq;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
-using HRM.BuildingBlocks.Domain.Enums;
 using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
@@ -25,7 +24,6 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// </summary>
 public sealed class PermissionCatalogService : IPermissionCatalogService
 {
-    private const string XmlNamespace = "http://hrm.system/permissions";
     private const string CatalogCacheKey = "PermissionCatalog";
     private readonly IEnumerable<IPermissionCatalogSource> _sources;
     private readonly IMemoryCache _cache;
@@ -265,6 +263,7 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
 
             ScopeLevel scopeLevel = scopeValue switch
             {
+                "Global" => ScopeLevel.Global,
                 "Company" => ScopeLevel.Company,
                 "Department" => ScopeLevel.Department,
                 "Position" => ScopeLevel.Position,

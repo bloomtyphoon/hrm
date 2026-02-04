@@ -1,5 +1,6 @@
 using System.Reflection;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
+using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +16,13 @@ namespace HRM.Modules.Identity.Infrastructure.Persistence;
 /// - Audit trail (CreatedAtUtc, ModifiedAtUtc, CreatedById, ModifiedById)
 /// - Outbox pattern (OutboxMessages table)
 ///
+/// Implements IIdentityQueryContext for:
+/// - Dependency Inversion (Application layer depends on abstraction)
+/// - Query handlers can access DbSets without referencing Infrastructure
+///
 /// Tables:
-/// - Identity.Operators: Operator accounts
+/// - Identity.Accounts: Unified authentication accounts (primary login entity)
+/// - Identity.Operators: Legacy operator accounts (being replaced by Account)
 /// - Identity.OutboxMessages: Integration events for reliable publishing
 ///
 /// Schema Separation:
@@ -43,7 +49,7 @@ namespace HRM.Modules.Identity.Infrastructure.Persistence;
 /// - Used for distributed locking in OutboxProcessor
 /// - Format: "Identity" (matches schema name)
 /// </summary>
-public sealed class IdentityDbContext : ModuleDbContext
+public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
 {
     public IdentityDbContext(
         DbContextOptions<IdentityDbContext> options,
@@ -60,15 +66,18 @@ public sealed class IdentityDbContext : ModuleDbContext
     public override string ModuleName => "Identity";
 
     /// <summary>
-    /// Operators table
-    /// Contains operator accounts (username, email, password, etc.)
+    /// Accounts table — unified authentication entity (System + Employee).
+    /// Primary entity for login flow.
+    /// </summary>
+    public DbSet<Account> Accounts => Set<Account>();
+
+    /// <summary>
+    /// Operators table (LEGACY — being replaced by Account).
     /// </summary>
     public DbSet<Operator> Operators => Set<Operator>();
 
     /// <summary>
-    /// Refresh tokens table
-    /// Contains refresh tokens for JWT authentication and session management
-    /// Enables multi-device sessions, token revocation, and security audit trail
+    /// Refresh tokens table for session management.
     /// </summary>
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 

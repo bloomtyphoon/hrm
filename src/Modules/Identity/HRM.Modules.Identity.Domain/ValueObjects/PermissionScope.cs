@@ -1,4 +1,4 @@
-using HRM.BuildingBlocks.Domain.Enums;
+using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Domain.ValueObjects;
 
@@ -49,6 +49,14 @@ public sealed class PermissionScope
         Value = value;
         DisplayName = displayName;
         IsReadOnly = isReadOnly;
+    }
+
+    /// <summary>
+    /// Factory method: Global scope (Operators only)
+    /// </summary>
+    public static PermissionScope Global(string displayName = "Toàn hệ thống", bool isReadOnly = false)
+    {
+        return new PermissionScope(ScopeLevel.Global, displayName, isReadOnly);
     }
 
     /// <summary>

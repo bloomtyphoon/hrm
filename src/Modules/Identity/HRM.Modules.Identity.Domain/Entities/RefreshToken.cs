@@ -1,5 +1,5 @@
 using HRM.BuildingBlocks.Domain.Entities;
-using HRM.BuildingBlocks.Domain.Enums;
+using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
@@ -49,22 +49,34 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// - Indexes: Token (unique), (UserType, PrincipalId), ExpiresAt
 /// - Soft delete: No (hard delete after expiration + grace period)
 /// </summary>
-public sealed class RefreshToken : Entity
+public sealed class RefreshToken : AuditableEntity
 {
     /// <summary>
     /// Type of user that owns this refresh token (Operator, Employee, etc.)
-    /// Used as discriminator for polymorphic association
+    /// Used as discriminator for polymorphic association.
+    ///
+    /// DEPRECATED: Use AccountType property instead.
+    /// This property is kept for database backward compatibility.
     ///
     /// Database:
     /// - Stored as TINYINT (1 byte)
     /// - Part of composite index: (UserType, PrincipalId)
-    ///
-    /// Usage:
-    /// - Filter queries by user type
-    /// - Determine which table PrincipalId references
-    /// - JWT claims for authorization
     /// </summary>
+#pragma warning disable CS0618 // Type is obsolete - kept for DB compatibility
     public UserType UserType { get; private set; }
+#pragma warning restore CS0618
+
+    /// <summary>
+    /// Account type (canonical property).
+    /// Computed from UserType for backward compatibility.
+    ///
+    /// Mapping:
+    /// - UserType.Operator → AccountType.System
+    /// - UserType.User → AccountType.Employee
+    /// </summary>
+#pragma warning disable CS0618 // Using obsolete UserType for conversion
+    public AccountType AccountType => UserType.ToAccountType();
+#pragma warning restore CS0618
 
     /// <summary>
     /// ID of the user (Operator, Employee, etc.) that owns this refresh token
@@ -225,13 +237,31 @@ public sealed class RefreshToken : Entity
     /// await _dbContext.SaveChangesAsync();
     /// </code>
     /// </summary>
-    /// <param name="userType">Type of user (Operator, Employee, etc.)</param>
+    /// <param name="accountType">Type of account (System or Employee)</param>
     /// <param name="principalId">ID of the user who owns this token</param>
     /// <param name="token">Random secure token string</param>
     /// <param name="expiresAt">Expiration date/time (UTC)</param>
     /// <param name="ipAddress">IP address of the client</param>
     /// <param name="userAgent">User agent string (browser/device)</param>
     /// <returns>New RefreshToken instance</returns>
+    public static RefreshToken Create(
+        AccountType accountType,
+        Guid principalId,
+        string token,
+        DateTime expiresAt,
+        string? ipAddress,
+        string? userAgent)
+    {
+#pragma warning disable CS0618 // Using obsolete UserType for DB storage
+        return Create(accountType.ToUserType(), principalId, token, expiresAt, ipAddress, userAgent);
+#pragma warning restore CS0618
+    }
+
+    /// <summary>
+    /// Create new refresh token (deprecated - use AccountType overload).
+    /// </summary>
+    [Obsolete("Use Create(AccountType, ...) overload instead")]
+#pragma warning disable CS0618 // UserType is obsolete
     public static RefreshToken Create(
         UserType userType,
         Guid principalId,
@@ -263,10 +293,11 @@ public sealed class RefreshToken : Entity
             Token = token,
             ExpiresAt = expiresAt,
             CreatedByIp = ipAddress ?? "unknown",
-            UserAgent = userAgent,
-            CreatedAtUtc = DateTime.UtcNow
+            UserAgent = userAgent
+            // CreatedAtUtc is set automatically by AuditableEntity constructor
         };
     }
+#pragma warning restore CS0618
 
     /// <summary>
     /// Revoke this refresh token

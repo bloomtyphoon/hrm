@@ -1,23 +1,18 @@
-using HRM.BuildingBlocks.Domain.Abstractions.Authentication;
 using HRM.BuildingBlocks.Domain.Entities;
-using HRM.BuildingBlocks.Domain.Enums;
+using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Events;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
 /// <summary>
-/// Operator aggregate root
-/// Represents internal system user with administrative privileges
+/// Operator aggregate root (LEGACY — being replaced by Account entity).
+/// Represents internal system user with administrative privileges.
 ///
-/// Operator vs User:
-/// - Operator: Internal staff/admin with system access
-/// - User: External end-users (managed in different module)
-///
-/// Responsibilities:
-/// - Identity management (username, email, password)
-/// - Access control (status, 2FA)
-/// - Security (failed login tracking, account lockout)
-/// - Audit trail (via Entity base class)
+/// Migration Note:
+/// Login flow now uses Account entity directly.
+/// Operator is retained for backward compatibility with existing
+/// RegisterOperator/ActivateOperator commands.
+/// Will be fully retired when all management commands migrate to Account.
 ///
 /// Business Rules:
 /// - Username must be unique
@@ -31,7 +26,7 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// - OperatorRegisteredDomainEvent: Raised when new operator registered
 /// - OperatorActivatedDomainEvent: Raised when operator activated
 /// </summary>
-public sealed class Operator : Entity, IAggregateRoot, IAuthenticatable
+public sealed class Operator : SoftDeletableEntity, IAggregateRoot
 {
     /// <summary>
     /// Unique username for login
@@ -324,10 +319,4 @@ public sealed class Operator : Entity, IAggregateRoot, IAuthenticatable
         PhoneNumber = phoneNumber;
     }
 
-    // IAuthenticatable implementation
-    public string GetUsername() => Username;
-    public string GetEmail() => Email;
-    public string GetPasswordHash() => PasswordHash;
-    public bool GetIsActive() => Status == OperatorStatus.Active;
-    public UserType GetUserType() => UserType.Operator;
 }

@@ -1,7 +1,11 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
+using HRM.BuildingBlocks.Infrastructure.Security;
 using HRM.Modules.Identity.Application;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Application.Configuration;
 using HRM.Modules.Identity.Domain.Repositories;
 using HRM.Modules.Identity.Domain.Services;
@@ -104,8 +108,15 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork.IModuleUnitOfWork>(
             sp => sp.GetRequiredService<IdentityDbContext>());
 
+        // Register IIdentityQueryContext - resolves to IdentityDbContext
+        // Query handlers in Application layer depend on this abstraction
+        // Keeps Application layer independent of Infrastructure (Dependency Inversion)
+        services.AddScoped<IIdentityQueryContext>(
+            sp => sp.GetRequiredService<IdentityDbContext>());
+
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
+        services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IOperatorRepository, OperatorRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
@@ -113,6 +124,11 @@ public static class IdentityInfrastructureExtensions
         services.AddSingleton<IOperatorPermissionRepository, OperatorPermissionRepository>();
 
         // 3. Register Authentication Services
+        // CurrentUserService implements both ICurrentUserService (Identity) and IExecutionContext (shared)
+        // Other modules depend on IExecutionContext (primitives only), Identity uses ICurrentUserService (typed)
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IExecutionContext>(sp => sp.GetRequiredService<ICurrentUserService>());
+
         // Singleton: Stateless services, safe to share across requests
         // NOTE: These are Identity module-specific, used only for login/registration
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
@@ -153,6 +169,18 @@ public static class IdentityInfrastructureExtensions
         // IPermissionService: Checks user permissions for authorization
         // Scoped: Uses scoped repositories for database access
         services.AddScoped<IPermissionService, PermissionService>();
+
+        // 7. Register Route Security Map Source
+        // Register Identity module's RouteSecurityMap.xml to be loaded at startup
+        // Actual loading happens in RouteSecurityLoaderService (IHostedService)
+        services.Configure<RouteSecurityOptions>(options =>
+        {
+            options.Sources.Add(new RouteSecurityMapSourceConfig
+            {
+                Assembly = typeof(IdentityInfrastructureExtensions).Assembly,
+                ResourceName = "HRM.Modules.Identity.Infrastructure.Security.RouteSecurityMap.xml"
+            });
+        });
 
         return services;
     }

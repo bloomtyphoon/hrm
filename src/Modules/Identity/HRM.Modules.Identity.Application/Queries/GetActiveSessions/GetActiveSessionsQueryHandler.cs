@@ -1,5 +1,5 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
-using HRM.BuildingBlocks.Domain.Enums;
+using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Repositories;
 using MediatR;
 
@@ -44,9 +44,9 @@ public sealed class GetActiveSessionsQueryHandler
         GetActiveSessionsQuery request,
         CancellationToken cancellationToken)
     {
-        // Query active sessions from repository (polymorphic design)
+        // Query active sessions from repository (System account - Operator)
         var activeTokens = await _refreshTokenRepository.GetActiveSessionsAsync(
-            UserType.Operator,      // Polymorphic design: specify user type
+            AccountType.System,     // System account (Operator)
             request.OperatorId,
             cancellationToken);
 
