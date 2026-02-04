@@ -117,6 +117,7 @@ public sealed record RolePermission
         DataScopeLevel.Company => "Company",
         DataScopeLevel.Department => "Department",
         DataScopeLevel.Position => "Position",
+        DataScopeLevel.EmployeeSet => "Team",
         DataScopeLevel.Self => "Self",
         DataScopeLevel.None => "No Access",
         null => "No Scope",

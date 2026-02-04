@@ -93,6 +93,8 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             DataScopeLevel.Company => await BuildCompanyScopeRuleAsync(context, cancellationToken),
             DataScopeLevel.Department => await BuildDepartmentScopeRuleAsync(context, cancellationToken),
             DataScopeLevel.Position => await BuildPositionScopeRuleAsync(context, cancellationToken),
+            DataScopeLevel.EmployeeSet => throw new NotSupportedException(
+                "EmployeeSet scope must be resolved by IHierarchyScopeResolver in Organization module"),
             DataScopeLevel.Self => BuildSelfScopeRule(context),
             DataScopeLevel.None => DataScopeRule.None(),
             _ => DataScopeRule.None()

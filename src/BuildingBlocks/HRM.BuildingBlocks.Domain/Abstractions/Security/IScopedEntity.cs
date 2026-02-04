@@ -1,66 +1,69 @@
 namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 
 /// <summary>
-/// Interface for entities that support data scoping
-/// Entities implementing this can be filtered by EfScopeExpressionBuilder
+/// Marker interface for entities that support data scoping.
+///
+/// DESIGN PRINCIPLE:
+/// BB does NOT know about organization structure (Company, Department, Position).
+/// It only knows about abstract dimensions via ScopeDimensionAttribute.
+///
+/// Entity implementations use [ScopeDimension] attribute on properties
+/// to declare which scope level each property represents.
 ///
 /// Usage:
 /// <code>
 /// public class Employee : Entity, IScopedEntity
 /// {
+///     [ScopeDimension(DataScopeLevel.Company)]
 ///     public Guid? CompanyId { get; private set; }
+///
+///     [ScopeDimension(DataScopeLevel.Department)]
 ///     public Guid? DepartmentId { get; private set; }
+///
+///     [ScopeDimension(DataScopeLevel.Position)]
 ///     public Guid? PositionId { get; private set; }
-///     public Guid OwnerId => Id; // Employee owns their own data
+///
+///     public Guid OwnerId => Id;
 /// }
 /// </code>
+///
+/// EfScopeExpressionBuilder discovers dimension properties at startup
+/// via reflection and caches the selectors for runtime use.
 /// </summary>
 public interface IScopedEntity
 {
     /// <summary>
-    /// Entity's primary key
+    /// Entity's primary key.
     /// </summary>
     Guid Id { get; }
 
     /// <summary>
-    /// Company this entity belongs to (for company scope)
-    /// Null if not applicable
-    /// </summary>
-    Guid? CompanyId { get; }
-
-    /// <summary>
-    /// Department this entity belongs to (for department scope)
-    /// Null if not applicable
-    /// </summary>
-    Guid? DepartmentId { get; }
-
-    /// <summary>
-    /// Position this entity belongs to (for position scope)
-    /// Null if not applicable
-    /// </summary>
-    Guid? PositionId { get; }
-
-    /// <summary>
-    /// Owner of this entity (for self scope)
-    /// Returns the user/employee ID who owns this data
+    /// Owner of this entity (for Self scope).
+    /// Returns the user/employee ID who owns this data.
+    /// For Employee entity, typically returns Id (self-owned).
+    /// For related entities (Timesheet, Leave), returns EmployeeId.
     /// </summary>
     Guid OwnerId { get; }
 }
 
 /// <summary>
-/// Base interface for simpler scoped entities that only need company scope
-/// </summary>
-public interface ICompanyScopedEntity
-{
-    Guid Id { get; }
-    Guid? CompanyId { get; }
-}
-
-/// <summary>
-/// Interface for entities owned by a specific user
+/// Interface for entities owned by a specific user.
+/// Simpler than IScopedEntity - only supports Self scope.
+///
+/// Use this for entities that don't have org hierarchy dimensions
+/// but still need owner-based filtering.
+///
+/// Examples: UserSettings, PersonalNotes, SavedFilters
 /// </summary>
 public interface IOwnedEntity
 {
+    /// <summary>
+    /// Entity's primary key.
+    /// </summary>
     Guid Id { get; }
+
+    /// <summary>
+    /// Owner of this entity.
+    /// </summary>
     Guid OwnerId { get; }
 }
