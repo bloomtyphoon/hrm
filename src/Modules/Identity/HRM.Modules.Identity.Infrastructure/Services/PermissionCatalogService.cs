@@ -289,7 +289,7 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
             var constraintTypeStr = constraintElement.Attribute("type")?.Value
                 ?? throw new InvalidOperationException("Constraint type attribute is required");
 
-            if (!Enum.TryParse<ConstraintType>(constraintTypeStr, true, out var constraintType))
+            if (!Enum.TryParse<HRM.Modules.Identity.Domain.Enums.ConstraintType>(constraintTypeStr, true, out var constraintType))
             {
                 throw new InvalidOperationException($"Invalid constraint type: {constraintTypeStr}");
             }
