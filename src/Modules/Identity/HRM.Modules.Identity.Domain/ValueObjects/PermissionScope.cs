@@ -1,4 +1,4 @@
-using HRM.Modules.Identity.Domain.Enums;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 
 namespace HRM.Modules.Identity.Domain.ValueObjects;
 
@@ -10,10 +10,10 @@ namespace HRM.Modules.Identity.Domain.ValueObjects;
 public sealed class PermissionScope
 {
     /// <summary>
-    /// Scope level (Company, Department, Position, Employee/Self)
-    /// Maps to ScopeLevel enum from BuildingBlocks
+    /// Scope level (Company, Department, Position, Self)
+    /// Uses DataScopeLevel from BuildingBlocks (shared contract)
     /// </summary>
-    public ScopeLevel Value { get; private set; }
+    public DataScopeLevel Value { get; private set; }
 
     /// <summary>
     /// Display name for UI (e.g., "Toàn công ty", "Cùng phòng ban")
@@ -44,7 +44,7 @@ public sealed class PermissionScope
     /// <param name="value">Scope level</param>
     /// <param name="displayName">Display name for UI</param>
     /// <param name="isReadOnly">Whether this scope is read-only</param>
-    public PermissionScope(ScopeLevel value, string displayName, bool isReadOnly = false)
+    public PermissionScope(DataScopeLevel value, string displayName, bool isReadOnly = false)
     {
         Value = value;
         DisplayName = displayName;
@@ -56,7 +56,7 @@ public sealed class PermissionScope
     /// </summary>
     public static PermissionScope Global(string displayName = "Toàn hệ thống", bool isReadOnly = false)
     {
-        return new PermissionScope(ScopeLevel.Global, displayName, isReadOnly);
+        return new PermissionScope(DataScopeLevel.Global, displayName, isReadOnly);
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public sealed class PermissionScope
     /// </summary>
     public static PermissionScope Company(string displayName = "Toàn công ty", bool isReadOnly = false)
     {
-        return new PermissionScope(ScopeLevel.Company, displayName, isReadOnly);
+        return new PermissionScope(DataScopeLevel.Company, displayName, isReadOnly);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ public sealed class PermissionScope
     /// </summary>
     public static PermissionScope Department(string displayName = "Cùng phòng ban", bool isReadOnly = false)
     {
-        return new PermissionScope(ScopeLevel.Department, displayName, isReadOnly);
+        return new PermissionScope(DataScopeLevel.Department, displayName, isReadOnly);
     }
 
     /// <summary>
@@ -80,14 +80,14 @@ public sealed class PermissionScope
     /// </summary>
     public static PermissionScope Position(string displayName = "Cùng chức danh", bool isReadOnly = false)
     {
-        return new PermissionScope(ScopeLevel.Position, displayName, isReadOnly);
+        return new PermissionScope(DataScopeLevel.Position, displayName, isReadOnly);
     }
 
     /// <summary>
-    /// Factory method: Employee/Self scope
+    /// Factory method: Self scope
     /// </summary>
     public static PermissionScope Self(string displayName = "Chỉ bản thân", bool isReadOnly = false)
     {
-        return new PermissionScope(ScopeLevel.Employee, displayName, isReadOnly);
+        return new PermissionScope(DataScopeLevel.Self, displayName, isReadOnly);
     }
 }

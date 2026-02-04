@@ -1,4 +1,4 @@
-using HRM.Modules.Identity.Domain.Enums;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 
 namespace HRM.Modules.Identity.Domain.ValueObjects;
 
@@ -51,7 +51,7 @@ public sealed record RolePermission
     /// - Position: Team members with same position
     /// - Self: Only own data
     /// </summary>
-    public ScopeLevel? Scope { get; }
+    public DataScopeLevel? Scope { get; }
 
     /// <summary>
     /// Full permission identifier in format "Module.Entity.Action"
@@ -64,7 +64,7 @@ public sealed record RolePermission
     /// Private constructor for creating RolePermission instances
     /// Use static factory methods for validation
     /// </summary>
-    private RolePermission(string module, string entity, string action, ScopeLevel? scope)
+    private RolePermission(string module, string entity, string action, DataScopeLevel? scope)
     {
         Module = module;
         Entity = entity;
@@ -89,7 +89,7 @@ public sealed record RolePermission
     /// <param name="scope">Optional scope level</param>
     /// <returns>Valid RolePermission instance</returns>
     /// <exception cref="ArgumentException">If module, entity, or action is null/empty</exception>
-    public static RolePermission Create(string module, string entity, string action, ScopeLevel? scope = null)
+    public static RolePermission Create(string module, string entity, string action, DataScopeLevel? scope = null)
     {
         if (string.IsNullOrWhiteSpace(module))
             throw new ArgumentException("Module cannot be null or empty", nameof(module));
@@ -113,10 +113,13 @@ public sealed record RolePermission
     /// </summary>
     public string GetScopeDisplay() => Scope switch
     {
-        ScopeLevel.Company => "Company",
-        ScopeLevel.Department => "Department",
-        ScopeLevel.Position => "Position",
-        ScopeLevel.Employee => "Self",
+        DataScopeLevel.Global => "Global",
+        DataScopeLevel.Company => "Company",
+        DataScopeLevel.Department => "Department",
+        DataScopeLevel.Position => "Position",
+        DataScopeLevel.EmployeeSet => "Team",
+        DataScopeLevel.Self => "Self",
+        DataScopeLevel.None => "No Access",
         null => "No Scope",
         _ => "Unknown"
     };

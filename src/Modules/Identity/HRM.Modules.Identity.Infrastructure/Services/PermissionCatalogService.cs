@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
-using HRM.Modules.Identity.Domain.Enums;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
 using Microsoft.Extensions.Caching.Memory;
@@ -261,13 +261,13 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
             var readOnlyStr = scopeElement.Attribute("readOnly")?.Value;
             var readOnly = bool.TryParse(readOnlyStr, out var readOnlyValue) && readOnlyValue;
 
-            ScopeLevel scopeLevel = scopeValue switch
+            DataScopeLevel scopeLevel = scopeValue switch
             {
-                "Global" => ScopeLevel.Global,
-                "Company" => ScopeLevel.Company,
-                "Department" => ScopeLevel.Department,
-                "Position" => ScopeLevel.Position,
-                "Self" => ScopeLevel.Employee,
+                "Global" => DataScopeLevel.Global,
+                "Company" => DataScopeLevel.Company,
+                "Department" => DataScopeLevel.Department,
+                "Position" => DataScopeLevel.Position,
+                "Self" => DataScopeLevel.Self,
                 _ => throw new InvalidOperationException($"Invalid scope value: {scopeValue}")
             };
 

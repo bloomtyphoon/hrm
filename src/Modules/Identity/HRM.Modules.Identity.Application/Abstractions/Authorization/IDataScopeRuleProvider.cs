@@ -1,5 +1,4 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
-using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Application.Abstractions.Authorization;
 
@@ -16,9 +15,10 @@ public sealed record DataScopeContext
     public required Guid UserId { get; init; }
 
     /// <summary>
-    /// User's scope level for the current permission
+    /// User's scope level for the current permission.
+    /// Uses DataScopeLevel from BuildingBlocks (shared contract).
     /// </summary>
-    public required ScopeLevel ScopeLevel { get; init; }
+    public required DataScopeLevel ScopeLevel { get; init; }
 
     /// <summary>
     /// Current permission being checked (e.g., "Personnel.Employee.View")
@@ -44,7 +44,7 @@ public sealed record DataScopeContext
 ///
 /// Other modules receive DataScopeRule (a shared contract in BuildingBlocks.Domain)
 /// and translate it to EF expressions or SQL WHERE clauses.
-/// They never reference ScopeLevel or DataScopeContext directly.
+/// They never reference DataScopeContext directly.
 /// </summary>
 public interface IDataScopeRuleProvider
 {
