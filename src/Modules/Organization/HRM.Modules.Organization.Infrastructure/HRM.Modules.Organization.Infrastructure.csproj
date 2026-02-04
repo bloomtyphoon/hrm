@@ -11,11 +11,10 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
 
-    <!-- Dapper for raw queries -->
-    <PackageReference Include="Dapper" Version="2.1.35" />
-
     <!-- MediatR -->
     <PackageReference Include="MediatR" Version="14.0.0" />
+
+    <!-- Dapper inherited from BuildingBlocks.Infrastructure -->
   </ItemGroup>
 
   <ItemGroup>
