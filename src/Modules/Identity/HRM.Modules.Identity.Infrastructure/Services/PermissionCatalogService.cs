@@ -263,11 +263,13 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
 
             DataScopeLevel scopeLevel = scopeValue switch
             {
-                "Global" => DataScopeLevel.Global,
-                "Company" => DataScopeLevel.Company,
-                "Department" => DataScopeLevel.Department,
-                "Position" => DataScopeLevel.Position,
+                "None" => DataScopeLevel.None,
                 "Self" => DataScopeLevel.Self,
+                "EmployeeSet" => DataScopeLevel.EmployeeSet,
+                "Position" => DataScopeLevel.Position,
+                "Department" => DataScopeLevel.Department,
+                "Company" => DataScopeLevel.Company,
+                "Global" => DataScopeLevel.Global,
                 _ => throw new InvalidOperationException($"Invalid scope value: {scopeValue}")
             };
 
