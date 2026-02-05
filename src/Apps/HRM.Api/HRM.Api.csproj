@@ -16,6 +16,11 @@
     <ProjectReference Include="..\..\Modules\Identity\HRM.Modules.Identity.Api\HRM.Modules.Identity.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\HRM.Modules.Identity.Application\HRM.Modules.Identity.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\HRM.Modules.Identity.Infrastructure\HRM.Modules.Identity.Infrastructure.csproj" />
+
+    <!-- Organization Module -->
+    <ProjectReference Include="..\..\Modules\Organization\HRM.Modules.Organization.Api\HRM.Modules.Organization.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Organization\HRM.Modules.Organization.Application\HRM.Modules.Organization.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Organization\HRM.Modules.Organization.Infrastructure\HRM.Modules.Organization.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

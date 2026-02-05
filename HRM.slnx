@@ -25,6 +25,7 @@
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.IntegrationEvents/HRM.Modules.Organization.IntegrationEvents.csproj" Id="a1b2c3d4-0002-4000-8000-000000000002" />
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.Application/HRM.Modules.Organization.Application.csproj" Id="a1b2c3d4-0003-4000-8000-000000000003" />
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.Infrastructure/HRM.Modules.Organization.Infrastructure.csproj" Id="a1b2c3d4-0004-4000-8000-000000000004" />
+    <Project Path="src/Modules/Organization/HRM.Modules.Organization.Api/HRM.Modules.Organization.Api.csproj" Id="a1b2c3d4-0005-4000-8000-000000000005" />
   </Folder>
   <Folder Name="/src/Modules/Personnel/">
     <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Domain/HRM.Modules.Personnel.Domain.csproj" Id="b1b2c3d4-0001-4000-8000-000000000001" />

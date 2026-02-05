@@ -28,6 +28,16 @@ public interface IApiClient
         int pageSize = 20,
         CancellationToken cancellationToken = default);
 
+    // Company operations
+    Task<ApiResponse<CompanyResponse>> CreateCompanyAsync(
+        CreateCompanyRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<IReadOnlyList<CompanyResponse>>> GetCompaniesAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<CompanyResponse>> GetCompanyByIdAsync(
+        Guid id,
     Task<ApiResponse<AccountResponse>> ActivateAccountAsync(
         Guid accountId,
         CancellationToken cancellationToken = default);
@@ -626,6 +636,10 @@ public sealed class ApiClient : IApiClient
     }
 
     /// <summary>
+    /// Create a new company via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<CompanyResponse>> CreateCompanyAsync(
+        CreateCompanyRequest request,
     /// Revoke all sessions except current via HRM.Api
     /// </summary>
     public async Task<ApiResponse<RevokeAllSessionsResult>> RevokeAllSessionsExceptCurrentAsync(
@@ -635,6 +649,16 @@ public sealed class ApiClient : IApiClient
         {
             var httpClient = _httpClientFactory.CreateClient("HRM.Api");
 
+            var apiRequest = new
+            {
+                request.Code,
+                request.Name,
+                request.TaxId
+            };
+
+            var response = await httpClient.PostAsJsonAsync(
+                "/api/organization/companies",
+                apiRequest,
             var response = await httpClient.PostAsync(
                 "/api/identity/auth/sessions/revoke-all-except-current",
                 null,
@@ -642,6 +666,12 @@ public sealed class ApiClient : IApiClient
 
             if (response.IsSuccessStatusCode)
             {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                var data = await response.Content.ReadFromJsonAsync<CompanyResponse>(jsonOptions, cancellationToken);
+                return new ApiResponse<CompanyResponse>
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var data = await response.Content.ReadFromJsonAsync<RevokeAllSessionsResult>(jsonOptions, cancellationToken);
                 return new ApiResponse<RevokeAllSessionsResult>
@@ -655,6 +685,17 @@ public sealed class ApiClient : IApiClient
 
             try
             {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<CompanyResponse>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to create company",
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
                 return new ApiResponse<RevokeAllSessionsResult>
@@ -667,6 +708,8 @@ public sealed class ApiClient : IApiClient
             }
             catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
+                return new ApiResponse<CompanyResponse>
                 _logger.LogWarning(ex, "Failed to deserialize error response: {ErrorContent}", errorContent);
                 return new ApiResponse<RevokeAllSessionsResult>
                 {
@@ -678,6 +721,8 @@ public sealed class ApiClient : IApiClient
         }
         catch (HttpRequestException ex)
         {
+            _logger.LogError(ex, "Network error while calling HRM.Api");
+            return new ApiResponse<CompanyResponse>
             _logger.LogError(ex, "Network error while revoking all sessions");
             return new ApiResponse<RevokeAllSessionsResult>
             {
@@ -688,6 +733,8 @@ public sealed class ApiClient : IApiClient
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error while calling HRM.Api");
+            return new ApiResponse<CompanyResponse>
             _logger.LogError(ex, "Unexpected error while revoking all sessions");
             return new ApiResponse<RevokeAllSessionsResult>
             {
@@ -699,6 +746,9 @@ public sealed class ApiClient : IApiClient
     }
 
     /// <summary>
+    /// Get all companies via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<IReadOnlyList<CompanyResponse>>> GetCompaniesAsync(
     /// Refresh access token using a valid refresh token via HRM.Api.
     /// Uses a dedicated HttpClient without AuthTokenHandler to avoid recursion.
     /// </summary>
@@ -708,6 +758,96 @@ public sealed class ApiClient : IApiClient
     {
         try
         {
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var response = await httpClient.GetAsync("/api/organization/companies", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                var data = await response.Content.ReadFromJsonAsync<List<CompanyResponse>>(jsonOptions, cancellationToken);
+                return new ApiResponse<IReadOnlyList<CompanyResponse>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? []
+                };
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<IReadOnlyList<CompanyResponse>>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve companies",
+                    ValidationErrors = apiError?.GetValidationErrors()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
+                return new ApiResponse<IReadOnlyList<CompanyResponse>>
+                {
+                    IsSuccess = false,
+                    ErrorCode = "ApiError",
+                    ErrorMessage = $"Server returned {(int)response.StatusCode}: {errorContent}"
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error while calling HRM.Api");
+            return new ApiResponse<IReadOnlyList<CompanyResponse>>
+            {
+                IsSuccess = false,
+                ErrorCode = "NetworkError",
+                ErrorMessage = "Failed to connect to API server. Please try again later."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while calling HRM.Api");
+            return new ApiResponse<IReadOnlyList<CompanyResponse>>
+            {
+                IsSuccess = false,
+                ErrorCode = "UnexpectedError",
+                ErrorMessage = "An unexpected error occurred. Please contact support."
+            };
+        }
+    }
+
+    /// <summary>
+    /// Get company by ID via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<CompanyResponse>> GetCompanyByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var response = await httpClient.GetAsync($"/api/organization/companies/{id}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                var data = await response.Content.ReadFromJsonAsync<CompanyResponse>(jsonOptions, cancellationToken);
+                return new ApiResponse<CompanyResponse>
             // Use the named HttpClient (which goes through AuthTokenHandler),
             // but the refresh endpoint doesn't require a valid access token — it validates the refresh token.
             var httpClient = _httpClientFactory.CreateClient("HRM.Api");
@@ -731,6 +871,42 @@ public sealed class ApiClient : IApiClient
             }
 
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<CompanyResponse>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve company",
+                    ValidationErrors = apiError?.GetValidationErrors()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
+                return new ApiResponse<CompanyResponse>
+                {
+                    IsSuccess = false,
+                    ErrorCode = "ApiError",
+                    ErrorMessage = $"Server returned {(int)response.StatusCode}: {errorContent}"
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error while calling HRM.Api");
+            return new ApiResponse<CompanyResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "NetworkError",
+                ErrorMessage = "Failed to connect to API server. Please try again later."
             _logger.LogWarning("Token refresh failed with status {StatusCode}: {ErrorContent}",
                 (int)response.StatusCode, errorContent);
 
@@ -743,6 +919,12 @@ public sealed class ApiClient : IApiClient
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error while calling HRM.Api");
+            return new ApiResponse<CompanyResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "UnexpectedError",
+                ErrorMessage = "An unexpected error occurred. Please contact support."
             _logger.LogError(ex, "Error during token refresh");
             return new ApiResponse<LoginResponse>
             {
