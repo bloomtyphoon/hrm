@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 
 namespace HRM.Modules.Identity.Infrastructure.Authentication;
