@@ -1,6 +1,6 @@
-using HRM.Modules.Organization.Domain.Entities;
+using HRM.Modules.Personnel.Domain.Entities;
 
-namespace HRM.Modules.Organization.Application.Abstractions;
+namespace HRM.Modules.Personnel.Application.Abstractions;
 
 /// <summary>
 /// Repository interface for Employee aggregate.

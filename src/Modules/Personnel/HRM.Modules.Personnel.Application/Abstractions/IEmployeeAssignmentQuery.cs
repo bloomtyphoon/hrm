@@ -1,4 +1,4 @@
-namespace HRM.Modules.Organization.Application.Abstractions;
+namespace HRM.Modules.Personnel.Application.Abstractions;
 
 /// <summary>
 /// Query interface for employee assignments.

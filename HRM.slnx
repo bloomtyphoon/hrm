@@ -26,6 +26,12 @@
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.Application/HRM.Modules.Organization.Application.csproj" Id="a1b2c3d4-0003-4000-8000-000000000003" />
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.Infrastructure/HRM.Modules.Organization.Infrastructure.csproj" Id="a1b2c3d4-0004-4000-8000-000000000004" />
   </Folder>
+  <Folder Name="/src/Modules/Personnel/">
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Domain/HRM.Modules.Personnel.Domain.csproj" Id="b1b2c3d4-0001-4000-8000-000000000001" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.IntegrationEvents/HRM.Modules.Personnel.IntegrationEvents.csproj" Id="b1b2c3d4-0002-4000-8000-000000000002" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Application/HRM.Modules.Personnel.Application.csproj" Id="b1b2c3d4-0003-4000-8000-000000000003" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Infrastructure/HRM.Modules.Personnel.Infrastructure.csproj" Id="b1b2c3d4-0004-4000-8000-000000000004" />
+  </Folder>
   <Folder Name="/src/Database/" />
   <Folder Name="/src/Database/Identity/">
     <File Path="src/Database/Identity/001_CreateAccountsTable.sql" />

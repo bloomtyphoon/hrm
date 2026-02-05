@@ -1,7 +1,7 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
 
-namespace HRM.Modules.Organization.Domain.Entities;
+namespace HRM.Modules.Personnel.Domain.Entities;
 
 /// <summary>
 /// Employee assignment - a position held by an employee in a department/company.
@@ -9,6 +9,11 @@ namespace HRM.Modules.Organization.Domain.Entities;
 /// IMPORTANT: This is NOT an aggregate root.
 /// It's a child entity of the Employee aggregate.
 /// All changes must go through the Employee aggregate root.
+///
+/// DESIGN: CompanyId, DepartmentId, PositionId are WEAK REFERENCES:
+/// - Store as Guid only (no FK constraint to Organization module)
+/// - Personnel does NOT depend on Organization.Domain
+/// - Validate via IOrganizationQuery if needed
 ///
 /// An employee can have multiple assignments:
 /// - Multiple concurrent positions (e.g., regional manager + project lead)
@@ -29,19 +34,19 @@ public class EmployeeAssignment : Entity, IScopedEntity
     public Guid EmployeeId { get; private set; }
 
     /// <summary>
-    /// Company of this assignment.
+    /// Company ID (weak reference to Organization.Company).
     /// </summary>
     [ScopeDimension(DataScopeLevel.Company)]
     public Guid CompanyId { get; private set; }
 
     /// <summary>
-    /// Department of this assignment.
+    /// Department ID (weak reference to Organization.Department).
     /// </summary>
     [ScopeDimension(DataScopeLevel.Department)]
     public Guid DepartmentId { get; private set; }
 
     /// <summary>
-    /// Position of this assignment.
+    /// Position ID (weak reference to Organization.Position).
     /// </summary>
     [ScopeDimension(DataScopeLevel.Position)]
     public Guid PositionId { get; private set; }
@@ -77,11 +82,11 @@ public class EmployeeAssignment : Entity, IScopedEntity
     /// </summary>
     public Guid OwnerId => EmployeeId;
 
-    // Navigation properties
+    // Navigation properties (within Personnel module only)
     public virtual Employee? Employee { get; private set; }
-    public virtual Company? Company { get; private set; }
-    public virtual Department? Department { get; private set; }
-    public virtual Position? Position { get; private set; }
+
+    // Note: No navigation to Organization entities (Company, Department, Position)
+    // Use IOrganizationQuery to fetch org data if needed
 
     // EF Core constructor
     private EmployeeAssignment() { }
