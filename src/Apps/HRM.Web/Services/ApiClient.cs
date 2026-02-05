@@ -41,6 +41,10 @@ public interface IApiClient
 
     Task<ApiResponse<RevokeAllSessionsResult>> RevokeAllSessionsExceptCurrentAsync(
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<LoginResponse>> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ApiClient : IApiClient
@@ -690,6 +694,61 @@ public sealed class ApiClient : IApiClient
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",
                 ErrorMessage = "An unexpected error occurred. Please contact support."
+            };
+        }
+    }
+
+    /// <summary>
+    /// Refresh access token using a valid refresh token via HRM.Api.
+    /// Uses a dedicated HttpClient without AuthTokenHandler to avoid recursion.
+    /// </summary>
+    public async Task<ApiResponse<LoginResponse>> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Use the named HttpClient (which goes through AuthTokenHandler),
+            // but the refresh endpoint doesn't require a valid access token — it validates the refresh token.
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var payload = new { refreshToken };
+
+            var response = await httpClient.PostAsJsonAsync(
+                "/api/identity/auth/refresh",
+                payload,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var data = await response.Content.ReadFromJsonAsync<LoginResponse>(jsonOptions, cancellationToken);
+                return new ApiResponse<LoginResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning("Token refresh failed with status {StatusCode}: {ErrorContent}",
+                (int)response.StatusCode, errorContent);
+
+            return new ApiResponse<LoginResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "RefreshFailed",
+                ErrorMessage = "Session expired. Please login again."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during token refresh");
+            return new ApiResponse<LoginResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "RefreshError",
+                ErrorMessage = "Failed to refresh session."
             };
         }
     }
