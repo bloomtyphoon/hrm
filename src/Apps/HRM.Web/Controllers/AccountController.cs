@@ -147,8 +147,7 @@ public class AccountController : Controller
         if (response.IsSuccess && response.Data != null)
         {
             TempData["SuccessMessage"] = $"Account '{response.Data.Username}' registered successfully!";
-            TempData["AccountId"] = response.Data.Id;
-            return RedirectToAction(nameof(RegisterSuccess));
+            return RedirectToAction(nameof(Detail), new { id = response.Data.Id });
         }
 
         if (response.ValidationErrors != null)
@@ -167,23 +166,6 @@ public class AccountController : Controller
         }
 
         return View(model);
-    }
-
-    /// <summary>
-    /// GET: /Account/RegisterSuccess
-    /// Display registration success page.
-    /// </summary>
-    [HttpGet]
-    public IActionResult RegisterSuccess()
-    {
-        if (TempData["SuccessMessage"] == null)
-        {
-            return RedirectToAction(nameof(Register));
-        }
-
-        ViewBag.SuccessMessage = TempData["SuccessMessage"];
-        ViewBag.AccountId = TempData["AccountId"];
-        return View();
     }
 
     /// <summary>
