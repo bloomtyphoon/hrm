@@ -1,4 +1,5 @@
 using Dapper;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Domain.Enums;
@@ -65,9 +66,9 @@ public sealed class DataScopingService : IDataScopingService
         }
 
         // ScopeLevel removed from ICurrentUserService (not an Identity concern).
-        // This deprecated service defaults to Employee scope.
+        // This deprecated service defaults to Self scope.
         // Use IDataScopeService + DataScopeRuleProvider instead.
-        var scopeLevel = ScopeLevel.Employee;
+        var scopeLevel = DataScopeLevel.Self;
 
         var assignments = await LoadActiveAssignmentsAsync(employeeId.Value, cancellationToken);
 
@@ -104,10 +105,10 @@ public sealed class DataScopingService : IDataScopingService
 
         return scopeContext.ScopeLevel switch
         {
-            ScopeLevel.Company => BuildCompanyFilter(scopeContext, parameters),
-            ScopeLevel.Department => BuildDepartmentFilter(scopeContext, parameters),
-            ScopeLevel.Position => BuildPositionFilter(scopeContext, parameters),
-            ScopeLevel.Employee => BuildEmployeeFilter(scopeContext, parameters),
+            DataScopeLevel.Company => BuildCompanyFilter(scopeContext, parameters),
+            DataScopeLevel.Department => BuildDepartmentFilter(scopeContext, parameters),
+            DataScopeLevel.Position => BuildPositionFilter(scopeContext, parameters),
+            DataScopeLevel.Self => BuildSelfFilter(scopeContext, parameters),
             _ => throw new InvalidOperationException($"Unknown scope level: {scopeContext.ScopeLevel}")
         };
     }
@@ -127,28 +128,28 @@ public sealed class DataScopingService : IDataScopingService
             return true;
         }
 
-        if (scopeContext.ScopeLevel == ScopeLevel.Employee)
+        if (scopeContext.ScopeLevel == DataScopeLevel.Self)
         {
             return employeeId == scopeContext.UserId;
         }
 
         var sql = scopeContext.ScopeLevel switch
         {
-            ScopeLevel.Company => @"
+            DataScopeLevel.Company => @"
                 SELECT COUNT(1)
                 FROM personnel.EmployeeAssignments ea
                 WHERE ea.EmployeeId = @EmployeeId
                     AND ea.CompanyId IN @AllowedCompanyIds
                     AND (ea.EndDate IS NULL OR ea.EndDate > GETUTCDATE())",
 
-            ScopeLevel.Department => @"
+            DataScopeLevel.Department => @"
                 SELECT COUNT(1)
                 FROM personnel.EmployeeAssignments ea
                 WHERE ea.EmployeeId = @EmployeeId
                     AND ea.DepartmentId IN @AllowedDepartmentIds
                     AND (ea.EndDate IS NULL OR ea.EndDate > GETUTCDATE())",
 
-            ScopeLevel.Position => @"
+            DataScopeLevel.Position => @"
                 SELECT COUNT(1)
                 FROM personnel.EmployeeAssignments ea
                 WHERE ea.EmployeeId = @EmployeeId
@@ -224,7 +225,7 @@ public sealed class DataScopingService : IDataScopingService
         return "AND ea.PositionId IN @AllowedPositionIds";
     }
 
-    private static string BuildEmployeeFilter(DataScopeContext context, dynamic parameters)
+    private static string BuildSelfFilter(DataScopeContext context, dynamic parameters)
     {
         parameters.CurrentUserId = context.UserId;
         return "AND e.Id = @CurrentUserId";

@@ -2,7 +2,6 @@ using System.Data;
 using Dapper;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authorization;
-using HRM.Modules.Identity.Domain.Enums;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -90,11 +89,14 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 
         return context.ScopeLevel switch
         {
-            ScopeLevel.Global => DataScopeRule.Global(),
-            ScopeLevel.Company => await BuildCompanyScopeRuleAsync(context, cancellationToken),
-            ScopeLevel.Department => await BuildDepartmentScopeRuleAsync(context, cancellationToken),
-            ScopeLevel.Position => await BuildPositionScopeRuleAsync(context, cancellationToken),
-            ScopeLevel.Employee => BuildEmployeeScopeRule(context),
+            DataScopeLevel.Global => DataScopeRule.Global(),
+            DataScopeLevel.Company => await BuildCompanyScopeRuleAsync(context, cancellationToken),
+            DataScopeLevel.Department => await BuildDepartmentScopeRuleAsync(context, cancellationToken),
+            DataScopeLevel.Position => await BuildPositionScopeRuleAsync(context, cancellationToken),
+            DataScopeLevel.EmployeeSet => throw new NotSupportedException(
+                "EmployeeSet scope must be resolved by IHierarchyScopeResolver in Organization module"),
+            DataScopeLevel.Self => BuildSelfScopeRule(context),
+            DataScopeLevel.None => DataScopeRule.None(),
             _ => DataScopeRule.None()
         };
     }
@@ -108,8 +110,9 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 
         return context.ScopeLevel switch
         {
-            ScopeLevel.Global => DataScopeRule.Global(),
-            ScopeLevel.Employee => BuildEmployeeScopeRule(context),
+            DataScopeLevel.Global => DataScopeRule.Global(),
+            DataScopeLevel.Self => BuildSelfScopeRule(context),
+            DataScopeLevel.None => DataScopeRule.None(),
             _ => DataScopeRule.None()
         };
     }
@@ -207,10 +210,10 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
         return DataScopeRule.Position(positionIds);
     }
 
-    private DataScopeRule BuildEmployeeScopeRule(DataScopeContext context)
+    private DataScopeRule BuildSelfScopeRule(DataScopeContext context)
     {
         _logger.LogDebug(
-            "Employee scope for user {UserId}, employeeId {EmployeeId}",
+            "Self scope for user {UserId}, employeeId {EmployeeId}",
             context.UserId, context.EmployeeId);
 
         if (!context.EmployeeId.HasValue)

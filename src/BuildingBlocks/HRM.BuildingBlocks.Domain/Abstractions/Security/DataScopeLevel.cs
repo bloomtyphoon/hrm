@@ -1,16 +1,19 @@
 namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 
 /// <summary>
-/// Hierarchy of data scope levels, from narrowest to widest.
-/// Encodes the organizational dimension used for data filtering.
+/// Data scope levels for filtering.
 ///
-/// Ordering: None(0) &lt; Self(1) &lt; Position(2) &lt; Department(3) &lt; Company(4) &lt; Global(5)
+/// Two categories:
+/// 1. Dimension-based: Company, Department, Position (static org structure)
+/// 2. Set-based: Self, EmployeeSet (dynamic, resolved at runtime)
 ///
-/// The integer ordering enables semantic comparisons:
-///   if (rule.Level >= DataScopeLevel.Department) — user sees department-level or wider
+/// Ordering (narrowest to widest):
+///   None(0) &lt; Self(1) &lt; EmployeeSet(2) &lt; Position(3) &lt; Department(4) &lt; Company(5) &lt; Global(6)
 ///
-/// IMPORTANT: Comparison is for semantic checks only, NOT for filter building.
-/// Filter building must switch on the exact Level to select the correct dimension.
+/// IMPORTANT:
+/// - Dimension-based levels filter by property with [ScopeDimension] attribute
+/// - Set-based levels filter by OwnerId IN (resolved IDs)
+/// - EmployeeSet is for hierarchical scope (manager → subordinates)
 /// </summary>
 public enum DataScopeLevel
 {
@@ -21,31 +24,42 @@ public enum DataScopeLevel
 
     /// <summary>
     /// Self scope — user sees only their own data.
-    /// Filter dimension: EmployeeId (via SelfEmployeeId).
+    /// Filter: OwnerId == SelfEmployeeId
     /// </summary>
     Self = 1,
 
     /// <summary>
-    /// Position scope — user sees data for specific positions.
-    /// Filter dimension: PositionId (via DimensionIds).
+    /// Employee set scope — user sees data for a custom resolved set of employees.
+    /// Used for hierarchical scope (manager sees subordinates' data).
+    ///
+    /// Filter: OwnerId IN (EmployeeIds)
+    ///
+    /// The Organization module resolves the employee set via IHierarchyScopeResolver.
+    /// BB does NOT know how the set is resolved (graph traversal, etc.)
     /// </summary>
-    Position = 2,
+    EmployeeSet = 2,
+
+    /// <summary>
+    /// Position scope — user sees data for specific positions.
+    /// Filter: [ScopeDimension(Position)] property IN (DimensionIds)
+    /// </summary>
+    Position = 3,
 
     /// <summary>
     /// Department scope — user sees data for specific departments.
-    /// Filter dimension: DepartmentId (via DimensionIds).
+    /// Filter: [ScopeDimension(Department)] property IN (DimensionIds)
     /// </summary>
-    Department = 3,
+    Department = 4,
 
     /// <summary>
     /// Company scope — user sees data for specific companies.
-    /// Filter dimension: CompanyId (via DimensionIds).
+    /// Filter: [ScopeDimension(Company)] property IN (DimensionIds)
     /// </summary>
-    Company = 4,
+    Company = 5,
 
     /// <summary>
     /// Global scope — no filtering. User sees all data.
     /// Typically for super admin or system accounts.
     /// </summary>
-    Global = 5
+    Global = 6
 }
