@@ -3,6 +3,9 @@ using HRM.BuildingBlocks.Infrastructure.DependencyInjection;
 using HRM.Modules.Identity.Api.DependencyInjection;
 using HRM.Modules.Identity.Application.DependencyInjection;
 using HRM.Modules.Identity.Infrastructure.DependencyInjection;
+using HRM.Modules.Organization.Api.DependencyInjection;
+using HRM.Modules.Organization.Application.DependencyInjection;
+using HRM.Modules.Organization.Infrastructure;
 
 namespace HRM.Api.DependencyInjection;
 
@@ -79,12 +82,20 @@ public static class ModuleExtensions
         // - Background services (IdentityOutboxProcessor)
         services.AddIdentityInfrastructure(configuration);
 
+        // 5. Organization Module Application Layer
+        // Register module-specific handlers and validators
+        // - Command handlers (CreateCompanyCommandHandler, etc.)
+        services.AddOrganizationApplication();
+
+        // 6. Organization Module Infrastructure Layer
+        // Register module-specific technical implementations
+        // - OrganizationDbContext (SQL Server, schema: Organization)
+        // - Repositories (ICompanyRepository → CompanyRepository)
+        services.AddOrganizationModule(configuration);
+
         // Future modules (same pattern):
         // services.AddPersonnelApplication();
         // services.AddPersonnelInfrastructure(configuration);
-        //
-        // services.AddPayrollApplication();
-        // services.AddPayrollInfrastructure(configuration);
 
         return services;
     }
@@ -100,6 +111,12 @@ public static class ModuleExtensions
         // - POST /api/identity/operators/register
         // - POST /api/identity/operators/{id}/activate
         app.MapIdentityEndpoints();
+
+        // Map Organization module endpoints
+        // - POST /api/organization/companies
+        // - GET /api/organization/companies
+        // - GET /api/organization/companies/{id}
+        app.MapOrganizationEndpoints();
 
         // Future module endpoints:
         // app.MapPersonnelEndpoints();
