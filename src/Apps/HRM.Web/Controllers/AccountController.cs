@@ -6,8 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HRM.Web.Controllers;
 
 /// <summary>
-/// Controller for account management.
-/// Handles account registration and related operations.
+/// Controller for account management and session management.
 /// </summary>
 [Authorize]
 public class AccountController : Controller
@@ -66,6 +65,56 @@ public class AccountController : Controller
         }
 
         return View(viewModel);
+    }
+
+    /// <summary>
+    /// GET: /Account/Detail/{id}
+    /// Display account detail page.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Detail(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        // Fetch account from list (no dedicated get-by-id endpoint)
+        var response = await _apiClient.GetAccountsAsync(
+            cancellationToken: cancellationToken);
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            var account = response.Data.Items.FirstOrDefault(a => a.Id == id);
+            if (account != null)
+            {
+                return View(account);
+            }
+        }
+
+        TempData["ErrorMessage"] = "Account not found.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// POST: /Account/Activate/{id}
+    /// Activate a pending account.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Activate(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _apiClient.ActivateAccountAsync(id, cancellationToken);
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            TempData["SuccessMessage"] = $"Account '{response.Data.Username}' has been activated.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to activate account.";
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     /// <summary>
@@ -135,5 +184,77 @@ public class AccountController : Controller
         ViewBag.SuccessMessage = TempData["SuccessMessage"];
         ViewBag.AccountId = TempData["AccountId"];
         return View();
+    }
+
+    /// <summary>
+    /// GET: /Account/Sessions
+    /// Display active sessions for current user.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Sessions(
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _apiClient.GetActiveSessionsAsync(cancellationToken);
+
+        var viewModel = new SessionListViewModel();
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            viewModel.Sessions = response.Data;
+        }
+        else
+        {
+            _logger.LogError("Failed to get sessions: {ErrorMessage}", response.ErrorMessage);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to load sessions.";
+        }
+
+        return View(viewModel);
+    }
+
+    /// <summary>
+    /// POST: /Account/RevokeSession/{sessionId}
+    /// Revoke a specific session (logout from specific device).
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeSession(
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _apiClient.RevokeSessionAsync(sessionId, cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Session has been revoked.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to revoke session.";
+        }
+
+        return RedirectToAction(nameof(Sessions));
+    }
+
+    /// <summary>
+    /// POST: /Account/RevokeAllSessions
+    /// Revoke all sessions except current.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeAllSessions(
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _apiClient.RevokeAllSessionsExceptCurrentAsync(cancellationToken);
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            TempData["SuccessMessage"] = response.Data.Message;
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to revoke sessions.";
+        }
+
+        return RedirectToAction(nameof(Sessions));
     }
 }
