@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRM.Modules.Identity.Infrastructure.Persistence;
 
 /// <summary>
-/// DbContext for Identity module
+/// DbContext for Identity module.
 /// Inherits from ModuleDbContext for:
 /// - Unit of Work pattern
 /// - Domain event dispatching
@@ -16,38 +16,12 @@ namespace HRM.Modules.Identity.Infrastructure.Persistence;
 /// - Audit trail (CreatedAtUtc, ModifiedAtUtc, CreatedById, ModifiedById)
 /// - Outbox pattern (OutboxMessages table)
 ///
-/// Implements IIdentityQueryContext for:
-/// - Dependency Inversion (Application layer depends on abstraction)
-/// - Query handlers can access DbSets without referencing Infrastructure
-///
 /// Tables:
-/// - Identity.Accounts: Unified authentication accounts (primary login entity)
-/// - Identity.Operators: Legacy operator accounts (being replaced by Account)
+/// - Identity.Accounts: Unified authentication accounts (System + Employee)
+/// - Identity.RefreshTokens: Session management tokens
 /// - Identity.OutboxMessages: Integration events for reliable publishing
 ///
-/// Schema Separation:
-/// - Schema: "Identity" (isolates from other modules)
-/// - Same database: HrmDb (shared with Personnel, Payroll, etc.)
-/// - Connection string: "HrmDb" from appsettings.json
-///
-/// Configuration:
-/// - Entity configurations via IEntityTypeConfiguration
-/// - Applied from assembly (OperatorConfiguration, etc.)
-/// - Conventions: Snake_case column names, UTC datetime columns
-///
-/// Migrations:
-/// - NOT USED (user requested database scripts instead)
-/// - See: src/Database/Identity/*.sql
-///
-/// Performance:
-/// - Indexes defined in entity configurations
-/// - Query filters cached (executed once per model)
-/// - Connection pooling enabled by default
-///
-/// Module Name:
-/// - MUST override ModuleName property
-/// - Used for distributed locking in OutboxProcessor
-/// - Format: "Identity" (matches schema name)
+/// Schema: "Identity" (shared database with other modules)
 /// </summary>
 public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
 {
@@ -59,22 +33,14 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
     }
 
     /// <summary>
-    /// Module name for distributed locking
-    /// CRITICAL: Must be unique across all modules
-    /// Used by OutboxProcessor for SQL Server application locks
+    /// Module name for distributed locking.
     /// </summary>
     public override string ModuleName => "Identity";
 
     /// <summary>
     /// Accounts table — unified authentication entity (System + Employee).
-    /// Primary entity for login flow.
     /// </summary>
     public DbSet<Account> Accounts => Set<Account>();
-
-    /// <summary>
-    /// Operators table (LEGACY — being replaced by Account).
-    /// </summary>
-    public DbSet<Operator> Operators => Set<Operator>();
 
     /// <summary>
     /// Refresh tokens table for session management.
@@ -82,19 +48,14 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     /// <summary>
-    /// Configure entity mappings
-    /// Applies all IEntityTypeConfiguration from current assembly
+    /// Configure entity mappings.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Apply base configuration (soft delete filters, outbox, etc.)
         base.OnModelCreating(modelBuilder);
 
-        // Set default schema for Identity module
         modelBuilder.HasDefaultSchema("Identity");
 
-        // Apply entity configurations from assembly
-        // Automatically discovers: OperatorConfiguration, etc.
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }

@@ -36,75 +36,75 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 /// 
 /// Example Implementation:
 /// <code>
-/// public sealed class DeleteOperatorCommandHandler 
-///     : ICommandHandler&lt;DeleteOperatorCommand&gt;
+/// public sealed class DeleteAccountCommandHandler
+///     : ICommandHandler&lt;DeleteAccountCommand&gt;
 /// {
-///     private readonly IOperatorRepository _repository;
-///     private readonly ILogger&lt;DeleteOperatorCommandHandler&gt; _logger;
-///     
-///     public DeleteOperatorCommandHandler(
-///         IOperatorRepository repository,
-///         ILogger&lt;DeleteOperatorCommandHandler&gt; logger)
+///     private readonly IAccountRepository _repository;
+///     private readonly ILogger&lt;DeleteAccountCommandHandler&gt; _logger;
+///
+///     public DeleteAccountCommandHandler(
+///         IAccountRepository repository,
+///         ILogger&lt;DeleteAccountCommandHandler&gt; logger)
 ///     {
 ///         _repository = repository;
 ///         _logger = logger;
 ///     }
-///     
+///
 ///     public async Task&lt;Result&gt; Handle(
-///         DeleteOperatorCommand command,
+///         DeleteAccountCommand command,
 ///         CancellationToken cancellationToken)
 ///     {
 ///         // 1. Load entity from repository
-///         var @operator = await _repository.GetByIdAsync(
-///             command.OperatorId,
+///         var account = await _repository.GetByIdAsync(
+///             command.AccountId,
 ///             cancellationToken
 ///         );
-///         
-///         if (@operator is null)
+///
+///         if (account is null)
 ///         {
 ///             _logger.LogWarning(
-///                 "Operator {OperatorId} not found for deletion",
-///                 command.OperatorId
+///                 "Account {AccountId} not found for deletion",
+///                 command.AccountId
 ///             );
-///             
+///
 ///             return Result.Failure(
 ///                 new NotFoundError(
-///                     "Operator.NotFound",
-///                     $"Operator with ID {command.OperatorId} not found"
+///                     "Account.NotFound",
+///                     $"Account with ID {command.AccountId} not found"
 ///                 )
 ///             );
 ///         }
-///         
+///
 ///         // 2. Validate business rules
-///         if (@operator.IsSystemOperator())
+///         if (account.IsSystemAccount())
 ///         {
 ///             _logger.LogWarning(
-///                 "Attempt to delete system operator {OperatorId}",
-///                 command.OperatorId
+///                 "Attempt to delete system account {AccountId}",
+///                 command.AccountId
 ///             );
-///             
+///
 ///             return Result.Failure(
 ///                 new ForbiddenError(
-///                     "Operator.CannotDeleteSystem",
-///                     "System operators cannot be deleted"
+///                     "Account.CannotDeleteSystem",
+///                     "System accounts cannot be deleted"
 ///                 )
 ///             );
 ///         }
-///         
+///
 ///         // 3. Execute domain logic
-///         // Domain event may be raised here: OperatorDeletedDomainEvent
-///         _repository.Remove(@operator);
-///         
+///         // Domain event may be raised here: AccountDeletedDomainEvent
+///         _repository.Remove(account);
+///
 ///         _logger.LogInformation(
-///             "Operator {OperatorId} marked for deletion",
-///             command.OperatorId
+///             "Account {AccountId} marked for deletion",
+///             command.AccountId
 ///         );
-///         
+///
 ///         // 4. Return success
 ///         return Result.Success();
-///         
+///
 ///         // Note: UnitOfWorkBehavior will:
-///         // - Dispatch OperatorDeletedDomainEvent
+///         // - Dispatch AccountDeletedDomainEvent
 ///         // - Commit changes to database
 ///         // - All in one transaction
 ///     }
@@ -136,17 +136,17 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 /// 
 /// Example Implementation:
 /// <code>
-/// public sealed class RegisterOperatorCommandHandler 
-///     : ICommandHandler&lt;RegisterOperatorCommand, Guid&gt;
+/// public sealed class RegisterAccountCommandHandler 
+///     : ICommandHandler&lt;RegisterAccountCommand, Guid&gt;
 /// {
-///     private readonly IOperatorRepository _repository;
+///     private readonly IAccountRepository _repository;
 ///     private readonly IPasswordHasher _passwordHasher;
-///     private readonly ILogger&lt;RegisterOperatorCommandHandler&gt; _logger;
+///     private readonly ILogger&lt;RegisterAccountCommandHandler&gt; _logger;
 ///     
-///     public RegisterOperatorCommandHandler(
-///         IOperatorRepository repository,
+///     public RegisterAccountCommandHandler(
+///         IAccountRepository repository,
 ///         IPasswordHasher passwordHasher,
-///         ILogger&lt;RegisterOperatorCommandHandler&gt; logger)
+///         ILogger&lt;RegisterAccountCommandHandler&gt; logger)
 ///     {
 ///         _repository = repository;
 ///         _passwordHasher = passwordHasher;
@@ -154,7 +154,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///     }
 ///     
 ///     public async Task&lt;Result&lt;Guid&gt;&gt; Handle(
-///         RegisterOperatorCommand command,
+///         RegisterAccountCommand command,
 ///         CancellationToken cancellationToken)
 ///     {
 ///         // 1. Check for duplicate username (business rule validation)
@@ -167,7 +167,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///             
 ///             return Result.Failure&lt;Guid&gt;(
 ///                 new ConflictError(
-///                     "Operator.DuplicateUsername",
+///                     "Account.DuplicateUsername",
 ///                     $"Username '{command.Username}' is already taken"
 ///                 )
 ///             );
@@ -183,7 +183,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///             
 ///             return Result.Failure&lt;Guid&gt;(
 ///                 new ConflictError(
-///                     "Operator.DuplicateEmail",
+///                     "Account.DuplicateEmail",
 ///                     $"Email '{command.Email}' is already registered"
 ///                 )
 ///             );
@@ -193,32 +193,32 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///         var hashedPassword = _passwordHasher.HashPassword(command.Password);
 ///         
 ///         // 4. Execute domain logic (aggregate method)
-///         var @operator = Operator.Register(
+///         var account = Account.Create(
 ///             command.Username,
 ///             command.Email,
 ///             hashedPassword
 ///         );
 ///         
-///         // Domain event raised: OperatorRegisteredDomainEvent
+///         // Domain event raised: AccountCreatedDomainEvent
 ///         // This will be handled by domain event handler which creates OutboxMessage
 ///         
 ///         // 5. Persist entity
-///         await _repository.AddAsync(@operator, cancellationToken);
-///         
+///         await _repository.AddAsync(account, cancellationToken);
+///
 ///         _logger.LogInformation(
-///             "Operator {OperatorId} registered successfully with username {Username}",
-///             @operator.Id,
+///             "Account {AccountId} registered successfully with username {Username}",
+///             account.Id,
 ///             command.Username
 ///         );
-///         
+///
 ///         // 6. Return created ID
-///         return Result.Success(@operator.Id);
-///         
+///         return Result.Success(account.Id);
+///
 ///         // Note: UnitOfWorkBehavior will:
-///         // 1. Collect domain events from @operator entity
-///         // 2. Dispatch OperatorRegisteredDomainEvent synchronously
+///         // 1. Collect domain events from account entity
+///         // 2. Dispatch AccountCreatedDomainEvent synchronously
 ///         // 3. Domain event handler creates OutboxMessage
-///         // 4. Commit both Operator and OutboxMessage atomically
+///         // 4. Commit both Account and OutboxMessage atomically
 ///         // 5. Clear domain events from entity
 ///     }
 /// }
@@ -232,7 +232,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 /// - Avoid returning full entities (use queries instead)
 /// 
 /// Integration with Domain Events:
-/// - Domain events raised in entity methods (e.g., Operator.Register)
+/// - Domain events raised in entity methods (e.g., Account.Create)
 /// - Events stored in entity's internal collection
 /// - UnitOfWork collects and dispatches events before commit
 /// - Domain event handlers create OutboxMessages

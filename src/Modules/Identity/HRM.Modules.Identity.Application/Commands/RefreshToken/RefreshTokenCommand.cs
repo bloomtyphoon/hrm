@@ -30,7 +30,7 @@ namespace HRM.Modules.Identity.Application.Commands.RefreshToken;
 /// - Refresh token must be active (not revoked, not expired)
 /// - Old token is revoked with replacement tracking
 /// - New token inherits same expiry duration
-/// - Operator must still be Active status
+/// - Account must still be Active status
 ///
 /// Flow:
 /// 1. Validate refresh token exists and is active

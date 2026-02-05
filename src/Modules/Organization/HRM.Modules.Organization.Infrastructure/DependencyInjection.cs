@@ -4,6 +4,7 @@ using HRM.Modules.Organization.Infrastructure.Persistence;
 using HRM.Modules.Organization.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using HRM.BuildingBlocks.Application.Abstractions.Organization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HRM.Modules.Organization.Infrastructure;
@@ -40,6 +41,13 @@ public static class DependencyInjection
 
         // Cross-module query interface (to be implemented)
         // services.AddScoped<IOrganizationQuery, OrganizationQuery>();
+        // Cross-module query interface (to be implemented)
+        // services.AddScoped<IOrganizationQuery, OrganizationQuery>();
+
+        // Repositories (to be implemented)
+        // services.AddScoped<ICompanyRepository, CompanyRepository>();
+        // services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+        // services.AddScoped<IPositionRepository, PositionRepository>();
 
         return services;
     }

@@ -10,8 +10,8 @@ namespace HRM.Web.Services;
 /// </summary>
 public interface IApiClient
 {
-    Task<ApiResponse<OperatorResponse>> RegisterOperatorAsync(
-        RegisterOperatorRequest request,
+    Task<ApiResponse<AccountResponse>> RegisterAccountAsync(
+        RegisterAccountRequest request,
         CancellationToken cancellationToken = default);
 
     Task<ApiResponse<LoginResponse>> LoginAsync(
@@ -21,7 +21,7 @@ public interface IApiClient
     Task<ApiResponse<object>> LogoutAsync(
         CancellationToken cancellationToken = default);
 
-    Task<ApiResponse<PagedResult<OperatorSummary>>> GetOperatorsAsync(
+    Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
         int pageNumber = 1,
@@ -38,6 +38,22 @@ public interface IApiClient
 
     Task<ApiResponse<CompanyResponse>> GetCompanyByIdAsync(
         Guid id,
+    Task<ApiResponse<AccountResponse>> ActivateAccountAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<List<SessionInfo>>> GetActiveSessionsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> RevokeSessionAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<RevokeAllSessionsResult>> RevokeAllSessionsExceptCurrentAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<LoginResponse>> RefreshTokenAsync(
+        string refreshToken,
         CancellationToken cancellationToken = default);
 }
 
@@ -57,8 +73,8 @@ public sealed class ApiClient : IApiClient
     /// <summary>
     /// Register a new operator via HRM.Api
     /// </summary>
-    public async Task<ApiResponse<OperatorResponse>> RegisterOperatorAsync(
-        RegisterOperatorRequest request,
+    public async Task<ApiResponse<AccountResponse>> RegisterAccountAsync(
+        RegisterAccountRequest request,
         CancellationToken cancellationToken = default)
     {
         try
@@ -76,14 +92,14 @@ public sealed class ApiClient : IApiClient
             };
 
             var response = await httpClient.PostAsJsonAsync(
-                "/api/identity/operators/register",
+                "/api/identity/accounts/register",
                 apiRequest,
                 cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
-                var data = await response.Content.ReadFromJsonAsync<OperatorResponse>(cancellationToken);
-                return new ApiResponse<OperatorResponse>
+                var data = await response.Content.ReadFromJsonAsync<AccountResponse>(cancellationToken);
+                return new ApiResponse<AccountResponse>
                 {
                     IsSuccess = true,
                     Data = data
@@ -102,7 +118,7 @@ public sealed class ApiClient : IApiClient
                 };
 
                 var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
-                return new ApiResponse<OperatorResponse>
+                return new ApiResponse<AccountResponse>
                 {
                     IsSuccess = false,
                     ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
@@ -115,7 +131,7 @@ public sealed class ApiClient : IApiClient
                 _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
 
                 // Fallback if not ProblemDetails format
-                return new ApiResponse<OperatorResponse>
+                return new ApiResponse<AccountResponse>
                 {
                     IsSuccess = false,
                     ErrorCode = "ApiError",
@@ -126,7 +142,7 @@ public sealed class ApiClient : IApiClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Network error while calling HRM.Api");
-            return new ApiResponse<OperatorResponse>
+            return new ApiResponse<AccountResponse>
             {
                 IsSuccess = false,
                 ErrorCode = "NetworkError",
@@ -136,7 +152,7 @@ public sealed class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while calling HRM.Api");
-            return new ApiResponse<OperatorResponse>
+            return new ApiResponse<AccountResponse>
             {
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",
@@ -311,7 +327,7 @@ public sealed class ApiClient : IApiClient
     /// <summary>
     /// Get paginated list of operators via HRM.Api
     /// </summary>
-    public async Task<ApiResponse<PagedResult<OperatorSummary>>> GetOperatorsAsync(
+    public async Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
         int pageNumber = 1,
@@ -332,7 +348,7 @@ public sealed class ApiClient : IApiClient
             queryParams.Add($"pageSize={pageSize}");
 
             var queryString = string.Join("&", queryParams);
-            var url = $"/api/identity/operators?{queryString}";
+            var url = $"/api/identity/accounts?{queryString}";
 
             var response = await httpClient.GetAsync(url, cancellationToken);
 
@@ -342,11 +358,11 @@ public sealed class ApiClient : IApiClient
                 {
                     PropertyNameCaseInsensitive = true
                 };
-                var data = await response.Content.ReadFromJsonAsync<PagedResult<OperatorSummary>>(jsonOptions, cancellationToken);
-                return new ApiResponse<PagedResult<OperatorSummary>>
+                var data = await response.Content.ReadFromJsonAsync<PagedResult<AccountSummary>>(jsonOptions, cancellationToken);
+                return new ApiResponse<PagedResult<AccountSummary>>
                 {
                     IsSuccess = true,
-                    Data = data ?? new PagedResult<OperatorSummary>()
+                    Data = data ?? new PagedResult<AccountSummary>()
                 };
             }
 
@@ -361,11 +377,11 @@ public sealed class ApiClient : IApiClient
                 };
 
                 var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
-                return new ApiResponse<PagedResult<OperatorSummary>>
+                return new ApiResponse<PagedResult<AccountSummary>>
                 {
                     IsSuccess = false,
                     ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
-                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve operators",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve accounts",
                     ValidationErrors = apiError?.GetValidationErrors()
                 };
             }
@@ -373,7 +389,7 @@ public sealed class ApiClient : IApiClient
             {
                 _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
 
-                return new ApiResponse<PagedResult<OperatorSummary>>
+                return new ApiResponse<PagedResult<AccountSummary>>
                 {
                     IsSuccess = false,
                     ErrorCode = "ApiError",
@@ -384,7 +400,7 @@ public sealed class ApiClient : IApiClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Network error while calling HRM.Api");
-            return new ApiResponse<PagedResult<OperatorSummary>>
+            return new ApiResponse<PagedResult<AccountSummary>>
             {
                 IsSuccess = false,
                 ErrorCode = "NetworkError",
@@ -394,7 +410,223 @@ public sealed class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while calling HRM.Api");
-            return new ApiResponse<PagedResult<OperatorSummary>>
+            return new ApiResponse<PagedResult<AccountSummary>>
+            {
+                IsSuccess = false,
+                ErrorCode = "UnexpectedError",
+                ErrorMessage = "An unexpected error occurred. Please contact support."
+            };
+        }
+    }
+
+    /// <summary>
+    /// Activate a pending account via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<AccountResponse>> ActivateAccountAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var response = await httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/activate",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<AccountResponse>(cancellationToken);
+                return new ApiResponse<AccountResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<AccountResponse>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to activate account",
+                    ValidationErrors = apiError?.GetValidationErrors()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize error response: {ErrorContent}", errorContent);
+                return new ApiResponse<AccountResponse>
+                {
+                    IsSuccess = false,
+                    ErrorCode = "ApiError",
+                    ErrorMessage = $"Server returned {(int)response.StatusCode}: {errorContent}"
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error while activating account");
+            return new ApiResponse<AccountResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "NetworkError",
+                ErrorMessage = "Failed to connect to API server. Please try again later."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while activating account");
+            return new ApiResponse<AccountResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "UnexpectedError",
+                ErrorMessage = "An unexpected error occurred. Please contact support."
+            };
+        }
+    }
+
+    /// <summary>
+    /// Get active sessions for current user via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<List<SessionInfo>>> GetActiveSessionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var response = await httpClient.GetAsync(
+                "/api/identity/auth/sessions",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var data = await response.Content.ReadFromJsonAsync<List<SessionInfo>>(jsonOptions, cancellationToken);
+                return new ApiResponse<List<SessionInfo>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? new List<SessionInfo>()
+                };
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<List<SessionInfo>>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to retrieve sessions",
+                    ValidationErrors = apiError?.GetValidationErrors()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize error response: {ErrorContent}", errorContent);
+                return new ApiResponse<List<SessionInfo>>
+                {
+                    IsSuccess = false,
+                    ErrorCode = "ApiError",
+                    ErrorMessage = $"Server returned {(int)response.StatusCode}: {errorContent}"
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error while getting sessions");
+            return new ApiResponse<List<SessionInfo>>
+            {
+                IsSuccess = false,
+                ErrorCode = "NetworkError",
+                ErrorMessage = "Failed to connect to API server. Please try again later."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while getting sessions");
+            return new ApiResponse<List<SessionInfo>>
+            {
+                IsSuccess = false,
+                ErrorCode = "UnexpectedError",
+                ErrorMessage = "An unexpected error occurred. Please contact support."
+            };
+        }
+    }
+
+    /// <summary>
+    /// Revoke a specific session via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<object>> RevokeSessionAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var response = await httpClient.DeleteAsync(
+                $"/api/identity/auth/sessions/{sessionId}",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { message = "Session revoked successfully" }
+                };
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<object>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to revoke session",
+                    ValidationErrors = apiError?.GetValidationErrors()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize error response: {ErrorContent}", errorContent);
+                return new ApiResponse<object>
+                {
+                    IsSuccess = false,
+                    ErrorCode = "ApiError",
+                    ErrorMessage = $"Server returned {(int)response.StatusCode}: {errorContent}"
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error while revoking session");
+            return new ApiResponse<object>
+            {
+                IsSuccess = false,
+                ErrorCode = "NetworkError",
+                ErrorMessage = "Failed to connect to API server. Please try again later."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while revoking session");
+            return new ApiResponse<object>
             {
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",
@@ -408,6 +640,9 @@ public sealed class ApiClient : IApiClient
     /// </summary>
     public async Task<ApiResponse<CompanyResponse>> CreateCompanyAsync(
         CreateCompanyRequest request,
+    /// Revoke all sessions except current via HRM.Api
+    /// </summary>
+    public async Task<ApiResponse<RevokeAllSessionsResult>> RevokeAllSessionsExceptCurrentAsync(
         CancellationToken cancellationToken = default)
     {
         try
@@ -424,6 +659,9 @@ public sealed class ApiClient : IApiClient
             var response = await httpClient.PostAsJsonAsync(
                 "/api/organization/companies",
                 apiRequest,
+            var response = await httpClient.PostAsync(
+                "/api/identity/auth/sessions/revoke-all-except-current",
+                null,
                 cancellationToken);
 
             if (response.IsSuccessStatusCode)
@@ -434,6 +672,9 @@ public sealed class ApiClient : IApiClient
                 };
                 var data = await response.Content.ReadFromJsonAsync<CompanyResponse>(jsonOptions, cancellationToken);
                 return new ApiResponse<CompanyResponse>
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var data = await response.Content.ReadFromJsonAsync<RevokeAllSessionsResult>(jsonOptions, cancellationToken);
+                return new ApiResponse<RevokeAllSessionsResult>
                 {
                     IsSuccess = true,
                     Data = data
@@ -455,6 +696,13 @@ public sealed class ApiClient : IApiClient
                     IsSuccess = false,
                     ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
                     ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to create company",
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, jsonOptions);
+                return new ApiResponse<RevokeAllSessionsResult>
+                {
+                    IsSuccess = false,
+                    ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                    ErrorMessage = apiError?.GetErrorMessage() ?? "Failed to revoke sessions",
                     ValidationErrors = apiError?.GetValidationErrors()
                 };
             }
@@ -462,6 +710,8 @@ public sealed class ApiClient : IApiClient
             {
                 _logger.LogWarning(ex, "Failed to deserialize ProblemDetails. Raw response: {ErrorContent}", errorContent);
                 return new ApiResponse<CompanyResponse>
+                _logger.LogWarning(ex, "Failed to deserialize error response: {ErrorContent}", errorContent);
+                return new ApiResponse<RevokeAllSessionsResult>
                 {
                     IsSuccess = false,
                     ErrorCode = "ApiError",
@@ -473,6 +723,8 @@ public sealed class ApiClient : IApiClient
         {
             _logger.LogError(ex, "Network error while calling HRM.Api");
             return new ApiResponse<CompanyResponse>
+            _logger.LogError(ex, "Network error while revoking all sessions");
+            return new ApiResponse<RevokeAllSessionsResult>
             {
                 IsSuccess = false,
                 ErrorCode = "NetworkError",
@@ -483,6 +735,8 @@ public sealed class ApiClient : IApiClient
         {
             _logger.LogError(ex, "Unexpected error while calling HRM.Api");
             return new ApiResponse<CompanyResponse>
+            _logger.LogError(ex, "Unexpected error while revoking all sessions");
+            return new ApiResponse<RevokeAllSessionsResult>
             {
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",
@@ -495,6 +749,11 @@ public sealed class ApiClient : IApiClient
     /// Get all companies via HRM.Api
     /// </summary>
     public async Task<ApiResponse<IReadOnlyList<CompanyResponse>>> GetCompaniesAsync(
+    /// Refresh access token using a valid refresh token via HRM.Api.
+    /// Uses a dedicated HttpClient without AuthTokenHandler to avoid recursion.
+    /// </summary>
+    public async Task<ApiResponse<LoginResponse>> RefreshTokenAsync(
+        string refreshToken,
         CancellationToken cancellationToken = default)
     {
         try
@@ -589,6 +848,22 @@ public sealed class ApiClient : IApiClient
                 };
                 var data = await response.Content.ReadFromJsonAsync<CompanyResponse>(jsonOptions, cancellationToken);
                 return new ApiResponse<CompanyResponse>
+            // Use the named HttpClient (which goes through AuthTokenHandler),
+            // but the refresh endpoint doesn't require a valid access token — it validates the refresh token.
+            var httpClient = _httpClientFactory.CreateClient("HRM.Api");
+
+            var payload = new { refreshToken };
+
+            var response = await httpClient.PostAsJsonAsync(
+                "/api/identity/auth/refresh",
+                payload,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var data = await response.Content.ReadFromJsonAsync<LoginResponse>(jsonOptions, cancellationToken);
+                return new ApiResponse<LoginResponse>
                 {
                     IsSuccess = true,
                     Data = data
@@ -632,6 +907,14 @@ public sealed class ApiClient : IApiClient
                 IsSuccess = false,
                 ErrorCode = "NetworkError",
                 ErrorMessage = "Failed to connect to API server. Please try again later."
+            _logger.LogWarning("Token refresh failed with status {StatusCode}: {ErrorContent}",
+                (int)response.StatusCode, errorContent);
+
+            return new ApiResponse<LoginResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "RefreshFailed",
+                ErrorMessage = "Session expired. Please login again."
             };
         }
         catch (Exception ex)
@@ -642,6 +925,12 @@ public sealed class ApiClient : IApiClient
                 IsSuccess = false,
                 ErrorCode = "UnexpectedError",
                 ErrorMessage = "An unexpected error occurred. Please contact support."
+            _logger.LogError(ex, "Error during token refresh");
+            return new ApiResponse<LoginResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "RefreshError",
+                ErrorMessage = "Failed to refresh session."
             };
         }
     }

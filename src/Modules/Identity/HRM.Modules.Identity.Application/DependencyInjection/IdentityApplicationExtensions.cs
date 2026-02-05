@@ -37,10 +37,10 @@ public static class IdentityApplicationExtensions
     /// Registers handlers and validators from Identity.Application assembly
     /// 
     /// What Gets Registered:
-    /// - Command handlers (RegisterOperatorCommandHandler, etc.)
-    /// - Query handlers (GetOperatorByIdQueryHandler, etc.)
-    /// - Domain event handlers (UserCreatedDomainEventHandler, etc.)
-    /// - FluentValidation validators (RegisterOperatorCommandValidator, etc.)
+    /// - Command handlers (RegisterAccountCommandHandler, etc.)
+    /// - Query handlers (GetAccountByIdQueryHandler, etc.)
+    /// - Domain event handlers (AccountCreatedDomainEventHandler, etc.)
+    /// - FluentValidation validators (RegisterAccountCommandValidator, etc.)
     /// 
     /// Note:
     /// - MediatR itself is registered by BuildingBlocksApplication

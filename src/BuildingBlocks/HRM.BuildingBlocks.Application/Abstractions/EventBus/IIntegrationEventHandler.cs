@@ -20,7 +20,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.EventBus;
 /// - Handles events within same module
 /// - Executes synchronously within transaction
 /// - Creates OutboxMessages for integration events
-/// - Example: OperatorRegisteredDomainEventHandler
+/// - Example: AccountCreatedDomainEventHandler
 /// 
 /// Integration Event Handler:
 /// - Handles events from other modules

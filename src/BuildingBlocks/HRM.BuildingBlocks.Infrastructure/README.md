@@ -122,7 +122,7 @@ Claims:
 - `sub` → UserId
 - `name` → Username
 - `email` → Email
-- `UserType` → Operator or User
+- `AccountType` → System or Employee
 - `ScopeLevel` → Company/Department/Position/Employee
 - `EmployeeId` → Employee identifier (Users only)
 - `Roles` → Comma-separated roles
@@ -150,7 +150,7 @@ Configuration class for JWT settings from appsettings.json.
 Applies data scoping filters based on user's scope level.
 
 Scope Levels:
-- **Operator**: Global access (no filtering)
+- **System**: Global access (no filtering)
 - **Company**: Filter by assigned companies
 - **Department**: Filter by assigned departments
 - **Position**: Filter by assigned positions
@@ -250,7 +250,7 @@ export JwtSettings__SecretKey="production-secret-key-from-key-vault"
 ### Data Scoping Security
 - Always applied server-side
 - Cannot be bypassed by client
-- Operators have global access
+- System accounts have global access
 - Users restricted by ScopeLevel
 - Empty results on scope violation (not errors)
 

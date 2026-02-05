@@ -56,10 +56,10 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///
 /// Payload (Claims):
 /// {
-///   "sub": "operator-guid",           // User identifier
+///   "sub": "account-guid",           // User identifier
 ///   "name": "admin",                  // Username
 ///   "email": "admin@hrm.com",         // Email
-///   "UserType": "Operator",           // Operator or User
+///   "AccountType": "System",           // System or Employee
 ///   "Roles": "SystemAdmin,Manager",   // Comma-separated roles
 ///   "ScopeLevel": "Company",          // Only for Users
 ///   "EmployeeId": "employee-guid",    // Only for Users
@@ -113,19 +113,19 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///     public async Task&lt;Result&lt;LoginResult&gt;&gt; Handle(...)
 ///     {
 ///         // 1. Validate credentials
-///         var @operator = await ValidateCredentialsAsync(command);
-///         if (@operator is null)
+///         var account = await ValidateCredentialsAsync(command);
+///         if (account is null)
 ///             return Result.Failure(new UnauthorizedError(...));
 ///
 ///         // 2. Generate access token (JWT)
-///         var accessToken = _tokenService.GenerateAccessToken(@operator);
+///         var accessToken = _tokenService.GenerateAccessToken(account);
 ///
 ///         // 3. Generate refresh token (random secure string)
 ///         var refreshToken = _tokenService.GenerateRefreshToken();
 ///
 ///         // 4. Store refresh token in database
-///         var refreshTokenEntity = RefreshToken.CreateForOperator(
-///             @operator.Id,
+///         var refreshTokenEntity = RefreshToken.Create(
+///             account.Id,
 ///             refreshToken,
 ///             DateTime.UtcNow.AddDays(7),
 ///             command.DeviceName,
@@ -162,19 +162,19 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///             return Result.Failure(new UnauthorizedError(...));
 ///
 ///         // 2. Load user
-///         var @operator = await _operatorRepository.GetByIdAsync(
-///             storedToken.GetOperatorId()!.Value
+///         var account = await _accountRepository.GetByIdAsync(
+///             storedToken.AccountId
 ///         );
 ///
 ///         // 3. Generate new access token
-///         var newAccessToken = _tokenService.GenerateAccessToken(@operator);
+///         var newAccessToken = _tokenService.GenerateAccessToken(account);
 ///
 ///         // 4. Optional: Rotate refresh token (recommended for security)
 ///         var newRefreshToken = _tokenService.GenerateRefreshToken();
 ///         storedToken.Revoke(command.IpAddress, newRefreshToken);
 ///
-///         var newRefreshTokenEntity = RefreshToken.CreateForOperator(
-///             @operator.Id,
+///         var newRefreshTokenEntity = RefreshToken.Create(
+///             account.Id,
 ///             newRefreshToken,
 ///             DateTime.UtcNow.AddDays(7),
 ///             command.DeviceName,
@@ -228,10 +228,10 @@ public interface ITokenService
     /// Token contains claims for authorization and user identification.
     ///
     /// Claims Included:
-    /// - sub: User/Operator ID (NameIdentifier)
+    /// - sub: Account ID (NameIdentifier)
     /// - name: Username
     /// - email: Email address
-    /// - UserType: "Operator" or "User"
+    /// - AccountType: "System" or "Employee"
     /// - Roles: Comma-separated role names
     /// - ScopeLevel: Data visibility level (for Users only)
     /// - EmployeeId: Employee identifier (for Users only)
@@ -261,7 +261,7 @@ public interface ITokenService
     ///
     /// Usage:
     /// <code>
-    /// var accessToken = _tokenService.GenerateAccessToken(@operator);
+    /// var accessToken = _tokenService.GenerateAccessToken(account);
     ///
     /// // Return to client
     /// return new LoginResponse
@@ -312,8 +312,8 @@ public interface ITokenService
     /// var refreshToken = _tokenService.GenerateRefreshToken();
     ///
     /// // Store in database
-    /// var tokenEntity = RefreshToken.CreateForUser(
-    ///     userId,
+    /// var tokenEntity = RefreshToken.Create(
+    ///     accountId,
     ///     refreshToken,                    // Plain token (or hash it)
     ///     DateTime.UtcNow.AddDays(7),     // Expiration
     ///     deviceName,
@@ -336,7 +336,7 @@ public interface ITokenService
     ///
     /// // Generate and store new token
     /// var newRefreshToken = _tokenService.GenerateRefreshToken();
-    /// var newTokenEntity = RefreshToken.CreateForUser(...);
+    /// var newTokenEntity = RefreshToken.Create(...);
     /// await _refreshTokenRepository.AddAsync(newTokenEntity);
     /// </code>
     /// </summary>
@@ -360,7 +360,7 @@ public interface ITokenService
     ///
     /// // Store with custom expiration
     /// var tokenEntity = RefreshToken.Create(
-    ///     userId,
+    ///     accountId,
     ///     refreshToken,
     ///     expiresAt,  // Custom expiry for Remember Me
     ///     ipAddress,

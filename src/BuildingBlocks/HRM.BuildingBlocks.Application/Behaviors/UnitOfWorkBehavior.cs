@@ -46,7 +46,7 @@ namespace HRM.BuildingBlocks.Application.Behaviors;
 ///
 /// Example:
 /// <code>
-/// public sealed record RegisterOperatorCommand(...) : IModuleCommand<Guid>
+/// public sealed record RegisterAccountCommand(...) : IModuleCommand<Guid>
 /// {
 ///     public string ModuleName => "Identity";
 /// }

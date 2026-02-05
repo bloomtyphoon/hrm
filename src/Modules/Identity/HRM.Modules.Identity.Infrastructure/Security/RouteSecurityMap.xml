@@ -3,85 +3,68 @@
   <!--
     Identity Module Route Security Map
     Maps API routes to permissions
-
-    This file is loaded at startup and used by RoutePermissionMiddleware
-    to automatically protect routes without [Authorize] attributes.
-
-    Route Matching:
-    - Exact path match (case-insensitive)
-    - Path parameters use {param} syntax
-    - Method must match exactly (GET, POST, PUT, DELETE, PATCH)
-
-    RequiresDataScope:
-    - If "true", downstream query handlers should resolve data scope
-      via IDataScopeService (business module) for filtering
-    - Route security does NOT decide scope level — only flags the need
-    - Identity module routes typically do NOT require data scope
   -->
 
   <!-- Public Routes - No authentication required -->
   <PublicRoutes>
-    <!-- Authentication endpoints -->
     <Route Method="POST" Path="/api/identity/auth/login" />
     <Route Method="POST" Path="/api/identity/auth/refresh" />
     <Route Method="GET" Path="/api/identity/auth/me" />
-
-    <!-- Health check -->
     <Route Method="GET" Path="/health" />
   </PublicRoutes>
 
   <!-- Protected Routes - Require authentication and specific permissions -->
   <ProtectedRoutes>
 
-    <!-- ==================== Operator Management ==================== -->
+    <!-- ==================== Account Management ==================== -->
 
-    <!-- List operators (paginated) -->
+    <!-- List accounts (paginated) -->
     <Route
         Method="GET"
-        Path="/api/identity/operators"
-        Permission="Identity.Operator.View" />
+        Path="/api/identity/accounts"
+        Permission="Identity.Account.View" />
 
-    <!-- Get operator by ID -->
+    <!-- Get account by ID -->
     <Route
         Method="GET"
-        Path="/api/identity/operators/{id}"
-        Permission="Identity.Operator.View" />
+        Path="/api/identity/accounts/{id}"
+        Permission="Identity.Account.View" />
 
-    <!-- Register new operator -->
+    <!-- Register new account -->
     <Route
         Method="POST"
-        Path="/api/identity/operators/register"
-        Permission="Identity.Operator.Create" />
+        Path="/api/identity/accounts/register"
+        Permission="Identity.Account.Create" />
 
-    <!-- Activate operator -->
+    <!-- Activate account -->
     <Route
         Method="POST"
-        Path="/api/identity/operators/{id}/activate"
-        Permission="Identity.Operator.Update" />
+        Path="/api/identity/accounts/{id}/activate"
+        Permission="Identity.Account.Update" />
 
-    <!-- Update operator -->
+    <!-- Update account -->
     <Route
         Method="PUT"
-        Path="/api/identity/operators/{id}"
-        Permission="Identity.Operator.Update" />
+        Path="/api/identity/accounts/{id}"
+        Permission="Identity.Account.Update" />
 
-    <!-- Delete operator -->
+    <!-- Delete account -->
     <Route
         Method="DELETE"
-        Path="/api/identity/operators/{id}"
-        Permission="Identity.Operator.Delete" />
+        Path="/api/identity/accounts/{id}"
+        Permission="Identity.Account.Delete" />
 
-    <!-- Reset operator password -->
+    <!-- Reset account password -->
     <Route
         Method="POST"
-        Path="/api/identity/operators/{id}/reset-password"
-        Permission="Identity.Operator.ResetPassword" />
+        Path="/api/identity/accounts/{id}/reset-password"
+        Permission="Identity.Account.ResetPassword" />
 
-    <!-- Assign role to operator -->
+    <!-- Assign role to account -->
     <Route
         Method="POST"
-        Path="/api/identity/operators/{id}/roles"
-        Permission="Identity.Operator.AssignRole" />
+        Path="/api/identity/accounts/{id}/roles"
+        Permission="Identity.Account.AssignRole" />
 
     <!-- ==================== Role Management ==================== -->
 
@@ -123,23 +106,23 @@
 
     <!-- ==================== Session Management ==================== -->
 
-    <!-- Get active sessions (user can view own sessions) -->
+    <!-- Get active sessions -->
     <Route
         Method="GET"
         Path="/api/identity/sessions"
-        Permission="Identity.User.View" />
+        Permission="Identity.Account.View" />
 
     <!-- Revoke session -->
     <Route
         Method="DELETE"
         Path="/api/identity/sessions/{id}"
-        Permission="Identity.User.Update" />
+        Permission="Identity.Account.Update" />
 
     <!-- Logout (revoke current session) -->
     <Route
         Method="POST"
         Path="/api/identity/auth/logout"
-        Permission="Identity.User.Update" />
+        Permission="Identity.Account.Update" />
 
   </ProtectedRoutes>
 

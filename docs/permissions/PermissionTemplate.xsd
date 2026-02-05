@@ -37,8 +37,8 @@
   <!-- ApplicableTo type -->
   <xs:simpleType name="ApplicableToType">
     <xs:restriction base="xs:string">
-      <xs:enumeration value="User"/>
-      <xs:enumeration value="Operator"/>
+      <xs:enumeration value="Employee"/>
+      <xs:enumeration value="System"/>
       <xs:enumeration value="Both"/>
     </xs:restriction>
   </xs:simpleType>

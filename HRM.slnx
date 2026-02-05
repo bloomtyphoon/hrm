@@ -27,17 +27,20 @@
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.Infrastructure/HRM.Modules.Organization.Infrastructure.csproj" Id="a1b2c3d4-0004-4000-8000-000000000004" />
     <Project Path="src/Modules/Organization/HRM.Modules.Organization.Api/HRM.Modules.Organization.Api.csproj" Id="a1b2c3d4-0005-4000-8000-000000000005" />
   </Folder>
+  <Folder Name="/src/Modules/Personnel/">
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Domain/HRM.Modules.Personnel.Domain.csproj" Id="b1b2c3d4-0001-4000-8000-000000000001" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.IntegrationEvents/HRM.Modules.Personnel.IntegrationEvents.csproj" Id="b1b2c3d4-0002-4000-8000-000000000002" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Application/HRM.Modules.Personnel.Application.csproj" Id="b1b2c3d4-0003-4000-8000-000000000003" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Infrastructure/HRM.Modules.Personnel.Infrastructure.csproj" Id="b1b2c3d4-0004-4000-8000-000000000004" />
+  </Folder>
   <Folder Name="/src/Database/" />
   <Folder Name="/src/Database/Identity/">
-    <File Path="src/Database/Identity/001_CreateOperatorsTable.sql" />
-    <File Path="src/Database/Identity/002_CreateIndexes.sql" />
-    <File Path="src/Database/Identity/003_SeedAdminOperator.sql" />
-    <File Path="src/Database/Identity/004_CreateRefreshTokensTable.sql" />
-    <File Path="src/Database/Identity/005_MigrateRefreshTokensToPolymorphic.sql" />
-    <File Path="src/Database/Identity/006_CreateRolesTable.sql" />
-    <File Path="src/Database/Identity/007_CreateRolePermissionsTable.sql" />
-    <File Path="src/Database/Identity/008_CreateOperatorRolesTable.sql" />
-    <File Path="src/Database/Identity/009_SeedAdminRoleAndPermissions.sql" />
+    <File Path="src/Database/Identity/001_CreateAccountsTable.sql" />
+    <File Path="src/Database/Identity/002_CreateRefreshTokensTable.sql" />
+    <File Path="src/Database/Identity/003_CreateRolesAndPermissionsTable.sql" />
+    <File Path="src/Database/Identity/004_CreateAccountRolesTable.sql" />
+    <File Path="src/Database/Identity/005_SeedAdminRoleAndPermissions.sql" />
+    <File Path="src/Database/Identity/006_CreateOutboxMessagesTable.sql" />
     <File Path="src/Database/Identity/README.md" />
   </Folder>
 </Solution>

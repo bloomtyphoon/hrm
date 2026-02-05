@@ -27,12 +27,6 @@ public interface IDataScopingService
 public sealed class DataScopeContext
 {
     public required AccountType AccountType { get; init; }
-
-    [Obsolete("Use AccountType instead")]
-#pragma warning disable CS0618
-    public UserType UserType => AccountType.ToUserType();
-#pragma warning restore CS0618
-
     public required Guid UserId { get; init; }
     public DataScopeLevel? ScopeLevel { get; init; }
     public List<Guid> AllowedCompanyIds { get; init; } = new();
@@ -40,14 +34,6 @@ public sealed class DataScopeContext
     public List<Guid> AllowedPositionIds { get; init; } = new();
 
     public bool IsSystemAccount => AccountType == AccountType.System;
-
-    [Obsolete("Use IsSystemAccount instead")]
-    public bool IsOperator => IsSystemAccount;
-
     public bool IsEmployeeAccount => AccountType == AccountType.Employee;
-
-    [Obsolete("Use IsEmployeeAccount instead")]
-    public bool IsUser => IsEmployeeAccount;
-
     public bool RequiresScoping => AccountType == AccountType.Employee;
 }

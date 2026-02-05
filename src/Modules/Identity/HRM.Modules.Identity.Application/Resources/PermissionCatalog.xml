@@ -2,7 +2,7 @@
 <PermissionCatalog Module="Identity" Version="2.0" xmlns="http://hrm.system/permissions">
   <!--
     Identity Module Permission Catalog
-    Defines all permissions for identity management (users, operators, roles)
+    Defines all permissions for identity management (accounts, roles)
 
     This file is embedded as a resource and loaded via IPermissionCatalogSourceFactory
 
@@ -33,120 +33,100 @@
 
   <Permissions>
 
-    <!-- User Entity - External users (future module) -->
-    <Permission Key="Identity.User.View" DisplayName="Xem người dùng" DefaultScope="Department">
-      <AllowedScopes>
-        <Scope Name="Company" />
-        <Scope Name="Department" />
-        <Scope Name="Self" />
-      </AllowedScopes>
-    </Permission>
+    <Module name="Identity" displayName="Quản lý danh tính">
 
-    <Permission Key="Identity.User.Create" DisplayName="Tạo người dùng" DefaultScope="Department">
-      <AllowedScopes>
-        <Scope Name="Company" />
-        <Scope Name="Department" />
-      </AllowedScopes>
-    </Permission>
+      <!-- Account Entity - Unified authentication accounts -->
+      <Entity name="Account" displayName="Tài khoản">
 
-    <Permission Key="Identity.User.Update" DisplayName="Cập nhật người dùng" DefaultScope="Department">
-      <AllowedScopes>
-        <Scope Name="Company" />
-        <Scope Name="Department" />
-        <Scope Name="Self" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="View" displayName="Xem tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.User.Delete" DisplayName="Xóa người dùng" DefaultScope="Department">
-      <AllowedScopes>
-        <Scope Name="Company" />
-        <Scope Name="Department" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="Create" displayName="Tạo tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.User.ResetPassword" DisplayName="Đặt lại mật khẩu" DefaultScope="Self">
-      <AllowedScopes>
-        <Scope Name="Company" />
-        <Scope Name="Department" />
-        <Scope Name="Self" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="Update" displayName="Cập nhật tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.User.AssignRole" DisplayName="Gán vai trò cho người dùng" DefaultScope="Department">
-      <AllowedScopes>
-        <Scope Name="Company" />
-        <Scope Name="Department" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="Delete" displayName="Xóa tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
 
-    <!-- Operator Entity - Internal system administrators -->
-    <!-- Operators are system-level, no department/self scope needed -->
-    <Permission Key="Identity.Operator.View" DisplayName="Xem quản trị viên" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="ResetPassword" displayName="Đặt lại mật khẩu" defaultScope="Self">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.Operator.Create" DisplayName="Tạo quản trị viên" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="AssignRole" displayName="Gán vai trò cho tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.Operator.Update" DisplayName="Cập nhật quản trị viên" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+      </Entity>
 
-    <Permission Key="Identity.Operator.Delete" DisplayName="Xóa quản trị viên" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+      <!-- Role Entity -->
+      <Entity name="Role" displayName="Vai trò">
 
-    <Permission Key="Identity.Operator.ResetPassword" DisplayName="Đặt lại mật khẩu quản trị viên" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="View" displayName="Xem vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.Operator.AssignRole" DisplayName="Gán vai trò cho quản trị viên" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="Create" displayName="Tạo vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
 
-    <!-- Role Entity -->
-    <Permission Key="Identity.Role.View" DisplayName="Xem vai trò" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="Update" displayName="Cập nhật vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.Role.Create" DisplayName="Tạo vai trò" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="Delete" displayName="Xóa vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.Role.Update" DisplayName="Cập nhật vai trò" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+        <Action name="AssignPermission" displayName="Gán quyền cho vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
 
-    <Permission Key="Identity.Role.Delete" DisplayName="Xóa vai trò" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+      </Entity>
 
-    <Permission Key="Identity.Role.AssignPermission" DisplayName="Gán quyền cho vai trò" DefaultScope="Global">
-      <AllowedScopes>
-        <Scope Name="Global" />
-      </AllowedScopes>
-    </Permission>
+    </Module>
 
   </Permissions>
 

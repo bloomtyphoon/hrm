@@ -7,7 +7,7 @@
 This is a **Modular Monolith** application that composes multiple bounded contexts (modules) into a single deployable API:
 
 - **BuildingBlocks**: Shared infrastructure (MediatR, Authentication, EventBus, etc.)
-- **Identity Module**: Authentication and authorization (Operators, Users)
+- **Identity Module**: Authentication and authorization (Accounts, Roles)
 - **Personnel Module**: Employee management (future)
 - **Attendance Module**: Time tracking (future)
 
@@ -49,9 +49,9 @@ dotnet ef database update --project ../../Modules/Identity/HRM.Modules.Identity.
 2. Or use SQL scripts in `/src/Database/Identity/`:
 ```bash
 # Execute in order:
-# 001_CreateOperatorsTable.sql
+# 001_CreateAccountsTable.sql
 # 002_CreateIndexes.sql
-# 003_SeedAdminOperator.sql
+# 003_SeedAdminAccount.sql
 ```
 
 ### Run the Application
@@ -89,8 +89,8 @@ This API uses **.NET 10 native OpenAPI** (minimal approach):
 
 **Option 2: HTTP Files (VS Code / Rider)**
 ```http
-### Register Operator
-POST http://localhost:5000/api/identity/operators/register
+### Register Account
+POST http://localhost:5000/api/identity/accounts/register
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -117,9 +117,9 @@ https://editor.swagger.io/
 
 ### Identity Module
 
-#### Register Operator
+#### Register Account
 ```http
-POST /api/identity/operators/register
+POST /api/identity/accounts/register
 Authorization: Bearer {admin_token}
 Content-Type: application/json
 
@@ -149,9 +149,9 @@ Content-Type: application/json
 }
 ```
 
-#### Activate Operator
+#### Activate Account
 ```http
-POST /api/identity/operators/{id}/activate
+POST /api/identity/accounts/{id}/activate
 Authorization: Bearer {admin_token}
 ```
 
@@ -184,7 +184,7 @@ Response (200 OK):
 
 This API uses **JWT Bearer authentication**:
 
-1. Register an operator (requires admin token)
+1. Register an account (requires admin token)
 2. Login to get access token (future endpoint)
 3. Include token in requests: `Authorization: Bearer {token}`
 
@@ -198,7 +198,7 @@ After running database migrations:
 
 ## Authorization Policies
 
-- **AdminOnly**: Requires `Admin` role (operator management)
+- **AdminOnly**: Requires `Admin` role (account management)
 - **Manager**: Requires `Admin` or `Manager` role (department/employee management)
 - **User**: Any authenticated user
 
@@ -237,7 +237,7 @@ All errors follow **Problem Details (RFC 7807)** format:
 
 ```json
 {
-  "code": "Operator.UsernameAlreadyExists",
+  "code": "Account.UsernameAlreadyExists",
   "message": "Username 'john.doe' is already taken. Please choose a different username.",
   "status": 409
 }

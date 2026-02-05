@@ -73,11 +73,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # List of migration scripts in order
 SCRIPTS=(
-    "001_CreateOperatorsTable.sql"
-    "002_CreateIndexes.sql"
-    "003_SeedAdminOperator.sql"
-    "004_CreateRefreshTokensTable.sql"
-    "005_MigrateRefreshTokensToPolymorphic.sql"
+    "001_CreateAccountsTable.sql"
+    "002_CreateRefreshTokensTable.sql"
+    "003_CreateRolesAndPermissionsTable.sql"
+    "004_CreateAccountRolesTable.sql"
+    "005_SeedAdminRoleAndPermissions.sql"
 )
 
 # Execute each script
@@ -105,8 +105,6 @@ for SCRIPT in "${SCRIPTS[@]}"; do
         echo -e "${GREEN}  ✓ Success${NC}"
         EXECUTED=$((EXECUTED + 1))
     else
-        # Script might have checks that skip execution (e.g., "table already exists")
-        # Try again with output to see if it's a skip or error
         OUTPUT=$(sqlcmd -S "$SERVER" -U "$USERNAME" -P "$PASSWORD" -d "$DATABASE" -i "$SCRIPT_PATH" 2>&1)
 
         if echo "$OUTPUT" | grep -qi "already exists\|Skipping"; then
@@ -142,8 +140,8 @@ else
     echo "  1. Verify tables exist:"
     echo "     sqlcmd -S $SERVER -U $USERNAME -P '$PASSWORD' -d $DATABASE -Q \"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='Identity'\""
     echo ""
-    echo "  2. Verify admin operator exists:"
-    echo "     sqlcmd -S $SERVER -U $USERNAME -P '$PASSWORD' -d $DATABASE -Q \"SELECT Username, Email FROM Identity.Operators WHERE Username='admin'\""
+    echo "  2. Verify admin account exists:"
+    echo "     sqlcmd -S $SERVER -U $USERNAME -P '$PASSWORD' -d $DATABASE -Q \"SELECT Username, Email FROM Identity.Accounts WHERE Username='admin'\""
     echo ""
     echo "  3. Start your application and test login"
 fi

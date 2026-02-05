@@ -9,7 +9,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// They capture the outcome of domain operations and enable reactive behavior
 /// 
 /// Characteristics:
-/// - Past tense naming (OperatorRegistered, UserCreated, EmployeeAssigned)
+/// - Past tense naming (AccountCreated, EmployeeAssigned)
 /// - Immutable (use record type)
 /// - Dispatched synchronously within the same transaction
 /// - Handlers run in same transaction before commit
@@ -22,8 +22,8 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// - If any handler fails, entire transaction rolls back
 /// 
 /// Handler Examples:
-/// - OperatorRegisteredDomainEvent → Send welcome email
-/// - OperatorRegisteredDomainEvent → Create integration event for audit
+/// - AccountCreatedDomainEvent → Send welcome email
+/// - AccountCreatedDomainEvent → Create integration event for audit
 /// - UserCreatedDomainEvent → Create integration event for Personnel module
 /// - EmployeeAssignedDomainEvent → Update department statistics
 /// - UserScopeLevelChangedDomainEvent → Revoke active sessions

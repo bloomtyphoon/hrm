@@ -35,13 +35,13 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// Examples:
 /// <code>
 /// // Single entity query (nullable return for not found)
-/// public sealed record GetOperatorByIdQuery : IQuery&lt;OperatorDto?&gt;
+/// public sealed record GetAccountByIdQuery : IQuery&lt;AccountDto?&gt;
 /// {
-///     public Guid OperatorId { get; init; }
+///     public Guid AccountId { get; init; }
 /// }
-/// 
+///
 /// // Collection query
-/// public sealed record GetActiveOperatorsQuery : IQuery&lt;List&lt;OperatorDto&gt;&gt;
+/// public sealed record GetActiveAccountsQuery : IQuery&lt;List&lt;AccountDto&gt;&gt;
 /// {
 ///     public string? SearchTerm { get; init; }
 /// }
@@ -70,7 +70,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// </code>
 /// 
 /// Return Type Guidelines:
-/// - Single entity: OperatorDto? (nullable - null if not found)
+/// - Single entity: AccountDto? (nullable - null if not found)
 /// - Collection: List&lt;EmployeeDto&gt; (empty list if none found)
 /// - Paged results: PagedResult&lt;T&gt; (custom type with items + metadata)
 /// - Scalar: int, bool, Guid, etc.
@@ -94,7 +94,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// Queries MUST respect ScopeLevel when executed by Users:
 /// - Apply IDataScopingService.ApplyScopingAsync()
 /// - Filters data based on User's assignments
-/// - Operators see all data (no scoping)
+/// - System accounts see all data (no scoping)
 /// 
 /// Pipeline Flow:
 /// 1. LoggingBehavior (logs query)

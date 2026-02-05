@@ -56,7 +56,7 @@ public static class SessionErrors
     /// Use Cases:
     /// - User tries to revoke another user's session
     /// - Session ID doesn't exist
-    /// - Session belongs to different operator
+    /// - Session belongs to different account
     /// </summary>
     public static NotFoundError NotFoundOrUnauthorized() =>
         new(
@@ -120,7 +120,7 @@ public static class SessionErrors
     /// - May indicate compromised account
     ///
     /// Use Cases:
-    /// - User tries to revoke session with different OperatorId
+    /// - User tries to revoke session with different AccountId
     /// - Attempting horizontal privilege escalation
     /// - Token manipulation attempt
     /// </summary>
