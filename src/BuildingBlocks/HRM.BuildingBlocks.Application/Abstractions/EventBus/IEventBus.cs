@@ -93,21 +93,21 @@ namespace HRM.BuildingBlocks.Application.Abstractions.EventBus;
 /// await _eventBus.PublishAsync(
 ///     new AccountRegisteredIntegrationEvent
 ///     {
-///         OperatorId = @operator.Id,
-///         Username = @operator.Username,
-///         Email = @operator.Email,
+///         AccountId = account.Id,
+///         Username = account.Username,
+///         Email = account.Email,
 ///         OccurredAt = DateTime.UtcNow
 ///     }
 /// );
-/// 
+///
 /// // Organization Module subscribes:
 /// public class AccountRegisteredIntegrationEventHandler
 ///     : IIntegrationEventHandler&lt;AccountRegisteredIntegrationEvent&gt;
 /// {
 ///     public async Task Handle(AccountRegisteredIntegrationEvent @event, ...)
 ///     {
-///         // Create default permissions for new operator
-///         var permissions = CreateDefaultPermissions(@event.OperatorId);
+///         // Create default permissions for new account
+///         var permissions = CreateDefaultPermissions(@event.AccountId);
 ///         await _repository.AddAsync(permissions);
 ///     }
 /// }

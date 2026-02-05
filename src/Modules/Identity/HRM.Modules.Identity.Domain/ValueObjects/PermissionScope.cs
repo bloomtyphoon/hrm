@@ -52,7 +52,7 @@ public sealed class PermissionScope
     }
 
     /// <summary>
-    /// Factory method: Global scope (Operators only)
+    /// Factory method: Global scope (System accounts only)
     /// </summary>
     public static PermissionScope Global(string displayName = "Toàn hệ thống", bool isReadOnly = false)
     {

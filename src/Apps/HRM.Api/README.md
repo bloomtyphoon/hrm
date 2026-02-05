@@ -7,7 +7,7 @@
 This is a **Modular Monolith** application that composes multiple bounded contexts (modules) into a single deployable API:
 
 - **BuildingBlocks**: Shared infrastructure (MediatR, Authentication, EventBus, etc.)
-- **Identity Module**: Authentication and authorization (Operators, Users)
+- **Identity Module**: Authentication and authorization (Accounts, Roles)
 - **Personnel Module**: Employee management (future)
 - **Attendance Module**: Time tracking (future)
 
@@ -49,9 +49,9 @@ dotnet ef database update --project ../../Modules/Identity/HRM.Modules.Identity.
 2. Or use SQL scripts in `/src/Database/Identity/`:
 ```bash
 # Execute in order:
-# 001_CreateOperatorsTable.sql
+# 001_CreateAccountsTable.sql
 # 002_CreateIndexes.sql
-# 003_SeedAdminOperator.sql
+# 003_SeedAdminAccount.sql
 ```
 
 ### Run the Application
@@ -184,7 +184,7 @@ Response (200 OK):
 
 This API uses **JWT Bearer authentication**:
 
-1. Register an operator (requires admin token)
+1. Register an account (requires admin token)
 2. Login to get access token (future endpoint)
 3. Include token in requests: `Authorization: Bearer {token}`
 
@@ -198,7 +198,7 @@ After running database migrations:
 
 ## Authorization Policies
 
-- **AdminOnly**: Requires `Admin` role (operator management)
+- **AdminOnly**: Requires `Admin` role (account management)
 - **Manager**: Requires `Admin` or `Manager` role (department/employee management)
 - **User**: Any authenticated user
 

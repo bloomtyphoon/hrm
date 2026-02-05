@@ -41,15 +41,15 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///         // Hash password before storing
 ///         var hashedPassword = _passwordHasher.HashPassword(command.Password);
 ///
-///         // Create operator with hashed password
+///         // Create account with hashed password
 ///         var account = Account.Create(
 ///             command.Username,
 ///             command.Email,
 ///             hashedPassword // ← Hashed, never plaintext
 ///         );
 ///
-///         await _repository.AddAsync(@operator);
-///         return Result.Success(@operator.Id);
+///         await _repository.AddAsync(account);
+///         return Result.Success(account.Id);
 ///     }
 /// }
 /// </code>
@@ -62,22 +62,22 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///
 ///     public async Task&lt;Result&lt;LoginResult&gt;&gt; Handle(...)
 ///     {
-///         // Find user by username
-///         var @operator = await _repository.GetByUsernameAsync(command.Username);
-///         if (@operator is null)
+///         // Find account by username
+///         var account = await _repository.GetByUsernameAsync(command.Username);
+///         if (account is null)
 ///             return Result.Failure(new UnauthorizedError(...));
 ///
 ///         // Verify provided password against stored hash
 ///         bool isValid = _passwordHasher.VerifyPassword(
-///             command.Password,           // Plaintext from user
-///             @operator.GetPasswordHash() // Hashed from database
+///             command.Password,          // Plaintext from user
+///             account.GetPasswordHash()  // Hashed from database
 ///         );
 ///
 ///         if (!isValid)
 ///             return Result.Failure(new UnauthorizedError(...));
 ///
 ///         // Password correct, proceed with login
-///         var token = _tokenService.GenerateAccessToken(@operator);
+///         var token = _tokenService.GenerateAccessToken(account);
 ///         return Result.Success(token);
 ///     }
 /// }
@@ -97,13 +97,13 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 /// 2. Don't Return Password Hashes:
 /// <code>
 /// // ❌ BAD - Don't include in DTOs
-/// public class OperatorDto
+/// public class AccountDto
 /// {
 ///     public string PasswordHash { get; set; } // Never expose this!
 /// }
 ///
 /// // ✅ GOOD
-/// public class OperatorDto
+/// public class AccountDto
 /// {
 ///     public Guid Id { get; set; }
 ///     public string Username { get; set; }
@@ -148,13 +148,13 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 /// {
 ///     public async Task&lt;Result&gt; Handle(...)
 ///     {
-///         // 1. Load operator
-///         var @operator = await _repository.GetByIdAsync(command.OperatorId);
+///         // 1. Load account
+///         var account = await _repository.GetByIdAsync(command.AccountId);
 ///
 ///         // 2. Verify old password
 ///         bool isValid = _passwordHasher.VerifyPassword(
 ///             command.OldPassword,
-///             @operator.GetPasswordHash()
+///             account.GetPasswordHash()
 ///         );
 ///         if (!isValid)
 ///             return Result.Failure(new UnauthorizedError(...));
@@ -162,8 +162,8 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///         // 3. Hash new password
 ///         var newHash = _passwordHasher.HashPassword(command.NewPassword);
 ///
-///         // 4. Update operator
-///         @operator.ChangePassword(newHash);
+///         // 4. Update account
+///         account.ChangePassword(newHash);
 ///
 ///         return Result.Success();
 ///     }

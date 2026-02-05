@@ -38,8 +38,8 @@ public static class IdentityApplicationExtensions
     /// 
     /// What Gets Registered:
     /// - Command handlers (RegisterAccountCommandHandler, etc.)
-    /// - Query handlers (GetOperatorByIdQueryHandler, etc.)
-    /// - Domain event handlers (UserCreatedDomainEventHandler, etc.)
+    /// - Query handlers (GetAccountByIdQueryHandler, etc.)
+    /// - Domain event handlers (AccountCreatedDomainEventHandler, etc.)
     /// - FluentValidation validators (RegisterAccountCommandValidator, etc.)
     /// 
     /// Note:

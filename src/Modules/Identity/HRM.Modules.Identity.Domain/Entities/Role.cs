@@ -6,7 +6,7 @@ namespace HRM.Modules.Identity.Domain.Entities;
 
 /// <summary>
 /// Role aggregate root
-/// Represents a collection of permissions that can be assigned to users/operators
+/// Represents a collection of permissions that can be assigned to accounts
 ///
 /// Role vs Permissions:
 /// - Role: Named collection of permissions (e.g., "HR Manager", "System Admin")
@@ -54,19 +54,19 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
     public string? Description { get; private set; }
 
     /// <summary>
-    /// Whether this role is for operators (true) or users (false)
+    /// Whether this role is a system role (true) or employee role (false)
     ///
-    /// Account Roles:
+    /// System Roles:
     /// - Global access without scope restrictions
-    /// - For internal staff/admins
+    /// - For system accounts (internal staff/admins)
     /// - Example: "System Administrator", "Support Engineer"
     ///
-    /// User Roles:
+    /// Employee Roles:
     /// - Scope-based access (Company, Department, Position, Self)
-    /// - For end users
+    /// - For employee accounts (end users)
     /// - Example: "HR Manager", "Employee Self-Service"
     /// </summary>
-    public bool IsOperatorRole { get; private set; }
+    public bool IsSystemRole { get; private set; }
 
     /// <summary>
     /// Read-only collection of permissions assigned to this role
@@ -101,10 +101,10 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
     /// </summary>
     /// <param name="name">Unique role name (3-100 chars)</param>
     /// <param name="description">Optional description</param>
-    /// <param name="isOperatorRole">True for operator role, false for user role</param>
+    /// <param name="isSystemRole">True for system role, false for employee role</param>
     /// <returns>New empty role</returns>
     /// <exception cref="ArgumentException">If name is invalid</exception>
-    public static Role Create(string name, string? description = null, bool isOperatorRole = false)
+    public static Role Create(string name, string? description = null, bool isSystemRole = false)
     {
         ValidateName(name);
 
@@ -113,7 +113,7 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
             Id = Guid.NewGuid(),
             Name = name.Trim(),
             Description = description?.Trim(),
-            IsOperatorRole = isOperatorRole
+            IsSystemRole = isSystemRole
         };
 
         return role;

@@ -50,7 +50,7 @@ public interface ICommandBase
 /// 5. Idempotent when possible: Safe to retry
 /// 
 /// Pipeline Flow:
-/// 1. Command created (e.g., DeleteOperatorCommand)
+/// 1. Command created (e.g., DeleteAccountCommand)
 /// 2. ValidationBehavior: Validates via FluentValidation
 /// 3. LoggingBehavior: Logs command execution
 /// 4. CommandHandler: Executes business logic
@@ -60,9 +60,9 @@ public interface ICommandBase
 /// Examples:
 /// <code>
 /// // Delete operation (no return value needed)
-/// public sealed record DeleteOperatorCommand : ICommand
+/// public sealed record DeleteAccountCommand : ICommand
 /// {
-///     public Guid OperatorId { get; init; }
+///     public Guid AccountId { get; init; }
 /// }
 /// 
 /// // Deactivate operation
@@ -172,8 +172,8 @@ public interface ICommand : IRequest<Result>, ICommandBase
 ///     return BadRequest(result.Error);
 /// 
 /// // Safe to access Value here - guaranteed non-null for non-nullable types
-/// var operatorId = result.Value;
-/// return CreatedAtAction(nameof(GetOperator), new { id = operatorId }, null);
+/// var accountId = result.Value;
+/// return CreatedAtAction(nameof(GetAccount), new { id = accountId }, null);
 /// </code>
 /// 
 /// Design Considerations:

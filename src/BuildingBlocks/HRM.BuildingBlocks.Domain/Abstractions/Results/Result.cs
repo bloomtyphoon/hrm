@@ -23,20 +23,20 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Results;
 ///
 /// Usage Example:
 /// <code>
-/// public async Task&lt;Result&gt; Handle(DeleteOperatorCommand command, CancellationToken ct)
+/// public async Task&lt;Result&gt; Handle(DeleteAccountCommand command, CancellationToken ct)
 /// {
-///     var @operator = await _repository.GetByIdAsync(command.OperatorId, ct);
-///     if (@operator is null)
+///     var account = await _repository.GetByIdAsync(command.AccountId, ct);
+///     if (account is null)
 ///         return Result.Failure(
 ///             new NotFoundError("Account.NotFound", "Account not found")
 ///         );
 ///
-///     if (@operator.IsSystemOperator())
+///     if (account.IsSystemAccount())
 ///         return Result.Failure(
 ///             new ForbiddenError("Account.CannotDelete", "Cannot delete system account")
 ///         );
 ///
-///     _repository.Remove(@operator);
+///     _repository.Remove(account);
 ///     return Result.Success();
 /// }
 ///
@@ -200,7 +200,7 @@ public class Result
 ///             )
 ///         );
 ///
-///     // Create operator (domain event raised here)
+///     // Create account (domain event raised here)
 ///     var hashedPassword = _passwordHasher.HashPassword(command.Password);
 ///     var account = Account.Create(
 ///         command.Username,
@@ -209,17 +209,17 @@ public class Result
 ///     );
 ///
 ///     // Persist
-///     await _repository.AddAsync(@operator, ct);
+///     await _repository.AddAsync(account, ct);
 ///
 ///     // Return created ID
-///     return Result.Success(@operator.Id);
+///     return Result.Success(account.Id);
 /// }
 ///
 /// // In API controller:
 /// var result = await mediator.Send(command);
 /// if (result.IsFailure)
 ///     return BadRequest(result.Error);
-/// return CreatedAtAction(nameof(GetOperator), new { id = result.Value }, null);
+/// return CreatedAtAction(nameof(GetAccount), new { id = result.Value }, null);
 /// </code>
 /// </summary>
 /// <typeparam name="TValue">Type of value returned on success</typeparam>
