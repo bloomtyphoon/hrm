@@ -18,7 +18,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 ///
 /// Example:
 /// <code>
-/// public sealed record RegisterOperatorCommand(...)
+/// public sealed record RegisterAccountCommand(...)
 ///     : IModuleCommand&lt;Guid&gt;
 /// {
 ///     public string ModuleName => "Identity";  // ✅ Self-documenting

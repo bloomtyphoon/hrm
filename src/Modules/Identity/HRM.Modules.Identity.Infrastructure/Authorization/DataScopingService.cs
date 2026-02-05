@@ -42,9 +42,7 @@ public sealed class DataScopingService : IDataScopingService
             );
         }
 
-#pragma warning disable CS0618
-        if (_currentUserService.IsOperator())
-#pragma warning restore CS0618
+        if (_currentUserService.IsSystemAccount())
         {
             _cachedScopeContext = new DataScopeContext
             {
@@ -100,9 +98,7 @@ public sealed class DataScopingService : IDataScopingService
             throw new ArgumentNullException(nameof(parameters));
         }
 
-#pragma warning disable CS0618
-        if (scopeContext.IsOperator)
-#pragma warning restore CS0618
+        if (scopeContext.IsSystemAccount)
         {
             return string.Empty;
         }
@@ -127,9 +123,7 @@ public sealed class DataScopingService : IDataScopingService
             throw new ArgumentNullException(nameof(scopeContext));
         }
 
-#pragma warning disable CS0618
-        if (scopeContext.IsOperator)
-#pragma warning restore CS0618
+        if (scopeContext.IsSystemAccount)
         {
             return true;
         }

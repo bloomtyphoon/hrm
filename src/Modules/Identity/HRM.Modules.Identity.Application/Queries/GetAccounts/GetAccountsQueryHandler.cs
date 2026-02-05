@@ -1,0 +1,70 @@
+using HRM.BuildingBlocks.Application.Abstractions.Queries;
+using HRM.BuildingBlocks.Application.Pagination;
+using HRM.Modules.Identity.Application.Abstractions.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace HRM.Modules.Identity.Application.Queries.GetAccounts;
+
+/// <summary>
+/// Handler for GetAccountsQuery.
+/// Returns paginated list of accounts with search and filter support.
+/// </summary>
+public sealed class GetAccountsQueryHandler
+    : IQueryHandler<GetAccountsQuery, PagedResult<AccountSummaryDto>>
+{
+    private readonly IIdentityQueryContext _context;
+
+    public GetAccountsQueryHandler(IIdentityQueryContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<PagedResult<AccountSummaryDto>> Handle(
+        GetAccountsQuery request,
+        CancellationToken cancellationToken)
+    {
+        var query = _context.Accounts.AsNoTracking();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var searchTerm = request.SearchTerm.ToLower();
+            query = query.Where(a =>
+                a.Username.ToLower().Contains(searchTerm) ||
+                a.Email.ToLower().Contains(searchTerm));
+        }
+
+        // Apply status filter
+        if (request.Status.HasValue)
+        {
+            query = query.Where(a => a.Status == request.Status.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(a => new AccountSummaryDto
+            {
+                Id = a.Id,
+                Username = a.Username,
+                Email = a.Email,
+                FullName = a.FullName,
+                Status = a.Status,
+                AccountType = a.AccountType,
+                CreatedAtUtc = a.CreatedAtUtc,
+                LastLoginAtUtc = a.LastLoginAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<AccountSummaryDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = request.PageNumber,
+            PageSize = request.PageSize
+        };
+    }
+}

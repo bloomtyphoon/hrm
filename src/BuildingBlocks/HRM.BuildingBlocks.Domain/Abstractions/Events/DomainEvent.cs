@@ -7,7 +7,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// 
 /// Usage Example:
 /// <code>
-/// public sealed record OperatorRegisteredDomainEvent : DomainEvent
+/// public sealed record AccountCreatedDomainEvent : DomainEvent
 /// {
 ///     public Guid OperatorId { get; init; }
 ///     public string Username { get; init; }
@@ -29,14 +29,14 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// - Include aggregate root name
 /// 
 /// Good Examples:
-/// - OperatorRegisteredDomainEvent
+/// - AccountCreatedDomainEvent
 /// - UserCreatedDomainEvent
 /// - EmployeeAssignedDomainEvent
 /// - DepartmentRenamedDomainEvent
 /// 
 /// Bad Examples:
 /// - OperatorEvent (not specific)
-/// - RegisterOperator (not past tense)
+/// - RegisterAccount (not past tense)
 /// - OperatorChanged (too vague)
 /// </summary>
 public abstract record DomainEvent : IDomainEvent

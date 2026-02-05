@@ -26,7 +26,7 @@ namespace HRM.Modules.Identity.Infrastructure.DependencyInjection;
 ///
 /// Registration:
 /// - DbContext: IdentityDbContext (SQL Server, connection string "HrmDb")
-/// - Repositories: IOperatorRepository -> OperatorRepository (Scoped)
+/// - Repositories: IAccountRepository -> AccountRepository (Scoped)
 /// - Authentication Services: IPasswordHasher -> PasswordHasher (Singleton), ITokenService -> TokenService (Singleton)
 /// - JWT Options: Configuration from appsettings.json (JwtSettings section)
 /// - Background Services: IdentityOutboxProcessor (Singleton, IHostedService)
@@ -117,11 +117,10 @@ public static class IdentityInfrastructureExtensions
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
         services.AddScoped<IAccountRepository, AccountRepository>();
-        services.AddScoped<IOperatorRepository, OperatorRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         // Singleton: Dapper-based repository for permission queries (uses connection string directly)
-        services.AddSingleton<IOperatorPermissionRepository, OperatorPermissionRepository>();
+        services.AddSingleton<IAccountPermissionRepository, AccountPermissionRepository>();
 
         // 3. Register Authentication Services
         // CurrentUserService implements both ICurrentUserService (Identity) and IExecutionContext (shared)

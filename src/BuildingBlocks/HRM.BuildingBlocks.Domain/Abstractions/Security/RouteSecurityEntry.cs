@@ -26,7 +26,7 @@ public sealed record RouteSecurityEntry
     public required string Path { get; init; }
 
     /// <summary>
-    /// Required permission key (e.g., "Identity.Operator.View")
+    /// Required permission key (e.g., "Identity.Account.View")
     /// </summary>
     public required string Permission { get; init; }
 

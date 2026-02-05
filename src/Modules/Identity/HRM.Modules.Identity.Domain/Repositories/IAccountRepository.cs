@@ -4,7 +4,7 @@ namespace HRM.Modules.Identity.Domain.Repositories;
 
 /// <summary>
 /// Repository interface for Account aggregate.
-/// Account is the unified authentication entity (replaces Operator for login).
+/// Account is the unified authentication entity.
 ///
 /// Query Methods:
 /// - GetByIdAsync: Retrieve by primary key

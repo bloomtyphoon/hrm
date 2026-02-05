@@ -14,7 +14,7 @@ namespace HRM.Modules.Identity.Application.Commands.RefreshToken;
 /// <summary>
 /// Handler for RefreshTokenCommand.
 /// Implements token rotation pattern for enhanced security.
-/// Uses Account entity (unified login) instead of legacy Operator.
+/// Uses Account entity (unified login) .
 ///
 /// Token Rotation Pattern:
 /// - Old token → Revoke (set RevokedAt, ReplacedByToken)
@@ -69,9 +69,9 @@ public sealed class RefreshTokenCommandHandler
                 AuthenticationErrors.RefreshTokenExpired());
         }
 
-        // 3. Fetch account using PrincipalId
+        // 3. Fetch account by AccountId
         var account = await _accountRepository.GetByIdAsync(
-            existingToken.PrincipalId,
+            existingToken.AccountId,
             cancellationToken);
 
         if (account is null)
