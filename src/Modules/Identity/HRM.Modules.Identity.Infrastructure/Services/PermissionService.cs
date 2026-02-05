@@ -14,7 +14,7 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// - Data scope is a separate concern handled by IDataScopeService (business module)
 ///
 /// Data Flow:
-/// Operator -> OperatorRoles -> Roles -> RolePermissions -> Permission key
+/// Account -> AccountRoles -> Roles -> RolePermissions -> Permission key
 ///
 /// Caching:
 /// - User permissions cached for 5 minutes
@@ -22,7 +22,7 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// </summary>
 public sealed class PermissionService : IPermissionService
 {
-    private readonly IOperatorPermissionRepository _permissionRepository;
+    private readonly IAccountPermissionRepository _permissionRepository;
     private readonly IMemoryCache _cache;
     private readonly ILogger<PermissionService> _logger;
 
@@ -31,7 +31,7 @@ public sealed class PermissionService : IPermissionService
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
     public PermissionService(
-        IOperatorPermissionRepository permissionRepository,
+        IAccountPermissionRepository permissionRepository,
         IMemoryCache cache,
         ILogger<PermissionService> logger)
     {
@@ -95,7 +95,7 @@ public sealed class PermissionService : IPermissionService
         string userId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var operatorId))
+        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var accountId))
         {
             return [];
         }
@@ -109,7 +109,7 @@ public sealed class PermissionService : IPermissionService
         }
 
         _logger.LogDebug("Cache miss for user {UserId} permissions, loading from database", userId);
-        var permissions = await _permissionRepository.GetPermissionsAsync(operatorId, cancellationToken);
+        var permissions = await _permissionRepository.GetPermissionsAsync(accountId, cancellationToken);
 
         _cache.Set(cacheKey, permissions, CacheDuration);
 
@@ -126,7 +126,7 @@ public sealed class PermissionService : IPermissionService
         string userId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var operatorId))
+        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var accountId))
         {
             return false;
         }
@@ -138,7 +138,7 @@ public sealed class PermissionService : IPermissionService
             return cachedResult;
         }
 
-        var isSuperAdmin = await _permissionRepository.IsSuperAdminAsync(operatorId, cancellationToken);
+        var isSuperAdmin = await _permissionRepository.IsSuperAdminAsync(accountId, cancellationToken);
 
         _cache.Set(cacheKey, isSuperAdmin, CacheDuration);
 

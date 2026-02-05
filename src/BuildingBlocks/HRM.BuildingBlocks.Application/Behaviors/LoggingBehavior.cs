@@ -19,9 +19,9 @@ namespace HRM.BuildingBlocks.Application.Behaviors;
 /// - Ensures complete observability
 /// 
 /// Example Log Output:
-/// [INFO] Handling RegisterOperatorCommand
-/// [INFO] Handled RegisterOperatorCommand in 245ms
-/// [ERROR] Error handling RegisterOperatorCommand: Username already exists
+/// [INFO] Handling RegisterAccountCommand
+/// [INFO] Handled RegisterAccountCommand in 245ms
+/// [ERROR] Error handling RegisterAccountCommand: Username already exists
 /// </summary>
 /// <typeparam name="TRequest">The request type</typeparam>
 /// <typeparam name="TResponse">The response type</typeparam>

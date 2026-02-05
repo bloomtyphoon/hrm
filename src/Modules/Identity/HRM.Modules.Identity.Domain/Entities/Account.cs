@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Audit;
 using HRM.BuildingBlocks.Domain.Entities;
 using HRM.Modules.Identity.Domain.Enums;
+using HRM.Modules.Identity.Domain.Events;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
@@ -20,7 +21,7 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// - TwoFactorChangedAtUtc: When 2FA was enabled/disabled
 /// - StatusChangedAtUtc: When account status was changed
 ///
-/// This replaces the separate Operator entity for a unified auth experience.
+/// Unified authentication entity for all account types (System, Employee).
 /// </summary>
 public class Account : AuditableEntity, ISecurityAuditable
 {
@@ -137,7 +138,7 @@ public class Account : AuditableEntity, ISecurityAuditable
         string fullName,
         string? phoneNumber = null)
     {
-        return new Account
+        var account = new Account
         {
             Id = Guid.NewGuid(),
             Username = username,
@@ -147,8 +148,12 @@ public class Account : AuditableEntity, ISecurityAuditable
             PhoneNumber = phoneNumber,
             AccountType = AccountType.System,
             Status = AccountStatus.Pending
-            // CreatedAtUtc is set automatically by AuditableEntity constructor
         };
+
+        account.AddDomainEvent(new AccountCreatedDomainEvent(
+            account.Id, username, email, AccountType.System));
+
+        return account;
     }
 
     /// <summary>
@@ -161,7 +166,7 @@ public class Account : AuditableEntity, ISecurityAuditable
         string fullName,
         string? phoneNumber = null)
     {
-        return new Account
+        var account = new Account
         {
             Id = Guid.NewGuid(),
             Username = username,
@@ -171,8 +176,12 @@ public class Account : AuditableEntity, ISecurityAuditable
             PhoneNumber = phoneNumber,
             AccountType = AccountType.Employee,
             Status = AccountStatus.Pending
-            // CreatedAtUtc is set automatically by AuditableEntity constructor
         };
+
+        account.AddDomainEvent(new AccountCreatedDomainEvent(
+            account.Id, username, email, AccountType.Employee));
+
+        return account;
     }
 
     /// <summary>
@@ -187,6 +196,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         ActivatedAtUtc = DateTime.UtcNow;
         StatusChangedAtUtc = DateTime.UtcNow;
         MarkAsModified();
+
+        AddDomainEvent(new AccountActivatedDomainEvent(Id, Username));
     }
 
     /// <summary>
@@ -200,6 +211,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         Status = AccountStatus.Suspended;
         StatusChangedAtUtc = DateTime.UtcNow;
         MarkAsModified();
+
+        AddDomainEvent(new AccountSuspendedDomainEvent(Id, Username));
     }
 
     /// <summary>
@@ -213,6 +226,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         Status = AccountStatus.Deactivated;
         StatusChangedAtUtc = DateTime.UtcNow;
         MarkAsModified();
+
+        AddDomainEvent(new AccountDeactivatedDomainEvent(Id, Username));
     }
 
     /// <summary>
@@ -224,6 +239,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         FailedLoginAttempts = 0;
         LockedUntilUtc = null;
         MarkAsModified();
+
+        AddDomainEvent(new AccountLoginSucceededDomainEvent(Id, Username));
     }
 
     /// <summary>
@@ -240,6 +257,14 @@ public class Account : AuditableEntity, ISecurityAuditable
         }
 
         MarkAsModified();
+
+        AddDomainEvent(new AccountLoginFailedDomainEvent(Id, Username, FailedLoginAttempts));
+
+        if (LockedUntilUtc.HasValue)
+        {
+            AddDomainEvent(new AccountLockedDomainEvent(
+                Id, Username, FailedLoginAttempts, LockedUntilUtc.Value));
+        }
     }
 
     /// <summary>
@@ -285,6 +310,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         PasswordHash = newPasswordHash;
         PasswordChangedAtUtc = DateTime.UtcNow;
         MarkAsModified();
+
+        AddDomainEvent(new AccountPasswordChangedDomainEvent(Id, Username));
     }
 
     /// <summary>
@@ -306,6 +333,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         TwoFactorSecretKey = secretKey;
         TwoFactorChangedAtUtc = DateTime.UtcNow;
         MarkAsModified();
+
+        AddDomainEvent(new AccountTwoFactorEnabledDomainEvent(Id, Username));
     }
 
     /// <summary>
@@ -317,6 +346,8 @@ public class Account : AuditableEntity, ISecurityAuditable
         TwoFactorSecretKey = null;
         TwoFactorChangedAtUtc = DateTime.UtcNow;
         MarkAsModified();
+
+        AddDomainEvent(new AccountTwoFactorDisabledDomainEvent(Id, Username));
     }
 
     /// <summary>

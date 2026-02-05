@@ -7,30 +7,15 @@ using MediatR;
 namespace HRM.Modules.Identity.Application.Commands.RevokeAllSessionsExceptCurrent;
 
 /// <summary>
-/// Handler for RevokeAllSessionsExceptCurrentCommand
-/// Revokes all operator's sessions except current device
-///
-/// Dependencies:
-/// - IRefreshTokenRepository: Access RefreshTokens and commit
+/// Handler for RevokeAllSessionsExceptCurrentCommand.
+/// Revokes all account's sessions except current device.
 ///
 /// Business Logic:
-/// 1. Verify current token exists and belongs to operator
-/// 2. Find all active sessions for operator
+/// 1. Verify current token exists and belongs to account
+/// 2. Find all active sessions for account
 /// 3. Filter out current session
 /// 4. Revoke all others in bulk
 /// 5. Return count of revoked sessions
-///
-/// Security Features:
-/// - Requires valid current token (cannot accidentally logout self)
-/// - Ownership verification (OperatorId check)
-/// - Atomic transaction (all or nothing)
-/// - Audit trail for each revocation
-///
-/// Performance:
-/// - Single query to load sessions
-/// - Bulk revocation in memory
-/// - Single transaction commit
-/// - Efficient for 1-100 sessions
 /// </summary>
 public sealed class RevokeAllSessionsExceptCurrentCommandHandler
     : IRequestHandler<RevokeAllSessionsExceptCurrentCommand, Result<RevokeAllSessionsResult>>
@@ -46,11 +31,11 @@ public sealed class RevokeAllSessionsExceptCurrentCommandHandler
         RevokeAllSessionsExceptCurrentCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Verify current token exists and belongs to operator
-        var currentToken = await _refreshTokenRepository.GetByTokenAndPrincipalAsync(
+        // 1. Verify current token exists and belongs to account
+        var currentToken = await _refreshTokenRepository.GetByTokenAndAccountAsync(
             request.CurrentRefreshToken,
-            AccountType.System,     // System account (Operator)
-            request.OperatorId,
+            AccountType.System,
+            request.AccountId,
             cancellationToken);
 
         if (currentToken is null)
@@ -59,10 +44,10 @@ public sealed class RevokeAllSessionsExceptCurrentCommandHandler
                 SessionErrors.CannotIdentifyCurrentSession());
         }
 
-        // 2. Find all active sessions for operator (except current)
+        // 2. Find all active sessions for account (except current)
         var sessionsToRevoke = await _refreshTokenRepository.GetActiveSessionsExceptAsync(
-            AccountType.System,     // System account (Operator)
-            request.OperatorId,
+            AccountType.System,
+            request.AccountId,
             currentToken.Id,
             cancellationToken);
 

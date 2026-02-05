@@ -28,12 +28,12 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Results;
 ///     var @operator = await _repository.GetByIdAsync(command.OperatorId, ct);
 ///     if (@operator is null)
 ///         return Result.Failure(
-///             new NotFoundError("Operator.NotFound", "Operator not found")
+///             new NotFoundError("Account.NotFound", "Account not found")
 ///         );
 ///
 ///     if (@operator.IsSystemOperator())
 ///         return Result.Failure(
-///             new ForbiddenError("Operator.CannotDelete", "Cannot delete system operator")
+///             new ForbiddenError("Account.CannotDelete", "Cannot delete system account")
 ///         );
 ///
 ///     _repository.Remove(@operator);
@@ -180,13 +180,13 @@ public class Result
 ///
 /// Usage Example:
 /// <code>
-/// public async Task&lt;Result&lt;Guid&gt;&gt; Handle(RegisterOperatorCommand command, CancellationToken ct)
+/// public async Task&lt;Result&lt;Guid&gt;&gt; Handle(RegisterAccountCommand command, CancellationToken ct)
 /// {
 ///     // Check for duplicate username
 ///     if (await _repository.ExistsByUsernameAsync(command.Username, ct))
 ///         return Result.Failure&lt;Guid&gt;(
 ///             Error.Conflict(
-///                 "Operator.DuplicateUsername",
+///                 "Account.DuplicateUsername",
 ///                 $"Username '{command.Username}' already exists"
 ///             )
 ///         );
@@ -195,14 +195,14 @@ public class Result
 ///     if (await _repository.ExistsByEmailAsync(command.Email, ct))
 ///         return Result.Failure&lt;Guid&gt;(
 ///             Error.Conflict(
-///                 "Operator.DuplicateEmail",
+///                 "Account.DuplicateEmail",
 ///                 $"Email '{command.Email}' already exists"
 ///             )
 ///         );
 ///
 ///     // Create operator (domain event raised here)
 ///     var hashedPassword = _passwordHasher.HashPassword(command.Password);
-///     var @operator = Operator.Register(
+///     var account = Account.Create(
 ///         command.Username,
 ///         command.Email,
 ///         hashedPassword

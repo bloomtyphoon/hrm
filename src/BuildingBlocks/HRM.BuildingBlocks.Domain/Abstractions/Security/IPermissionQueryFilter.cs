@@ -19,7 +19,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 public interface IPermissionQueryFilter<TEntity> where TEntity : class
 {
     /// <summary>
-    /// Permission key this filter applies to (e.g., "Identity.Operator.View")
+    /// Permission key this filter applies to (e.g., "Identity.Account.View")
     /// </summary>
     string Permission { get; }
 

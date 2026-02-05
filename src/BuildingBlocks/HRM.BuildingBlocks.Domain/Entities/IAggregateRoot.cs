@@ -15,7 +15,7 @@ namespace HRM.BuildingBlocks.Domain.Entities;
 /// Examples in HRM System:
 /// 
 /// Simple Aggregates (no child entities):
-/// - Operator (aggregate root only)
+/// - Account (aggregate root only)
 /// - Role (aggregate root only)
 /// - Company (aggregate root only)
 /// 
@@ -27,7 +27,7 @@ namespace HRM.BuildingBlocks.Domain.Entities;
 /// Incorrect Examples (don't make these aggregate roots):
 /// - UserRole (child of User)
 /// - EmployeeAssignment (child of Employee)
-/// - RefreshToken (child of User/Operator)
+/// - RefreshToken (child of Account)
 /// 
 /// Transaction Boundaries:
 /// - ✅ Create User + Assign Roles (same aggregate)

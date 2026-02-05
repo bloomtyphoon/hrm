@@ -32,7 +32,7 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///
 /// Usage in Registration:
 /// <code>
-/// public class RegisterOperatorCommandHandler
+/// public class RegisterAccountCommandHandler
 /// {
 ///     private readonly IPasswordHasher _passwordHasher;
 ///
@@ -42,7 +42,7 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///         var hashedPassword = _passwordHasher.HashPassword(command.Password);
 ///
 ///         // Create operator with hashed password
-///         var @operator = Operator.Register(
+///         var account = Account.Create(
 ///             command.Username,
 ///             command.Email,
 ///             hashedPassword // ← Hashed, never plaintext
@@ -123,9 +123,9 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 ///
 /// Example Password Validation:
 /// <code>
-/// public class RegisterOperatorCommandValidator : AbstractValidator&lt;RegisterOperatorCommand&gt;
+/// public class RegisterAccountCommandValidator : AbstractValidator&lt;RegisterAccountCommand&gt;
 /// {
-///     public RegisterOperatorCommandValidator()
+///     public RegisterAccountCommandValidator()
 ///     {
 ///         RuleFor(x => x.Password)
 ///             .MinimumLength(8)

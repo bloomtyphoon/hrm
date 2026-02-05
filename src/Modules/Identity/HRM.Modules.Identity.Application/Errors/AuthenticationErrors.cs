@@ -87,7 +87,7 @@ public static class AuthenticationErrors
     /// - User must contact admin to resolve
     ///
     /// Use Cases:
-    /// - Operator status = Suspended
+    /// - Account status = Suspended
     /// - Admin manually suspended account
     /// - Policy violation or security issue
     /// </summary>
@@ -101,7 +101,7 @@ public static class AuthenticationErrors
     /// Account is deactivated (not active)
     ///
     /// Use Cases:
-    /// - Operator status = Deactivated or Pending
+    /// - Account status = Deactivated or Pending
     /// - Account not yet activated after registration
     /// - Former employee account disabled
     /// </summary>

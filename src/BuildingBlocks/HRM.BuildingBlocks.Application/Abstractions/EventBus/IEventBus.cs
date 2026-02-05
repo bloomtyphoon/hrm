@@ -12,21 +12,21 @@ namespace HRM.BuildingBlocks.Application.Abstractions.EventBus;
 /// - Occur within a single module
 /// - Dispatched synchronously within transaction
 /// - Used for consistency within bounded context
-/// - Example: OperatorRegisteredDomainEvent
+/// - Example: AccountCreatedDomainEvent
 /// 
 /// Integration Events:
 /// - Communicate between modules
 /// - Published asynchronously via event bus
 /// - Used for eventual consistency across modules
-/// - Example: OperatorRegisteredIntegrationEvent
+/// - Example: AccountRegisteredIntegrationEvent
 /// 
 /// Event Flow:
 /// <code>
 /// 1. Domain Event Raised:
-///    Operator.Register() → OperatorRegisteredDomainEvent
+///    Account.Create() → AccountCreatedDomainEvent
 /// 
 /// 2. Domain Event Handler (synchronous, in transaction):
-///    OperatorRegisteredDomainEventHandler
+///    AccountCreatedDomainEventHandler
 ///    → Creates OutboxMessage with serialized integration event
 ///    → Commits OutboxMessage in same transaction
 /// 
@@ -91,7 +91,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.EventBus;
 /// <code>
 /// // Identity Module publishes:
 /// await _eventBus.PublishAsync(
-///     new OperatorRegisteredIntegrationEvent
+///     new AccountRegisteredIntegrationEvent
 ///     {
 ///         OperatorId = @operator.Id,
 ///         Username = @operator.Username,
@@ -101,10 +101,10 @@ namespace HRM.BuildingBlocks.Application.Abstractions.EventBus;
 /// );
 /// 
 /// // Organization Module subscribes:
-/// public class OperatorRegisteredIntegrationEventHandler
-///     : IIntegrationEventHandler&lt;OperatorRegisteredIntegrationEvent&gt;
+/// public class AccountRegisteredIntegrationEventHandler
+///     : IIntegrationEventHandler&lt;AccountRegisteredIntegrationEvent&gt;
 /// {
-///     public async Task Handle(OperatorRegisteredIntegrationEvent @event, ...)
+///     public async Task Handle(AccountRegisteredIntegrationEvent @event, ...)
 ///     {
 ///         // Create default permissions for new operator
 ///         var permissions = CreateDefaultPermissions(@event.OperatorId);

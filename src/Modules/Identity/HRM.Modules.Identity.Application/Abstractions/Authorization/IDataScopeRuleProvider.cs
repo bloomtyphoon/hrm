@@ -26,7 +26,7 @@ public sealed record DataScopeContext
     public required string Permission { get; init; }
 
     /// <summary>
-    /// True if user is a system account (Operator).
+    /// True if user is a system account.
     /// System accounts typically have global access.
     /// </summary>
     public bool IsSystemAccount { get; init; }

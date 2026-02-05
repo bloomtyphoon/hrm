@@ -23,7 +23,7 @@ namespace HRM.Modules.Identity.Application.Commands.Login;
 /// - RememberMe: Optional boolean
 ///
 /// Business Rules:
-/// - Operator must exist and be Active status
+/// - Account must exist and be Active status
 /// - Password must match stored hash
 /// - Account must not be locked
 /// - Failed attempt increments counter
@@ -147,7 +147,7 @@ public sealed record LoginResponse
 public sealed record UserInfo
 {
     /// <summary>
-    /// Operator ID (GUID)
+    /// Account ID (GUID)
     /// </summary>
     public required Guid Id { get; init; }
 

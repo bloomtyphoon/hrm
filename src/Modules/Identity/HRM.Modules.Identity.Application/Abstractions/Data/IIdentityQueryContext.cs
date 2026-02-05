@@ -4,27 +4,22 @@ using Microsoft.EntityFrameworkCore;
 namespace HRM.Modules.Identity.Application.Abstractions.Data;
 
 /// <summary>
-/// Query context interface for Identity module
-/// Provides read-only access to DbSets for query handlers
+/// Query context interface for Identity module.
+/// Provides read-only access to DbSets for query handlers.
 ///
 /// Purpose:
 /// - Dependency Inversion: Application depends on abstraction, not Infrastructure
 /// - Query handlers in Application layer can access data without referencing EF Core implementation
-/// - Keeps Application layer independent of Infrastructure
-///
-/// Implementation:
-/// - IdentityDbContext implements this interface
-/// - Registered in DI as scoped service
 ///
 /// Usage:
 /// <code>
-/// public class GetOperatorsQueryHandler : IQueryHandler<...>
+/// public class GetAccountsQueryHandler : IQueryHandler&lt;...&gt;
 /// {
 ///     private readonly IIdentityQueryContext _context;
 ///
-///     public async Task<PagedResult<OperatorSummaryDto>> Handle(...)
+///     public async Task&lt;PagedResult&lt;AccountSummaryDto&gt;&gt; Handle(...)
 ///     {
-///         var query = _context.Operators.AsNoTracking();
+///         var query = _context.Accounts.AsNoTracking();
 ///         // ... query logic
 ///     }
 /// }
@@ -33,12 +28,12 @@ namespace HRM.Modules.Identity.Application.Abstractions.Data;
 public interface IIdentityQueryContext
 {
     /// <summary>
-    /// Operators table (read-only access)
+    /// Accounts table (read-only access).
     /// </summary>
-    DbSet<Operator> Operators { get; }
+    DbSet<Account> Accounts { get; }
 
     /// <summary>
-    /// Refresh tokens table (read-only access)
+    /// Refresh tokens table (read-only access).
     /// </summary>
     DbSet<RefreshToken> RefreshTokens { get; }
 }

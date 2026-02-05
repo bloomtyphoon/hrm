@@ -37,7 +37,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// - EmployeeCreatedIntegrationEvent (from Personnel)
 /// - UserScopeLevelChangedIntegrationEvent (from Identity)
 /// - DepartmentCreatedIntegrationEvent (from Organization)
-/// - OperatorRegisteredIntegrationEvent (from Identity)
+/// - AccountRegisteredIntegrationEvent (from Identity)
 /// 
 /// Bad Examples:
 /// - EmployeeEvent (not specific)

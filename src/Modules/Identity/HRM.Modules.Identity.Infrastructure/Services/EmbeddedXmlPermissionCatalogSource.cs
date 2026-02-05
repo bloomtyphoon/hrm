@@ -14,8 +14,6 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// </summary>
 public sealed class EmbeddedXmlPermissionCatalogSource : IPermissionCatalogSource
 {
-    private const string XmlNamespace = "http://hrm.system/permissions";
-
     private readonly Assembly _assembly;
     private readonly string _resourceName;
     private string? _cachedModuleName;

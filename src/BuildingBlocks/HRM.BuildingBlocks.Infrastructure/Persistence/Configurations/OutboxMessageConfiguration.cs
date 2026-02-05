@@ -1,4 +1,4 @@
-using HRM.BuildingBlocks.Domain.Outbox;
+using HRM.BuildingBlocks.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

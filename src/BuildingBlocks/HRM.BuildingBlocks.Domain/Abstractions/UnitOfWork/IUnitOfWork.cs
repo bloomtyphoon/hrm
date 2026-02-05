@@ -22,12 +22,12 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 /// - No partial commits (all or nothing)
 /// - Database consistency maintained
 /// 
-/// Example Flow - Register Operator:
+/// Example Flow - Register Account:
 /// 
 /// 1. Application Layer (Command Handler):
 ///    <code>
-///    var operator = Operator.Register(username, email, hashedPassword);
-///    // Domain event raised: OperatorRegisteredDomainEvent
+///    var account = Account.Create(username, email, hashedPassword);
+///    // Domain event raised: AccountCreatedDomainEvent
 ///    
 ///    await _operatorRepository.AddAsync(operator);
 ///    await _unitOfWork.CommitAsync(); // ← Triggers the workflow below
@@ -44,15 +44,15 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 ///        await _publisher.Publish(evt); // MediatR
 ///    
 ///    // Step 3: Handler creates integration event
-///    // OperatorRegisteredDomainEventHandler:
-///    //   - Creates OperatorRegisteredIntegrationEvent
+///    // AccountCreatedDomainEventHandler:
+///    //   - Creates AccountRegisteredIntegrationEvent
 ///    //   - Serializes to JSON
 ///    //   - Creates OutboxMessage
 ///    //   - Adds to OutboxMessages DbSet
 ///    
 ///    // Step 4: Save everything (atomic)
 ///    await base.SaveChangesAsync();
-///    // Commits: Operator + OutboxMessage
+///    // Commits: Account + OutboxMessage
 ///    
 ///    // Step 5: Clear events
 ///    foreach (var entity in ChangeTracker.Entries<Entity>())
@@ -60,7 +60,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 ///    </code>
 /// 
 /// 3. Result:
-///    ✅ Operator saved to [identity].[Operators]
+///    ✅ Account saved to [identity].[Accounts]
 ///    ✅ OutboxMessage saved to [identity].[OutboxMessages]
 ///    ✅ Both in SAME transaction (atomic!)
 ///    ✅ Background service will publish integration event later
@@ -105,15 +105,15 @@ public interface IUnitOfWork : IModuleContext
     /// 3. Domain Event Handlers Create Integration Events:
     ///    Example Handler:
     ///    <code>
-    ///    public class OperatorRegisteredDomainEventHandler 
-    ///        : INotificationHandler<OperatorRegisteredDomainEvent>
+    ///    public class AccountCreatedDomainEventHandler 
+    ///        : INotificationHandler<AccountCreatedDomainEvent>
     ///    {
     ///        private readonly IdentityDbContext _context;
     ///        
-    ///        public async Task Handle(OperatorRegisteredDomainEvent evt, ...)
+    ///        public async Task Handle(AccountCreatedDomainEvent evt, ...)
     ///        {
     ///            // Create integration event
-    ///            var integrationEvent = new OperatorRegisteredIntegrationEvent
+    ///            var integrationEvent = new AccountRegisteredIntegrationEvent
     ///            {
     ///                OperatorId = evt.OperatorId,
     ///                Username = evt.Username,
@@ -140,7 +140,7 @@ public interface IUnitOfWork : IModuleContext
     /// 4. Save All Changes (Atomic Transaction):
     ///    - Call base.SaveChangesAsync()
     ///    - Commits ALL tracked changes:
-    ///      * Domain entities (Operator, User, Employee, etc.)
+    ///      * Domain entities (Account, Employee, etc.)
     ///      * OutboxMessages
     ///      * Any entities created by domain event handlers
     ///    - All in SINGLE database transaction

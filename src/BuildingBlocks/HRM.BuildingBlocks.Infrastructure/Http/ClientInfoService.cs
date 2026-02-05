@@ -101,15 +101,18 @@ public sealed class ClientInfoService : IClientInfoService
     /// <summary>
     /// Gets client User Agent string.
     ///
+    /// Uses raw header indexer instead of typed Headers.UserAgent property.
+    /// Headers.UserAgent parses structured values per RFC — silently returns
+    /// empty when the format is non-standard. The indexer reads the raw string,
+    /// which works reliably with all proxies, load balancers, and integration tests.
+    ///
     /// Returns null if:
     /// - HttpContext not available
     /// - User-Agent header not present
     /// - User-Agent header is empty
     ///
-    /// Common Values:
-    /// - Web: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36..."
-    /// - Mobile: "HRM-Mobile-App/1.2.3 (iOS 16.0)"
-    /// - API: "PostmanRuntime/7.36.0"
+    /// Security: User-Agent is easily spoofed — use for audit/logging only,
+    /// never for security decisions.
     /// </summary>
     public string? UserAgent
     {
@@ -117,12 +120,10 @@ public sealed class ClientInfoService : IClientInfoService
         {
             var context = _httpContextAccessor.HttpContext;
             if (context == null)
-            {
                 return null;
-            }
 
-            var userAgent = context.Request.Headers.UserAgent.ToString();
-            return string.IsNullOrWhiteSpace(userAgent) ? null : userAgent;
+            var ua = context.Request.Headers["User-Agent"].ToString();
+            return string.IsNullOrWhiteSpace(ua) ? null : ua;
         }
     }
 
