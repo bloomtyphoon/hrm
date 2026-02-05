@@ -27,7 +27,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 /// 1. Application Layer (Command Handler):
 ///    <code>
 ///    var account = Account.Create(username, email, hashedPassword);
-///    // Domain event raised: OperatorRegisteredDomainEvent
+///    // Domain event raised: AccountCreatedDomainEvent
 ///    
 ///    await _operatorRepository.AddAsync(operator);
 ///    await _unitOfWork.CommitAsync(); // ← Triggers the workflow below
@@ -44,8 +44,8 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 ///        await _publisher.Publish(evt); // MediatR
 ///    
 ///    // Step 3: Handler creates integration event
-///    // OperatorRegisteredDomainEventHandler:
-///    //   - Creates OperatorRegisteredIntegrationEvent
+///    // AccountCreatedDomainEventHandler:
+///    //   - Creates AccountRegisteredIntegrationEvent
 ///    //   - Serializes to JSON
 ///    //   - Creates OutboxMessage
 ///    //   - Adds to OutboxMessages DbSet
@@ -105,15 +105,15 @@ public interface IUnitOfWork : IModuleContext
     /// 3. Domain Event Handlers Create Integration Events:
     ///    Example Handler:
     ///    <code>
-    ///    public class OperatorRegisteredDomainEventHandler 
-    ///        : INotificationHandler<OperatorRegisteredDomainEvent>
+    ///    public class AccountCreatedDomainEventHandler 
+    ///        : INotificationHandler<AccountCreatedDomainEvent>
     ///    {
     ///        private readonly IdentityDbContext _context;
     ///        
-    ///        public async Task Handle(OperatorRegisteredDomainEvent evt, ...)
+    ///        public async Task Handle(AccountCreatedDomainEvent evt, ...)
     ///        {
     ///            // Create integration event
-    ///            var integrationEvent = new OperatorRegisteredIntegrationEvent
+    ///            var integrationEvent = new AccountRegisteredIntegrationEvent
     ///            {
     ///                OperatorId = evt.OperatorId,
     ///                Username = evt.Username,

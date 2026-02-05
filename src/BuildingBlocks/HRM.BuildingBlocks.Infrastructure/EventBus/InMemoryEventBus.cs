@@ -44,14 +44,14 @@ namespace HRM.BuildingBlocks.Infrastructure.EventBus;
 /// Handler Registration Example:
 /// <code>
 /// // In Personnel Module
-/// public class OperatorRegisteredIntegrationEventHandler
-///     : INotificationHandler<OperatorRegisteredIntegrationEvent>
+/// public class AccountRegisteredIntegrationEventHandler
+///     : INotificationHandler<AccountRegisteredIntegrationEvent>
 /// {
-///     public async Task Handle(OperatorRegisteredIntegrationEvent evt, CancellationToken ct)
+///     public async Task Handle(AccountRegisteredIntegrationEvent evt, CancellationToken ct)
 ///     {
 ///         // Handle event (e.g., create user profile)
 ///         _logger.LogInformation(
-///             "Received OperatorRegisteredIntegrationEvent for {Username}",
+///             "Received AccountRegisteredIntegrationEvent for {Username}",
 ///             evt.Username
 ///         );
 ///     }

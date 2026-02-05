@@ -18,8 +18,8 @@ namespace HRM.Modules.Identity.Infrastructure.BackgroundServices;
 /// - Use distributed locking for scaled deployments
 ///
 /// Integration Events Published:
-/// - OperatorRegisteredIntegrationEvent: When operator registered
-/// - OperatorActivatedIntegrationEvent: When operator activated (if implemented)
+/// - AccountRegisteredIntegrationEvent: When account registered
+/// - AccountActivatedIntegrationEvent: When account activated (if implemented)
 /// - Other operator lifecycle events (future)
 ///
 /// Distributed Locking:

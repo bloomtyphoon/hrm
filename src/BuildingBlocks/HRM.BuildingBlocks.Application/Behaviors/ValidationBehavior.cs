@@ -22,9 +22,9 @@ namespace HRM.BuildingBlocks.Application.Behaviors;
 /// Example:
 /// <code>
 /// // Validator
-/// public class RegisterOperatorCommandValidator : AbstractValidator<RegisterOperatorCommand>
+/// public class RegisterAccountCommandValidator : AbstractValidator<RegisterAccountCommand>
 /// {
-///     public RegisterOperatorCommandValidator()
+///     public RegisterAccountCommandValidator()
 ///     {
 ///         RuleFor(x => x.Username).NotEmpty().MinimumLength(3);
 ///     }

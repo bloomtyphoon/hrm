@@ -136,17 +136,17 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 /// 
 /// Example Implementation:
 /// <code>
-/// public sealed class RegisterOperatorCommandHandler 
-///     : ICommandHandler&lt;RegisterOperatorCommand, Guid&gt;
+/// public sealed class RegisterAccountCommandHandler 
+///     : ICommandHandler&lt;RegisterAccountCommand, Guid&gt;
 /// {
 ///     private readonly IAccountRepository _repository;
 ///     private readonly IPasswordHasher _passwordHasher;
-///     private readonly ILogger&lt;RegisterOperatorCommandHandler&gt; _logger;
+///     private readonly ILogger&lt;RegisterAccountCommandHandler&gt; _logger;
 ///     
-///     public RegisterOperatorCommandHandler(
+///     public RegisterAccountCommandHandler(
 ///         IAccountRepository repository,
 ///         IPasswordHasher passwordHasher,
-///         ILogger&lt;RegisterOperatorCommandHandler&gt; logger)
+///         ILogger&lt;RegisterAccountCommandHandler&gt; logger)
 ///     {
 ///         _repository = repository;
 ///         _passwordHasher = passwordHasher;
@@ -154,7 +154,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///     }
 ///     
 ///     public async Task&lt;Result&lt;Guid&gt;&gt; Handle(
-///         RegisterOperatorCommand command,
+///         RegisterAccountCommand command,
 ///         CancellationToken cancellationToken)
 ///     {
 ///         // 1. Check for duplicate username (business rule validation)
@@ -199,7 +199,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///             hashedPassword
 ///         );
 ///         
-///         // Domain event raised: OperatorRegisteredDomainEvent
+///         // Domain event raised: AccountCreatedDomainEvent
 ///         // This will be handled by domain event handler which creates OutboxMessage
 ///         
 ///         // 5. Persist entity
@@ -216,7 +216,7 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///         
 ///         // Note: UnitOfWorkBehavior will:
 ///         // 1. Collect domain events from @operator entity
-///         // 2. Dispatch OperatorRegisteredDomainEvent synchronously
+///         // 2. Dispatch AccountCreatedDomainEvent synchronously
 ///         // 3. Domain event handler creates OutboxMessage
 ///         // 4. Commit both Account and OutboxMessage atomically
 ///         // 5. Clear domain events from entity

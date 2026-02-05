@@ -19,10 +19,10 @@ namespace HRM.BuildingBlocks.Infrastructure.Extensions;
 /// Usage in Minimal API Endpoints:
 /// <code>
 /// app.MapPost("/api/operators/register", async (
-///     RegisterOperatorRequest request,
+///     RegisterAccountRequest request,
 ///     ISender sender) =>
 /// {
-///     var command = new RegisterOperatorCommand(...);
+///     var command = new RegisterAccountCommand(...);
 ///     var result = await sender.Send(command);
 ///
 ///     // Clean HTTP mapping
@@ -68,7 +68,7 @@ public static class ResultExtensions
     ///
     /// Usage:
     /// <code>
-    /// var result = await sender.Send(new RegisterOperatorCommand(...));
+    /// var result = await sender.Send(new RegisterAccountCommand(...));
     /// return result.ToHttpResult(operatorId =>
     ///     Results.Created($"/api/operators/{operatorId}", new { Id = operatorId })
     /// );

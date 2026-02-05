@@ -96,9 +96,9 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     ///
     /// Example Timeline:
     /// T+0ms:   CommitAsync() called
-    /// T+1ms:   Collect domain events (OperatorRegisteredDomainEvent)
+    /// T+1ms:   Collect domain events (AccountCreatedDomainEvent)
     /// T+2ms:   Dispatch event to handlers
-    /// T+5ms:   Handler creates OperatorRegisteredIntegrationEvent
+    /// T+5ms:   Handler creates AccountRegisteredIntegrationEvent
     /// T+6ms:   Handler creates OutboxMessage
     /// T+7ms:   SaveChanges() saves Account + OutboxMessage
     /// T+10ms:  Clear domain events

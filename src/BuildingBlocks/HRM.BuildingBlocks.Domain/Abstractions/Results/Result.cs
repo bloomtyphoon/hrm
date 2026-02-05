@@ -180,7 +180,7 @@ public class Result
 ///
 /// Usage Example:
 /// <code>
-/// public async Task&lt;Result&lt;Guid&gt;&gt; Handle(RegisterOperatorCommand command, CancellationToken ct)
+/// public async Task&lt;Result&lt;Guid&gt;&gt; Handle(RegisterAccountCommand command, CancellationToken ct)
 /// {
 ///     // Check for duplicate username
 ///     if (await _repository.ExistsByUsernameAsync(command.Username, ct))

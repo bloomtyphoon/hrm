@@ -23,7 +23,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Results;
 ///
 /// Usage in Domain:
 /// <code>
-/// public static class OperatorErrors
+/// public static class AccountErrors
 /// {
 ///     public static NotFoundError NotFound(Guid id) =>
 ///         new("Account.NotFound", $"Account with ID '{id}' not found");
@@ -36,7 +36,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Results;
 /// Usage in Application:
 /// <code>
 /// if (!await _repository.ExistsByIdAsync(id))
-///     return Result.Failure(OperatorErrors.NotFound(id));
+///     return Result.Failure(AccountErrors.NotFound(id));
 /// </code>
 /// </summary>
 public abstract record DomainError

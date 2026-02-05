@@ -129,7 +129,7 @@ public interface ICommand : IRequest<Result>, ICommandBase
 /// Examples:
 /// <code>
 /// // Return created entity ID (most common pattern)
-/// public sealed record RegisterOperatorCommand : ICommand&lt;Guid&gt;
+/// public sealed record RegisterAccountCommand : ICommand&lt;Guid&gt;
 /// {
 ///     public string Username { get; init; } = string.Empty;
 ///     public string Email { get; init; } = string.Empty;
@@ -166,7 +166,7 @@ public interface ICommand : IRequest<Result>, ICommandBase
 /// Value Access Pattern:
 /// <code>
 /// // In API controller:
-/// var result = await mediator.Send(new RegisterOperatorCommand { ... });
+/// var result = await mediator.Send(new RegisterAccountCommand { ... });
 /// 
 /// if (result.IsFailure)
 ///     return BadRequest(result.Error);
