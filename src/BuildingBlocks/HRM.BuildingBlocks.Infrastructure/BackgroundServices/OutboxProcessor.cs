@@ -3,7 +3,7 @@ using System.Data.Common;
 using System.Text.Json;
 using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.BuildingBlocks.Domain.Abstractions.Events;
-using HRM.BuildingBlocks.Domain.Outbox;
+using HRM.BuildingBlocks.Infrastructure.Outbox;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
