@@ -64,29 +64,27 @@ else
                             <dd class="col-sm-8">
                                 @if (!string.IsNullOrWhiteSpace(session.UserAgent))
                                 {
-                                    @{
-                                        var ua = session.UserAgent!;
-                                        string deviceIcon;
-                                        string deviceLabel;
+                                    var ua = session.UserAgent!;
+                                    string deviceIcon;
+                                    string deviceLabel;
 
-                                        if (ua.Contains("Mobile", StringComparison.OrdinalIgnoreCase) ||
-                                            ua.Contains("Android", StringComparison.OrdinalIgnoreCase) ||
-                                            ua.Contains("iPhone", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            deviceIcon = "bi-phone";
-                                            deviceLabel = "Mobile";
-                                        }
-                                        else if (ua.Contains("PostmanRuntime", StringComparison.OrdinalIgnoreCase) ||
-                                                 ua.Contains("curl", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            deviceIcon = "bi-terminal";
-                                            deviceLabel = "API Client";
-                                        }
-                                        else
-                                        {
-                                            deviceIcon = "bi-laptop";
-                                            deviceLabel = "Desktop";
-                                        }
+                                    if (ua.Contains("Mobile", StringComparison.OrdinalIgnoreCase) ||
+                                        ua.Contains("Android", StringComparison.OrdinalIgnoreCase) ||
+                                        ua.Contains("iPhone", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        deviceIcon = "bi-phone";
+                                        deviceLabel = "Mobile";
+                                    }
+                                    else if (ua.Contains("PostmanRuntime", StringComparison.OrdinalIgnoreCase) ||
+                                             ua.Contains("curl", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        deviceIcon = "bi-terminal";
+                                        deviceLabel = "API Client";
+                                    }
+                                    else
+                                    {
+                                        deviceIcon = "bi-laptop";
+                                        deviceLabel = "Desktop";
                                     }
                                     <i class="bi @deviceIcon me-1"></i>@deviceLabel
                                     <br />
