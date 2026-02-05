@@ -1,13 +1,18 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
-using HRM.Modules.Organization.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Abstractions;
 
-namespace HRM.Modules.Organization.Infrastructure.Services;
+namespace HRM.Modules.Personnel.Infrastructure.Services;
 
 /// <summary>
-/// Implementation of IDataScopeService for the Organization module.
+/// Implementation of IDataScopeService for the Personnel module.
 ///
-/// This is the central point that implements the Architecture Flow:
+/// DESIGN: This lives in Personnel module because:
+/// - Employee data is Personnel's domain
+/// - Scope resolution requires employee assignments (Personnel owns this)
+/// - Hierarchy resolution requires employee relationships (Personnel owns this)
+///
+/// Architecture Flow:
 ///
 /// User Request
 ///      │
@@ -15,16 +20,17 @@ namespace HRM.Modules.Organization.Infrastructure.Services;
 /// Permission Check
 ///      │
 ///      ▼
-/// Scope Resolution (Identity + Org modules)
+/// Scope Resolution (Identity + Personnel modules)
 ///      │
-///      ├── Dimension grants → DataScopeRule[]
-///      └── Hierarchy grants → IHierarchyScopeResolver
-///                                    │
-///      ▼                              ▼
-/// DataScopePolicy.Or(rules...)  ←────┘
+///      ├── IScopeGrantProvider (Identity) → returns scope LEVEL
+///      ├── IEmployeeAssignmentQuery (Personnel) → returns dimension IDs
+///      └── IHierarchyScopeResolver (Personnel) → returns subordinate IDs
 ///      │
 ///      ▼
-/// EfScopeExpressionBuilder.Build(policy)
+/// DataScopeRule / DataScopePolicy
+///      │
+///      ▼
+/// EfScopeExpressionBuilder.Build(rule/policy)
 ///      │
 ///      ▼
 /// query.Where(expression)
@@ -32,8 +38,8 @@ namespace HRM.Modules.Organization.Infrastructure.Services;
 /// Flow:
 /// 1. Receives userId and permission from caller
 /// 2. Gets user's scope LEVEL from IScopeGrantProvider (Identity)
-/// 3. Resolves dimension IDs from employee assignments
-/// 4. Resolves hierarchy (subordinates) if scope is EmployeeSet
+/// 3. Resolves dimension IDs from employee assignments (Personnel)
+/// 4. Resolves hierarchy (subordinates) if scope is EmployeeSet (Personnel)
 /// 5. Returns DataScopeRule ready for query filtering
 /// </summary>
 public sealed class DataScopeService : IDataScopeService

@@ -1,13 +1,18 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
-using HRM.Modules.Organization.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Abstractions;
 
-namespace HRM.Modules.Organization.Infrastructure.Services;
+namespace HRM.Modules.Personnel.Infrastructure.Services;
 
 /// <summary>
-/// Implementation of IHierarchyScopeResolver for the Organization module.
+/// Implementation of IHierarchyScopeResolver for the Personnel module.
 ///
 /// Resolves manager-subordinate hierarchies by traversing the ManagerId relationships.
 /// Uses caching for frequently accessed hierarchies.
+///
+/// DESIGN: This lives in Personnel module because:
+/// - Employee hierarchy is Personnel's domain
+/// - Organization module only knows about structure (Company, Department, Position)
+/// - Personnel owns the "who reports to whom" relationship
 ///
 /// Performance considerations:
 /// - Uses recursive CTE for database traversal

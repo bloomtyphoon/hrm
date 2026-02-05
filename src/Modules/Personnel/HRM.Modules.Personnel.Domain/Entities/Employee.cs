@@ -1,15 +1,16 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
 
-namespace HRM.Modules.Organization.Domain.Entities;
+namespace HRM.Modules.Personnel.Domain.Entities;
 
 /// <summary>
 /// Employee aggregate root - represents a person employed by the organization.
 ///
-/// Employee is the central entity in HRM. It has:
-/// - Basic personal information
-/// - Multiple assignments (positions in departments/companies)
-/// - Manager relationship (for hierarchy)
+/// DESIGN: Personnel module owns Employee data.
+/// Organization references (CompanyId, DepartmentId, PositionId) are WEAK REFERENCES:
+/// - Store as Guid only (no FK constraint to Organization module)
+/// - Personnel does NOT depend on Organization.Domain
+/// - Sync via Integration Events if needed
 ///
 /// Scope (from primary assignment):
 /// - [ScopeDimension(Company)] = primary company
@@ -20,6 +21,7 @@ namespace HRM.Modules.Organization.Domain.Entities;
 /// Manager Hierarchy:
 /// - ManagerId points to another Employee who is the direct manager
 /// - Used for EmployeeSet scope (manager can see subordinates' data)
+/// - Resolved by IHierarchyScopeResolver in Personnel module
 /// </summary>
 public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
 {
@@ -79,24 +81,24 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
     /// </summary>
     public Guid? ManagerId { get; private set; }
 
-    #region Primary Assignment (Scope Dimensions)
+    #region Primary Assignment (Scope Dimensions) - Weak References to Organization
 
     /// <summary>
-    /// Primary company (from primary assignment).
+    /// Primary company ID (weak reference to Organization.Company).
     /// Used for Company scope filtering.
     /// </summary>
     [ScopeDimension(DataScopeLevel.Company)]
     public Guid? PrimaryCompanyId { get; private set; }
 
     /// <summary>
-    /// Primary department (from primary assignment).
+    /// Primary department ID (weak reference to Organization.Department).
     /// Used for Department scope filtering.
     /// </summary>
     [ScopeDimension(DataScopeLevel.Department)]
     public Guid? PrimaryDepartmentId { get; private set; }
 
     /// <summary>
-    /// Primary position (from primary assignment).
+    /// Primary position ID (weak reference to Organization.Position).
     /// Used for Position scope filtering.
     /// </summary>
     [ScopeDimension(DataScopeLevel.Position)]
@@ -113,7 +115,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
     private readonly List<EmployeeAssignment> _assignments = new();
     public IReadOnlyCollection<EmployeeAssignment> Assignments => _assignments.AsReadOnly();
 
-    // Navigation properties
+    // Navigation properties (within Personnel module only)
     public virtual Employee? Manager { get; private set; }
     public virtual ICollection<Employee> DirectReports { get; private set; } = new List<Employee>();
 
@@ -203,6 +205,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
 
     /// <summary>
     /// Add a new assignment.
+    /// CompanyId, DepartmentId, PositionId are weak references to Organization module.
     /// </summary>
     public EmployeeAssignment AddAssignment(
         Guid companyId,
