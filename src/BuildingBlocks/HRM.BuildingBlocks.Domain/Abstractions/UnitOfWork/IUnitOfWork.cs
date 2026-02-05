@@ -29,7 +29,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 ///    var account = Account.Create(username, email, hashedPassword);
 ///    // Domain event raised: AccountCreatedDomainEvent
 ///    
-///    await _operatorRepository.AddAsync(operator);
+///    await _accountRepository.AddAsync(account);
 ///    await _unitOfWork.CommitAsync(); // ← Triggers the workflow below
 ///    </code>
 /// 
@@ -115,7 +115,7 @@ public interface IUnitOfWork : IModuleContext
     ///            // Create integration event
     ///            var integrationEvent = new AccountRegisteredIntegrationEvent
     ///            {
-    ///                OperatorId = evt.OperatorId,
+    ///                AccountId = evt.AccountId,
     ///                Username = evt.Username,
     ///                Email = evt.Email
     ///            };

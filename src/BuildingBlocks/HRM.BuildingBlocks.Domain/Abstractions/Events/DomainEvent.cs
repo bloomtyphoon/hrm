@@ -9,7 +9,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// <code>
 /// public sealed record AccountCreatedDomainEvent : DomainEvent
 /// {
-///     public Guid OperatorId { get; init; }
+///     public Guid AccountId { get; init; }
 ///     public string Username { get; init; }
 ///     public string Email { get; init; }
 /// }
@@ -35,9 +35,9 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Events;
 /// - DepartmentRenamedDomainEvent
 /// 
 /// Bad Examples:
-/// - OperatorEvent (not specific)
+/// - AccountEvent (not specific)
 /// - RegisterAccount (not past tense)
-/// - OperatorChanged (too vague)
+/// - AccountChanged (too vague)
 /// </summary>
 public abstract record DomainEvent : IDomainEvent
 {

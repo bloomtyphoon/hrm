@@ -36,37 +36,37 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 /// 
 /// Example Implementation:
 /// <code>
-/// public sealed class DeleteOperatorCommandHandler 
-///     : ICommandHandler&lt;DeleteOperatorCommand&gt;
+/// public sealed class DeleteAccountCommandHandler
+///     : ICommandHandler&lt;DeleteAccountCommand&gt;
 /// {
 ///     private readonly IAccountRepository _repository;
-///     private readonly ILogger&lt;DeleteOperatorCommandHandler&gt; _logger;
-///     
-///     public DeleteOperatorCommandHandler(
+///     private readonly ILogger&lt;DeleteAccountCommandHandler&gt; _logger;
+///
+///     public DeleteAccountCommandHandler(
 ///         IAccountRepository repository,
-///         ILogger&lt;DeleteOperatorCommandHandler&gt; logger)
+///         ILogger&lt;DeleteAccountCommandHandler&gt; logger)
 ///     {
 ///         _repository = repository;
 ///         _logger = logger;
 ///     }
-///     
+///
 ///     public async Task&lt;Result&gt; Handle(
-///         DeleteOperatorCommand command,
+///         DeleteAccountCommand command,
 ///         CancellationToken cancellationToken)
 ///     {
 ///         // 1. Load entity from repository
-///         var @operator = await _repository.GetByIdAsync(
+///         var account = await _repository.GetByIdAsync(
 ///             command.AccountId,
 ///             cancellationToken
 ///         );
-///         
-///         if (@operator is null)
+///
+///         if (account is null)
 ///         {
 ///             _logger.LogWarning(
 ///                 "Account {AccountId} not found for deletion",
 ///                 command.AccountId
 ///             );
-///             
+///
 ///             return Result.Failure(
 ///                 new NotFoundError(
 ///                     "Account.NotFound",
@@ -74,37 +74,37 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Commands;
 ///                 )
 ///             );
 ///         }
-///         
+///
 ///         // 2. Validate business rules
-///         if (@operator.IsSystemOperator())
+///         if (account.IsSystemAccount())
 ///         {
 ///             _logger.LogWarning(
-///                 "Attempt to delete system operator {OperatorId}",
+///                 "Attempt to delete system account {AccountId}",
 ///                 command.AccountId
 ///             );
-///             
+///
 ///             return Result.Failure(
 ///                 new ForbiddenError(
 ///                     "Account.CannotDeleteSystem",
-///                     "System operators cannot be deleted"
+///                     "System accounts cannot be deleted"
 ///                 )
 ///             );
 ///         }
-///         
+///
 ///         // 3. Execute domain logic
-///         // Domain event may be raised here: OperatorDeletedDomainEvent
-///         _repository.Remove(@operator);
-///         
+///         // Domain event may be raised here: AccountDeletedDomainEvent
+///         _repository.Remove(account);
+///
 ///         _logger.LogInformation(
 ///             "Account {AccountId} marked for deletion",
 ///             command.AccountId
 ///         );
-///         
+///
 ///         // 4. Return success
 ///         return Result.Success();
-///         
+///
 ///         // Note: UnitOfWorkBehavior will:
-///         // - Dispatch OperatorDeletedDomainEvent
+///         // - Dispatch AccountDeletedDomainEvent
 ///         // - Commit changes to database
 ///         // - All in one transaction
 ///     }
@@ -203,19 +203,19 @@ public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand, Result
 ///         // This will be handled by domain event handler which creates OutboxMessage
 ///         
 ///         // 5. Persist entity
-///         await _repository.AddAsync(@operator, cancellationToken);
-///         
+///         await _repository.AddAsync(account, cancellationToken);
+///
 ///         _logger.LogInformation(
 ///             "Account {AccountId} registered successfully with username {Username}",
-///             @operator.Id,
+///             account.Id,
 ///             command.Username
 ///         );
-///         
+///
 ///         // 6. Return created ID
-///         return Result.Success(@operator.Id);
-///         
+///         return Result.Success(account.Id);
+///
 ///         // Note: UnitOfWorkBehavior will:
-///         // 1. Collect domain events from @operator entity
+///         // 1. Collect domain events from account entity
 ///         // 2. Dispatch AccountCreatedDomainEvent synchronously
 ///         // 3. Domain event handler creates OutboxMessage
 ///         // 4. Commit both Account and OutboxMessage atomically

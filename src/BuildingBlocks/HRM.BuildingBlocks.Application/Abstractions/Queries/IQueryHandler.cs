@@ -48,17 +48,17 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// 
 /// 2. Use EF Core with AsNoTracking:
 /// <code>
-/// public async Task&lt;OperatorDto?&gt; Handle(...)
+/// public async Task&lt;AccountDto?&gt; Handle(...)
 /// {
-///     return await _context.Operators
+///     return await _context.Accounts
 ///         .AsNoTracking() // Critical for read-only queries
-///         .Where(o => o.Id == query.OperatorId)
-///         .Select(o => new OperatorDto
+///         .Where(a => a.Id == query.AccountId)
+///         .Select(a => new AccountDto
 ///         {
-///             Id = o.Id,
-///             Username = o.Username,
-///             Email = o.Email,
-///             IsActive = o.IsActive
+///             Id = a.Id,
+///             Username = a.Username,
+///             Email = a.Email,
+///             IsActive = a.IsActive
 ///         })
 ///         .FirstOrDefaultAsync(cancellationToken);
 /// }
@@ -111,34 +111,34 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// 
 /// Single Entity Query:
 /// <code>
-/// public async Task&lt;OperatorDto?&gt; Handle(...)
+/// public async Task&lt;AccountDto?&gt; Handle(...)
 /// {
-///     var @operator = await _repository.GetByIdAsync(query.OperatorId);
-///     
+///     var account = await _repository.GetByIdAsync(query.AccountId);
+///
 ///     // Return null if not found - let API layer decide on 404
-///     if (@operator is null)
+///     if (account is null)
 ///         return null;
-///     
-///     return new OperatorDto
+///
+///     return new AccountDto
 ///     {
-///         Id = @operator.Id,
-///         Username = @operator.Username,
+///         Id = account.Id,
+///         Username = account.Username,
 ///         // ... map properties
 ///     };
 /// }
 /// </code>
-/// 
+///
 /// Collection Query:
 /// <code>
-/// public async Task&lt;List&lt;OperatorDto&gt;&gt; Handle(...)
+/// public async Task&lt;List&lt;AccountDto&gt;&gt; Handle(...)
 /// {
-///     var operators = await _repository.GetAllActiveAsync();
-///     
+///     var accounts = await _repository.GetAllActiveAsync();
+///
 ///     // Return empty list if none found - NOT an error
-///     if (!operators.Any())
-///         return new List&lt;OperatorDto&gt;();
-///     
-///     return operators.Select(o => new OperatorDto { ... }).ToList();
+///     if (!accounts.Any())
+///         return new List&lt;AccountDto&gt;();
+///
+///     return accounts.Select(a => new AccountDto { ... }).ToList();
 /// }
 /// </code>
 /// 

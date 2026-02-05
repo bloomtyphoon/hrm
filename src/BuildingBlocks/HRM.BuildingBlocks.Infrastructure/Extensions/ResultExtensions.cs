@@ -18,7 +18,7 @@ namespace HRM.BuildingBlocks.Infrastructure.Extensions;
 ///
 /// Usage in Minimal API Endpoints:
 /// <code>
-/// app.MapPost("/api/operators/register", async (
+/// app.MapPost("/api/identity/accounts/register", async (
 ///     RegisterAccountRequest request,
 ///     ISender sender) =>
 /// {
@@ -26,8 +26,8 @@ namespace HRM.BuildingBlocks.Infrastructure.Extensions;
 ///     var result = await sender.Send(command);
 ///
 ///     // Clean HTTP mapping
-///     return result.ToHttpResult(operatorId =>
-///         Results.Created($"/api/operators/{operatorId}", new { Id = operatorId })
+///     return result.ToHttpResult(accountId =>
+///         Results.Created($"/api/identity/accounts/{accountId}", new { Id = accountId })
 ///     );
 /// });
 /// </code>
@@ -50,7 +50,7 @@ public static class ResultExtensions
     ///
     /// Usage:
     /// <code>
-    /// var result = await sender.Send(new DeleteOperatorCommand(id));
+    /// var result = await sender.Send(new DeleteAccountCommand(id));
     /// return result.ToHttpResult(); // 204 No Content or error status
     /// </code>
     /// </summary>
@@ -69,8 +69,8 @@ public static class ResultExtensions
     /// Usage:
     /// <code>
     /// var result = await sender.Send(new RegisterAccountCommand(...));
-    /// return result.ToHttpResult(operatorId =>
-    ///     Results.Created($"/api/operators/{operatorId}", new { Id = operatorId })
+    /// return result.ToHttpResult(accountId =>
+    ///     Results.Created($"/api/identity/accounts/{accountId}", new { Id = accountId })
     /// );
     /// </code>
     /// </summary>
@@ -93,7 +93,7 @@ public static class ResultExtensions
     ///
     /// Usage:
     /// <code>
-    /// var result = await sender.Send(new GetOperatorQuery(id));
+    /// var result = await sender.Send(new GetAccountQuery(id));
     /// return result.ToHttpResult(); // 200 OK with value as JSON
     /// </code>
     /// </summary>
@@ -174,10 +174,10 @@ public static class ResultExtensions
     ///
     /// Usage:
     /// <code>
-    /// return await result.ToHttpResultAsync(async operatorId =>
+    /// return await result.ToHttpResultAsync(async accountId =>
     /// {
-    ///     var @operator = await repository.GetByIdAsync(operatorId);
-    ///     return Results.Ok(@operator);
+    ///     var account = await repository.GetByIdAsync(accountId);
+    ///     return Results.Ok(account);
     /// });
     /// </code>
     /// </summary>
@@ -198,7 +198,7 @@ public static class ResultExtensions
     /// Usage:
     /// <code>
     /// return result.MatchHttp(
-    ///     onSuccess: operatorId => Results.Created($"/api/operators/{operatorId}", ...),
+    ///     onSuccess: accountId => Results.Created($"/api/identity/accounts/{accountId}", ...),
     ///     onNotFound: error => Results.NotFound(new { error.Message }),
     ///     onConflict: error => Results.Conflict(new { error.Message }),
     ///     onValidation: error => Results.BadRequest(new { error.Message, error.Details }),

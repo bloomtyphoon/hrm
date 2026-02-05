@@ -33,7 +33,7 @@ The Permission Catalog System is a declarative, XML-based permission management 
 │                   Database (Role Permissions)               │
 │  - Role: System Admin, HR Manager, Department Manager       │
 │  - Selected Permissions from Catalog                         │
-│  - User/Operator Assignments                                 │
+│  - Account Assignments                                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -86,8 +86,7 @@ The catalog defines permissions for all system modules:
 - **SalaryStructure**: View, Create, Update, Delete
 
 ### 4. Identity Module
-- **User**: View, Create, Update, Delete, ResetPassword, AssignPermission
-- **Operator**: View, Create, Update, Delete, ResetPassword, AssignPermission
+- **Account**: View, Create, Update, Delete, ResetPassword, AssignRole
 - **Role**: View, Create, Update, Delete, AssignPermission
 
 ### 5. System Module
@@ -97,7 +96,7 @@ The catalog defines permissions for all system modules:
 
 ## Scopes
 
-Scopes define **data visibility boundaries** for users. Operators don't use scopes (global access).
+Scopes define **data visibility boundaries** for employee accounts. System accounts don't use scopes (global access).
 
 ### Available Scopes
 
@@ -175,11 +174,11 @@ Domain-specific actions for entities:
 
 ### Action Without Scopes
 
-Actions without scopes apply globally (for operators) or in user's context (for users):
+Actions without scopes apply globally (for system accounts) or in account's context (for employee accounts):
 
 ```xml
-<!-- Operator: Can create anywhere -->
-<!-- User: Creates in their assigned company/department -->
+<!-- System account: Can create anywhere -->
+<!-- Employee account: Creates in their assigned company/department -->
 <Action name="Create" displayName="Tạo mới" />
 ```
 
@@ -292,12 +291,12 @@ Admin creates roles (e.g., "System Admin", "HR Manager") and selects permissions
 3. For each action with scopes, admin selects applicable scopes
 4. System saves role + selected permissions to database
 
-### 3. Assign Role to User/Operator
+### 3. Assign Role to Account
 
 ```csharp
-// Assign role to user
-var userRole = new UserRole(
-    userId: userId,
+// Assign role to account
+var accountRole = new AccountRole(
+    accountId: accountId,
     roleId: roleId
 );
 ```
@@ -352,9 +351,9 @@ Admin wants to create an "HR Manager" role with these permissions:
 - View Timesheet (Self scope)
 - Create LeaveRequest (Self scope)
 
-### Scenario 3: Creating "System Administrator" Role (Operator)
+### Scenario 3: Creating "System Administrator" Role (System Account)
 
-Operators have global access without scopes:
+System accounts have global access without scopes:
 
 **All Modules:**
 - Full access to all actions
@@ -416,6 +415,6 @@ If migrating from the old Permission Template system:
 1. **API Endpoints**: Create endpoints to load catalog and manage roles
 2. **UI Components**: Build role management UI with catalog selection
 3. **Database Schema**: Tables for roles and role permissions
-4. **User Assignments**: Link users/operators to roles
+4. **Account Assignments**: Link accounts to roles
 5. **Runtime Evaluator**: Implement constraint evaluation
 6. **Migration Tool**: Import existing role data if needed
