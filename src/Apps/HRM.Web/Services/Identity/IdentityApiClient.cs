@@ -366,6 +366,347 @@ public sealed class IdentityApiClient : IIdentityApiClient
         }
     }
 
+    #region Role Management
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetRolesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/identity/roles", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<RoleResponse>>(JsonOptions, cancellationToken);
+                return new ApiResponse<IReadOnlyList<RoleResponse>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? []
+                };
+            }
+
+            return await HandleErrorResponseAsync<IReadOnlyList<RoleResponse>>(response, "Failed to retrieve roles", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<IReadOnlyList<RoleResponse>>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<IReadOnlyList<RoleResponse>>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<RoleDetailResponse>> GetRoleByIdAsync(
+        Guid roleId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/identity/roles/{roleId}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<RoleDetailResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<RoleDetailResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<RoleDetailResponse>(response, "Failed to retrieve role", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<RoleDetailResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<RoleDetailResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<RoleResponse>> CreateRoleAsync(
+        CreateRoleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                "/api/identity/roles",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<RoleResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<RoleResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<RoleResponse>(response, "Failed to create role", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<RoleResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<RoleResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<RoleResponse>> UpdateRoleAsync(
+        Guid roleId,
+        UpdateRoleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync(
+                $"/api/identity/roles/{roleId}",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<RoleResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<RoleResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<RoleResponse>(response, "Failed to update role", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<RoleResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<RoleResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> DeleteRoleAsync(
+        Guid roleId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                $"/api/identity/roles/{roleId}",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { message = "Role deleted successfully" }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to delete role", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<RoleDetailResponse>> AssignPermissionsToRoleAsync(
+        Guid roleId,
+        AssignPermissionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"/api/identity/roles/{roleId}/permissions",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<RoleDetailResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<RoleDetailResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<RoleDetailResponse>(response, "Failed to assign permissions", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<RoleDetailResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<RoleDetailResponse>(ex);
+        }
+    }
+
+    #endregion
+
+    #region Account-Role Management
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetAccountRolesAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/identity/accounts/{accountId}/roles",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<RoleResponse>>(JsonOptions, cancellationToken);
+                return new ApiResponse<IReadOnlyList<RoleResponse>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? []
+                };
+            }
+
+            return await HandleErrorResponseAsync<IReadOnlyList<RoleResponse>>(response, "Failed to retrieve account roles", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<IReadOnlyList<RoleResponse>>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<IReadOnlyList<RoleResponse>>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<AccountResponse>> AssignRolesToAccountAsync(
+        Guid accountId,
+        AssignRolesToAccountRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/roles",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<AccountResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<AccountResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<AccountResponse>(response, "Failed to assign roles", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<AccountResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<AccountResponse>(ex);
+        }
+    }
+
+    #endregion
+
+    #region Permission Catalog
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<PermissionCatalogResponse>> GetPermissionCatalogAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                "/api/identity/permissions/catalog",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<PermissionCatalogResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<PermissionCatalogResponse>
+                {
+                    IsSuccess = true,
+                    Data = data ?? new PermissionCatalogResponse()
+                };
+            }
+
+            return await HandleErrorResponseAsync<PermissionCatalogResponse>(response, "Failed to retrieve permission catalog", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<PermissionCatalogResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<PermissionCatalogResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<UserPermissionsResponse>> GetMyPermissionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                "/api/identity/permissions/me",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<UserPermissionsResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<UserPermissionsResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<UserPermissionsResponse>(response, "Failed to retrieve permissions", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<UserPermissionsResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<UserPermissionsResponse>(ex);
+        }
+    }
+
+    #endregion
+
     #region Private Helpers
 
     private async Task<ApiResponse<T>> HandleErrorResponseAsync<T>(
