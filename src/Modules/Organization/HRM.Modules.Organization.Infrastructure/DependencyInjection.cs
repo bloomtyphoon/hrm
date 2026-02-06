@@ -38,16 +38,11 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<ICompanyRepository, CompanyRepository>();
-
-        // Cross-module query interface (to be implemented)
-        // services.AddScoped<IOrganizationQuery, OrganizationQuery>();
-        // Cross-module query interface (to be implemented)
-        // services.AddScoped<IOrganizationQuery, OrganizationQuery>();
-
-        // Repositories (to be implemented)
-        // services.AddScoped<ICompanyRepository, CompanyRepository>();
         // services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         // services.AddScoped<IPositionRepository, PositionRepository>();
+
+        // Cross-module query interface (to be implemented)
+        // services.AddScoped<IOrganizationQuery, OrganizationQuery>();
 
         return services;
     }
