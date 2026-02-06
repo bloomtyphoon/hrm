@@ -1,5 +1,5 @@
 using HRM.Web.Models;
-using HRM.Web.Services;
+using HRM.Web.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,14 +11,14 @@ namespace HRM.Web.Controllers;
 [Authorize]
 public class AccountController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IIdentityApiClient _identityClient;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
-        IApiClient apiClient,
+        IIdentityApiClient identityClient,
         ILogger<AccountController> logger)
     {
-        _apiClient = apiClient;
+        _identityClient = identityClient;
         _logger = logger;
     }
 
@@ -38,7 +38,7 @@ public class AccountController : Controller
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var response = await _apiClient.GetAccountsAsync(
+        var response = await _identityClient.GetAccountsAsync(
             searchTerm,
             status,
             pageNumber,
@@ -77,7 +77,7 @@ public class AccountController : Controller
         CancellationToken cancellationToken = default)
     {
         // Fetch account from list (no dedicated get-by-id endpoint)
-        var response = await _apiClient.GetAccountsAsync(
+        var response = await _identityClient.GetAccountsAsync(
             cancellationToken: cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
@@ -103,7 +103,7 @@ public class AccountController : Controller
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.ActivateAccountAsync(id, cancellationToken);
+        var response = await _identityClient.ActivateAccountAsync(id, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
@@ -142,7 +142,7 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var response = await _apiClient.RegisterAccountAsync(model, cancellationToken);
+        var response = await _identityClient.RegisterAccountAsync(model, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
@@ -176,7 +176,7 @@ public class AccountController : Controller
     public async Task<IActionResult> Sessions(
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.GetActiveSessionsAsync(cancellationToken);
+        var response = await _identityClient.GetActiveSessionsAsync(cancellationToken);
 
         var viewModel = new SessionListViewModel();
 
@@ -203,7 +203,7 @@ public class AccountController : Controller
         Guid sessionId,
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.RevokeSessionAsync(sessionId, cancellationToken);
+        var response = await _identityClient.RevokeSessionAsync(sessionId, cancellationToken);
 
         if (response.IsSuccess)
         {
@@ -226,7 +226,7 @@ public class AccountController : Controller
     public async Task<IActionResult> RevokeAllSessions(
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.RevokeAllSessionsExceptCurrentAsync(cancellationToken);
+        var response = await _identityClient.RevokeAllSessionsExceptCurrentAsync(cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {

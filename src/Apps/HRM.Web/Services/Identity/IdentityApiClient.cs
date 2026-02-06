@@ -1,0 +1,424 @@
+using System.Net.Http.Json;
+using System.Text.Json;
+using HRM.Web.Models;
+using HRM.Web.Services.Abstractions;
+
+namespace HRM.Web.Services.Identity;
+
+/// <summary>
+/// HTTP client for Identity module API endpoints.
+/// Handles authentication, account management, and session management.
+/// </summary>
+public sealed class IdentityApiClient : IIdentityApiClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<IdentityApiClient> _logger;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public IdentityApiClient(
+        HttpClient httpClient,
+        ILogger<IdentityApiClient> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<AccountResponse>> RegisterAccountAsync(
+        RegisterAccountRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                request.Username,
+                request.Email,
+                request.Password,
+                request.FullName,
+                request.PhoneNumber
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                "/api/identity/accounts/register",
+                apiRequest,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<AccountResponse>(cancellationToken);
+                return new ApiResponse<AccountResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<AccountResponse>(response, "An error occurred while processing your request", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<AccountResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<AccountResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<LoginResponse>> LoginAsync(
+        LoginRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                request.UsernameOrEmail,
+                request.Password,
+                request.RememberMe
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                "/api/identity/auth/login",
+                apiRequest,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken);
+                return new ApiResponse<LoginResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<LoginResponse>(response, "Invalid username or password", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<LoginResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<LoginResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> LogoutAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                "/api/identity/auth/logout",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { message = "Logged out successfully" }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to logout", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
+        string? searchTerm = null,
+        string? status = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var queryParams = new List<string>();
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+                queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+            if (!string.IsNullOrWhiteSpace(status))
+                queryParams.Add($"status={Uri.EscapeDataString(status)}");
+            queryParams.Add($"pageNumber={pageNumber}");
+            queryParams.Add($"pageSize={pageSize}");
+
+            var queryString = string.Join("&", queryParams);
+            var url = $"/api/identity/accounts?{queryString}";
+
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<PagedResult<AccountSummary>>(JsonOptions, cancellationToken);
+                return new ApiResponse<PagedResult<AccountSummary>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? new PagedResult<AccountSummary>()
+                };
+            }
+
+            return await HandleErrorResponseAsync<PagedResult<AccountSummary>>(response, "Failed to retrieve accounts", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<PagedResult<AccountSummary>>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<PagedResult<AccountSummary>>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<AccountResponse>> ActivateAccountAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/activate",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<AccountResponse>(cancellationToken);
+                return new ApiResponse<AccountResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<AccountResponse>(response, "Failed to activate account", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<AccountResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<AccountResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<List<SessionInfo>>> GetActiveSessionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                "/api/identity/auth/sessions",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<SessionInfo>>(JsonOptions, cancellationToken);
+                return new ApiResponse<List<SessionInfo>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? new List<SessionInfo>()
+                };
+            }
+
+            return await HandleErrorResponseAsync<List<SessionInfo>>(response, "Failed to retrieve sessions", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<List<SessionInfo>>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<List<SessionInfo>>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> RevokeSessionAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                $"/api/identity/auth/sessions/{sessionId}",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { message = "Session revoked successfully" }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to revoke session", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<RevokeAllSessionsResult>> RevokeAllSessionsExceptCurrentAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                "/api/identity/auth/sessions/revoke-all-except-current",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<RevokeAllSessionsResult>(JsonOptions, cancellationToken);
+                return new ApiResponse<RevokeAllSessionsResult>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<RevokeAllSessionsResult>(response, "Failed to revoke sessions", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<RevokeAllSessionsResult>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<RevokeAllSessionsResult>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<LoginResponse>> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var payload = new { refreshToken };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                "/api/identity/auth/refresh",
+                payload,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<LoginResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning("Token refresh failed with status {StatusCode}: {ErrorContent}",
+                (int)response.StatusCode, errorContent);
+
+            return new ApiResponse<LoginResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "RefreshFailed",
+                ErrorMessage = "Session expired. Please login again."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during token refresh");
+            return new ApiResponse<LoginResponse>
+            {
+                IsSuccess = false,
+                ErrorCode = "RefreshError",
+                ErrorMessage = "Failed to refresh session."
+            };
+        }
+    }
+
+    #region Private Helpers
+
+    private async Task<ApiResponse<T>> HandleErrorResponseAsync<T>(
+        HttpResponseMessage response,
+        string defaultMessage,
+        CancellationToken cancellationToken)
+    {
+        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        try
+        {
+            var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, JsonOptions);
+            return new ApiResponse<T>
+            {
+                IsSuccess = false,
+                ErrorCode = apiError?.GetErrorCode() ?? "ApiError",
+                ErrorMessage = apiError?.GetErrorMessage() ?? defaultMessage,
+                ValidationErrors = apiError?.GetValidationErrors()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize error response: {ErrorContent}", errorContent);
+            return new ApiResponse<T>
+            {
+                IsSuccess = false,
+                ErrorCode = "ApiError",
+                ErrorMessage = $"Server returned {(int)response.StatusCode}: {errorContent}"
+            };
+        }
+    }
+
+    private ApiResponse<T> HandleNetworkError<T>(HttpRequestException ex)
+    {
+        _logger.LogError(ex, "Network error while calling Identity API");
+        return new ApiResponse<T>
+        {
+            IsSuccess = false,
+            ErrorCode = "NetworkError",
+            ErrorMessage = "Failed to connect to API server. Please try again later."
+        };
+    }
+
+    private ApiResponse<T> HandleUnexpectedError<T>(Exception ex)
+    {
+        _logger.LogError(ex, "Unexpected error while calling Identity API");
+        return new ApiResponse<T>
+        {
+            IsSuccess = false,
+            ErrorCode = "UnexpectedError",
+            ErrorMessage = "An unexpected error occurred. Please contact support."
+        };
+    }
+
+    #endregion
+}
