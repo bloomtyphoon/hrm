@@ -1,87 +1,90 @@
-@model AccountSummary
+@model AccountDetailViewModel
 
 @{
-    ViewData["Title"] = "Account Detail";
+    ViewData["Title"] = $"Account: {Model.Account.Username}";
+    var assignedRoleIds = Model.AssignedRoles.Select(r => r.Id).ToHashSet();
 }
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-1"></i>@TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Accounts</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Account.Username</li>
+    </ol>
+</nav>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Account Detail</h2>
+    <div>
+        <h2>@Model.Account.FullName</h2>
+        <div class="d-flex gap-2">
+            @{
+                var typeBadge = Model.Account.AccountType switch
+                {
+                    "System" => "bg-info",
+                    "Employee" => "bg-primary",
+                    _ => "bg-secondary"
+                };
+                var statusBadge = Model.Account.Status switch
+                {
+                    "Active" => "bg-success",
+                    "Pending" => "bg-warning text-dark",
+                    "Suspended" => "bg-danger",
+                    "Deactivated" => "bg-secondary",
+                    _ => "bg-secondary"
+                };
+            }
+            <span class="badge @typeBadge">@Model.Account.AccountType</span>
+            <span class="badge @statusBadge">@Model.Account.Status</span>
+        </div>
+    </div>
     <a asp-action="Index" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Back to List
     </a>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
-        <div class="card">
+    <!-- Account Info -->
+    <div class="col-md-6">
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-person me-2"></i>@Model.FullName
-                </h5>
+                <h6 class="mb-0"><i class="bi bi-person me-2"></i>Account Information</h6>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
+                    <dt class="col-sm-4">ID</dt>
+                    <dd class="col-sm-8"><code>@Model.Account.Id</code></dd>
+
                     <dt class="col-sm-4">Username</dt>
-                    <dd class="col-sm-8"><strong>@Model.Username</strong></dd>
+                    <dd class="col-sm-8"><strong>@Model.Account.Username</strong></dd>
 
                     <dt class="col-sm-4">Full Name</dt>
-                    <dd class="col-sm-8">@Model.FullName</dd>
+                    <dd class="col-sm-8">@Model.Account.FullName</dd>
 
                     <dt class="col-sm-4">Email</dt>
                     <dd class="col-sm-8">
-                        <a href="mailto:@Model.Email">@Model.Email</a>
+                        <a href="mailto:@Model.Account.Email">@Model.Account.Email</a>
                     </dd>
 
                     <dt class="col-sm-4">Account Type</dt>
                     <dd class="col-sm-8">
-                        @{
-                            var typeBadge = Model.AccountType switch
-                            {
-                                "System" => "bg-info",
-                                "Employee" => "bg-primary",
-                                _ => "bg-secondary"
-                            };
-                        }
-                        <span class="badge @typeBadge">@Model.AccountType</span>
+                        <span class="badge @typeBadge">@Model.Account.AccountType</span>
                     </dd>
 
                     <dt class="col-sm-4">Status</dt>
                     <dd class="col-sm-8">
-                        @{
-                            var badgeClass = Model.Status switch
-                            {
-                                "Active" => "bg-success",
-                                "Pending" => "bg-warning text-dark",
-                                "Suspended" => "bg-danger",
-                                "Deactivated" => "bg-secondary",
-                                _ => "bg-secondary"
-                            };
-                        }
-                        <span class="badge @badgeClass">@Model.Status</span>
+                        <span class="badge @statusBadge">@Model.Account.Status</span>
                     </dd>
 
                     <dt class="col-sm-4">Created</dt>
                     <dd class="col-sm-8">
-                        <span title="@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
-                            @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC
-                        </span>
+                        @Model.Account.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC
                     </dd>
 
                     <dt class="col-sm-4">Last Login</dt>
                     <dd class="col-sm-8">
-                        @if (Model.LastLoginAtUtc.HasValue)
+                        @if (Model.Account.LastLoginAtUtc.HasValue)
                         {
-                            <span title="@Model.LastLoginAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC">
-                                @Model.LastLoginAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC
-                            </span>
+                            @Model.Account.LastLoginAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            <text> UTC</text>
                         }
                         else
                         {
@@ -91,17 +94,16 @@
                 </dl>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-4">
-        <div class="card">
+        <!-- Actions Card -->
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Actions</h5>
+                <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Actions</h6>
             </div>
             <div class="card-body d-grid gap-2">
-                @if (Model.Status == "Pending")
+                @if (Model.Account.Status == "Pending")
                 {
-                    <form asp-action="Activate" asp-route-id="@Model.Id" method="post">
+                    <form asp-action="Activate" asp-route-id="@Model.Account.Id" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-success w-100"
                                 onclick="return confirm('Are you sure you want to activate this account?')">
@@ -109,25 +111,138 @@
                         </button>
                     </form>
                 }
-                else if (Model.Status == "Active")
+                else if (Model.Account.Status == "Active")
                 {
-                    <span class="text-success">
+                    <div class="text-success">
                         <i class="bi bi-check-circle-fill me-1"></i>Account is active
-                    </span>
+                    </div>
                 }
-                else if (Model.Status == "Suspended")
+                else if (Model.Account.Status == "Suspended")
                 {
-                    <span class="text-danger">
+                    <div class="text-danger">
                         <i class="bi bi-exclamation-circle-fill me-1"></i>Account is suspended
-                    </span>
+                    </div>
                 }
-                else if (Model.Status == "Deactivated")
+                else if (Model.Account.Status == "Deactivated")
                 {
-                    <span class="text-secondary">
+                    <div class="text-secondary">
                         <i class="bi bi-dash-circle-fill me-1"></i>Account is deactivated
-                    </span>
+                    </div>
                 }
             </div>
+        </div>
+    </div>
+
+    <!-- Roles Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Assigned Roles (@Model.AssignedRoles.Count)</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#manageRolesModal">
+                    <i class="bi bi-pencil me-1"></i>Manage Roles
+                </button>
+            </div>
+            <div class="card-body">
+                @if (Model.AssignedRoles.Count == 0)
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-shield-x display-4 text-muted"></i>
+                        <p class="mt-3 text-muted">No roles assigned to this account.</p>
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#manageRolesModal">
+                            <i class="bi bi-plus-circle me-1"></i>Assign Roles
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var role in Model.AssignedRoles)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <strong>@role.Name</strong>
+                                    @{
+                                        var roleTypeBadge = role.RoleType == "System" ? "bg-primary" : "bg-info";
+                                    }
+                                    <span class="badge @roleTypeBadge ms-2">@role.RoleType</span>
+                                    @if (!string.IsNullOrEmpty(role.Description))
+                                    {
+                                        <br /><small class="text-muted">@role.Description</small>
+                                    }
+                                </div>
+                                <span class="badge bg-light text-dark">@role.PermissionCount permissions</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Roles Modal -->
+<div class="modal fade" id="manageRolesModal" tabindex="-1" aria-labelledby="manageRolesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form asp-action="AssignRoles" asp-route-id="@Model.Account.Id" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="manageRolesModalLabel">
+                        <i class="bi bi-shield-check me-2"></i>Manage Roles for @Model.Account.Username
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (Model.AvailableRoles.Count == 0)
+                    {
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            No active roles available. Please create roles first.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3">Select the roles to assign to this account:</p>
+                        <div class="row">
+                            @foreach (var role in Model.AvailableRoles.OrderBy(r => r.RoleType).ThenBy(r => r.Name))
+                            {
+                                var isAssigned = assignedRoleIds.Contains(role.Id);
+                                var roleTypeBadge = role.RoleType == "System" ? "bg-primary" : "bg-info";
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox"
+                                               class="form-check-input"
+                                               id="role-@role.Id"
+                                               name="roleIds"
+                                               value="@role.Id"
+                                               @(isAssigned ? "checked" : "") />
+                                        <label class="form-check-label" for="role-@role.Id">
+                                            <strong>@role.Name</strong>
+                                            <span class="badge @roleTypeBadge ms-1">@role.RoleType</span>
+                                            <br />
+                                            <small class="text-muted">
+                                                @(role.Description ?? "No description")
+                                                <span class="badge bg-light text-dark ms-1">@role.PermissionCount permissions</span>
+                                            </small>
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Cancel
+                    </button>
+                    @if (Model.AvailableRoles.Count > 0)
+                    {
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Save Changes
+                        </button>
+                    }
+                </div>
+            </form>
         </div>
     </div>
 </div>

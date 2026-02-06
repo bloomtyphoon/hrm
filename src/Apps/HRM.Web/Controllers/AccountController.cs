@@ -69,7 +69,7 @@ public class AccountController : Controller
 
     /// <summary>
     /// GET: /Account/Detail/{id}
-    /// Display account detail page.
+    /// Display account detail page with roles.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Detail(
@@ -77,20 +77,72 @@ public class AccountController : Controller
         CancellationToken cancellationToken = default)
     {
         // Fetch account from list (no dedicated get-by-id endpoint)
-        var response = await _identityClient.GetAccountsAsync(
+        var accountResponse = await _identityClient.GetAccountsAsync(
             cancellationToken: cancellationToken);
 
-        if (response.IsSuccess && response.Data != null)
+        if (!accountResponse.IsSuccess || accountResponse.Data == null)
         {
-            var account = response.Data.Items.FirstOrDefault(a => a.Id == id);
-            if (account != null)
-            {
-                return View(account);
-            }
+            TempData["ErrorMessage"] = "Failed to load account.";
+            return RedirectToAction(nameof(Index));
         }
 
-        TempData["ErrorMessage"] = "Account not found.";
-        return RedirectToAction(nameof(Index));
+        var account = accountResponse.Data.Items.FirstOrDefault(a => a.Id == id);
+        if (account == null)
+        {
+            TempData["ErrorMessage"] = "Account not found.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Fetch roles assigned to this account
+        var accountRolesResponse = await _identityClient.GetAccountRolesAsync(id, cancellationToken);
+        var assignedRoles = accountRolesResponse.IsSuccess && accountRolesResponse.Data != null
+            ? accountRolesResponse.Data
+            : [];
+
+        // Fetch all available roles
+        var allRolesResponse = await _identityClient.GetRolesAsync(cancellationToken);
+        var availableRoles = allRolesResponse.IsSuccess && allRolesResponse.Data != null
+            ? allRolesResponse.Data.Where(r => r.IsActive).ToList()
+            : [];
+
+        var viewModel = new AccountDetailViewModel
+        {
+            Account = account,
+            AssignedRoles = assignedRoles,
+            AvailableRoles = availableRoles
+        };
+
+        return View(viewModel);
+    }
+
+    /// <summary>
+    /// POST: /Account/AssignRoles/{id}
+    /// Assign roles to an account.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignRoles(
+        Guid id,
+        List<Guid> roleIds,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new AssignRolesToAccountRequest
+        {
+            RoleIds = roleIds ?? []
+        };
+
+        var response = await _identityClient.AssignRolesToAccountAsync(id, request, cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Roles updated successfully.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to update roles.";
+        }
+
+        return RedirectToAction(nameof(Detail), new { id });
     }
 
     /// <summary>

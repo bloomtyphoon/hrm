@@ -19,3 +19,24 @@ public sealed class AccountListViewModel
         "Deactivated"
     };
 }
+
+/// <summary>
+/// ViewModel for account detail page with roles.
+/// </summary>
+public sealed class AccountDetailViewModel
+{
+    /// <summary>
+    /// Account information.
+    /// </summary>
+    public AccountSummary Account { get; set; } = new();
+
+    /// <summary>
+    /// Roles currently assigned to this account.
+    /// </summary>
+    public IReadOnlyList<RoleResponse> AssignedRoles { get; set; } = [];
+
+    /// <summary>
+    /// All available roles for assignment.
+    /// </summary>
+    public IReadOnlyList<RoleResponse> AvailableRoles { get; set; } = [];
+}
