@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = $"Account: {Model.Account.Username}";
     var assignedRoleIds = Model.AssignedRoles.Select(r => r.Id).ToHashSet();
+    var accountType = Model.Account.AccountType;
+    var rolesByType = Model.AvailableRoles.GroupBy(r => r.RoleType).OrderBy(g => g.Key);
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -155,25 +157,42 @@
                 }
                 else
                 {
-                    <div class="list-group list-group-flush">
-                        @foreach (var role in Model.AssignedRoles)
-                        {
-                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <div>
-                                    <strong>@role.Name</strong>
-                                    @{
-                                        var roleTypeBadge = role.RoleType == "System" ? "bg-primary" : "bg-info";
-                                    }
-                                    <span class="badge @roleTypeBadge ms-2">@role.RoleType</span>
-                                    @if (!string.IsNullOrEmpty(role.Description))
-                                    {
-                                        <br /><small class="text-muted">@role.Description</small>
-                                    }
-                                </div>
-                                <span class="badge bg-light text-dark">@role.PermissionCount permissions</span>
+                    @{
+                        var assignedByType = Model.AssignedRoles.GroupBy(r => r.RoleType).OrderBy(g => g.Key);
+                    }
+                    @foreach (var typeGroup in assignedByType)
+                    {
+                        var typeBadgeClass = typeGroup.Key == "System" ? "bg-primary" : "bg-info";
+                        var isCrossTypeAssigned = typeGroup.Key != accountType;
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge @typeBadgeClass me-2">@typeGroup.Key</span>
+                                <small class="text-muted">@typeGroup.Count() role(s)</small>
+                                @if (isCrossTypeAssigned)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2" data-bs-toggle="tooltip"
+                                          title="Cross-type assignment: @typeGroup.Key roles assigned to @accountType account">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    </span>
+                                }
                             </div>
-                        }
-                    </div>
+                            <div class="list-group list-group-flush">
+                                @foreach (var role in typeGroup.OrderBy(r => r.Name))
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                        <div>
+                                            <strong>@role.Name</strong>
+                                            @if (!string.IsNullOrEmpty(role.Description))
+                                            {
+                                                <br /><small class="text-muted">@role.Description</small>
+                                            }
+                                        </div>
+                                        <span class="badge bg-light text-dark">@role.PermissionCount permissions</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -202,33 +221,70 @@
                     }
                     else
                     {
-                        <p class="text-muted mb-3">Select the roles to assign to this account:</p>
-                        <div class="row">
-                            @foreach (var role in Model.AvailableRoles.OrderBy(r => r.RoleType).ThenBy(r => r.Name))
-                            {
-                                var isAssigned = assignedRoleIds.Contains(role.Id);
-                                var roleTypeBadge = role.RoleType == "System" ? "bg-primary" : "bg-info";
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check">
-                                        <input type="checkbox"
-                                               class="form-check-input"
-                                               id="role-@role.Id"
-                                               name="roleIds"
-                                               value="@role.Id"
-                                               @(isAssigned ? "checked" : "") />
-                                        <label class="form-check-label" for="role-@role.Id">
-                                            <strong>@role.Name</strong>
-                                            <span class="badge @roleTypeBadge ms-1">@role.RoleType</span>
-                                            <br />
-                                            <small class="text-muted">
-                                                @(role.Description ?? "No description")
-                                                <span class="badge bg-light text-dark ms-1">@role.PermissionCount permissions</span>
-                                            </small>
-                                        </label>
+                        <p class="text-muted mb-3">
+                            Select roles for this <strong>@accountType</strong> account:
+                        </p>
+
+                        <!-- Cross-type warning alert (hidden by default, shown via JS) -->
+                        <div id="crossTypeWarning" class="alert alert-warning d-none mb-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Note:</strong> You are assigning roles from a different type than the account type.
+                            This may require additional approval depending on your organization's policy.
+                        </div>
+
+                        @foreach (var roleGroup in rolesByType)
+                        {
+                            var groupRoleType = roleGroup.Key;
+                            var isCrossType = groupRoleType != accountType;
+                            var groupBadgeClass = groupRoleType == "System" ? "bg-primary" : "bg-info";
+                            var groupTooltip = groupRoleType == "System"
+                                ? "System roles are for administrative and service accounts with elevated privileges"
+                                : "Employee roles are for regular staff members with standard business permissions";
+
+                            <div class="card mb-3 @(isCrossType ? "border-warning" : "")">
+                                <div class="card-header d-flex align-items-center @(isCrossType ? "bg-warning bg-opacity-10" : "")">
+                                    <span class="badge @groupBadgeClass me-2">@groupRoleType</span>
+                                    <span class="fw-semibold">@groupRoleType Roles</span>
+                                    <span class="ms-2 text-muted" data-bs-toggle="tooltip" title="@groupTooltip">
+                                        <i class="bi bi-info-circle"></i>
+                                    </span>
+                                    @if (isCrossType)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-auto" data-bs-toggle="tooltip"
+                                              title="This account is @accountType type. Assigning @groupRoleType roles may require approval.">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Cross-type
+                                        </span>
+                                    }
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        @foreach (var role in roleGroup.OrderBy(r => r.Name))
+                                        {
+                                            var isAssigned = assignedRoleIds.Contains(role.Id);
+                                            <div class="col-md-6 mb-2">
+                                                <div class="form-check">
+                                                    <input type="checkbox"
+                                                           class="form-check-input role-checkbox"
+                                                           id="role-@role.Id"
+                                                           name="roleIds"
+                                                           value="@role.Id"
+                                                           data-role-type="@role.RoleType"
+                                                           @(isAssigned ? "checked" : "") />
+                                                    <label class="form-check-label" for="role-@role.Id">
+                                                        <strong>@role.Name</strong>
+                                                        <br />
+                                                        <small class="text-muted">
+                                                            @(role.Description ?? "No description")
+                                                            <span class="badge bg-light text-dark ms-1">@role.PermissionCount permissions</span>
+                                                        </small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
-                            }
-                        </div>
+                            </div>
+                        }
                     }
                 </div>
                 <div class="modal-footer">
@@ -246,3 +302,43 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Cross-type warning logic
+            var accountType = '@accountType';
+            var warningAlert = document.getElementById('crossTypeWarning');
+            var roleCheckboxes = document.querySelectorAll('.role-checkbox');
+
+            function updateCrossTypeWarning() {
+                var hasCrossTypeSelection = false;
+                roleCheckboxes.forEach(function (cb) {
+                    if (cb.checked && cb.dataset.roleType !== accountType) {
+                        hasCrossTypeSelection = true;
+                    }
+                });
+
+                if (hasCrossTypeSelection) {
+                    warningAlert.classList.remove('d-none');
+                } else {
+                    warningAlert.classList.add('d-none');
+                }
+            }
+
+            // Attach event listeners
+            roleCheckboxes.forEach(function (cb) {
+                cb.addEventListener('change', updateCrossTypeWarning);
+            });
+
+            // Initial check
+            updateCrossTypeWarning();
+        });
+    </script>
+}
