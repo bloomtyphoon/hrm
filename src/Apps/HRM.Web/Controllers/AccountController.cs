@@ -1,5 +1,5 @@
 using HRM.Web.Models;
-using HRM.Web.Services;
+using HRM.Web.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,14 +11,14 @@ namespace HRM.Web.Controllers;
 [Authorize]
 public class AccountController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IIdentityApiClient _identityClient;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
-        IApiClient apiClient,
+        IIdentityApiClient identityClient,
         ILogger<AccountController> logger)
     {
-        _apiClient = apiClient;
+        _identityClient = identityClient;
         _logger = logger;
     }
 
@@ -38,7 +38,7 @@ public class AccountController : Controller
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var response = await _apiClient.GetAccountsAsync(
+        var response = await _identityClient.GetAccountsAsync(
             searchTerm,
             status,
             pageNumber,
@@ -69,7 +69,7 @@ public class AccountController : Controller
 
     /// <summary>
     /// GET: /Account/Detail/{id}
-    /// Display account detail page.
+    /// Display account detail page with roles.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Detail(
@@ -77,20 +77,72 @@ public class AccountController : Controller
         CancellationToken cancellationToken = default)
     {
         // Fetch account from list (no dedicated get-by-id endpoint)
-        var response = await _apiClient.GetAccountsAsync(
+        var accountResponse = await _identityClient.GetAccountsAsync(
             cancellationToken: cancellationToken);
 
-        if (response.IsSuccess && response.Data != null)
+        if (!accountResponse.IsSuccess || accountResponse.Data == null)
         {
-            var account = response.Data.Items.FirstOrDefault(a => a.Id == id);
-            if (account != null)
-            {
-                return View(account);
-            }
+            TempData["ErrorMessage"] = "Failed to load account.";
+            return RedirectToAction(nameof(Index));
         }
 
-        TempData["ErrorMessage"] = "Account not found.";
-        return RedirectToAction(nameof(Index));
+        var account = accountResponse.Data.Items.FirstOrDefault(a => a.Id == id);
+        if (account == null)
+        {
+            TempData["ErrorMessage"] = "Account not found.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Fetch roles assigned to this account
+        var accountRolesResponse = await _identityClient.GetAccountRolesAsync(id, cancellationToken);
+        var assignedRoles = accountRolesResponse.IsSuccess && accountRolesResponse.Data != null
+            ? accountRolesResponse.Data
+            : [];
+
+        // Fetch all available roles
+        var allRolesResponse = await _identityClient.GetRolesAsync(cancellationToken);
+        var availableRoles = allRolesResponse.IsSuccess && allRolesResponse.Data != null
+            ? allRolesResponse.Data.Where(r => r.IsActive).ToList()
+            : [];
+
+        var viewModel = new AccountDetailViewModel
+        {
+            Account = account,
+            AssignedRoles = assignedRoles,
+            AvailableRoles = availableRoles
+        };
+
+        return View(viewModel);
+    }
+
+    /// <summary>
+    /// POST: /Account/AssignRoles/{id}
+    /// Assign roles to an account.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignRoles(
+        Guid id,
+        List<Guid> roleIds,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new AssignRolesToAccountRequest
+        {
+            RoleIds = roleIds ?? []
+        };
+
+        var response = await _identityClient.AssignRolesToAccountAsync(id, request, cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Roles updated successfully.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to update roles.";
+        }
+
+        return RedirectToAction(nameof(Detail), new { id });
     }
 
     /// <summary>
@@ -103,7 +155,7 @@ public class AccountController : Controller
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.ActivateAccountAsync(id, cancellationToken);
+        var response = await _identityClient.ActivateAccountAsync(id, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
@@ -142,7 +194,7 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var response = await _apiClient.RegisterAccountAsync(model, cancellationToken);
+        var response = await _identityClient.RegisterAccountAsync(model, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
@@ -176,7 +228,7 @@ public class AccountController : Controller
     public async Task<IActionResult> Sessions(
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.GetActiveSessionsAsync(cancellationToken);
+        var response = await _identityClient.GetActiveSessionsAsync(cancellationToken);
 
         var viewModel = new SessionListViewModel();
 
@@ -203,7 +255,7 @@ public class AccountController : Controller
         Guid sessionId,
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.RevokeSessionAsync(sessionId, cancellationToken);
+        var response = await _identityClient.RevokeSessionAsync(sessionId, cancellationToken);
 
         if (response.IsSuccess)
         {
@@ -226,7 +278,7 @@ public class AccountController : Controller
     public async Task<IActionResult> RevokeAllSessions(
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.RevokeAllSessionsExceptCurrentAsync(cancellationToken);
+        var response = await _identityClient.RevokeAllSessionsExceptCurrentAsync(cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {

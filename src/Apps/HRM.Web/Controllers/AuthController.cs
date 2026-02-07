@@ -1,5 +1,5 @@
 using HRM.Web.Models;
-using HRM.Web.Services;
+using HRM.Web.Services.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -13,14 +13,14 @@ namespace HRM.Web.Controllers;
 /// </summary>
 public class AuthController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IIdentityApiClient _identityClient;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
-        IApiClient apiClient,
+        IIdentityApiClient identityClient,
         ILogger<AuthController> logger)
     {
-        _apiClient = apiClient;
+        _identityClient = identityClient;
         _logger = logger;
     }
 
@@ -61,7 +61,7 @@ public class AuthController : Controller
             return View(request);
         }
 
-        var result = await _apiClient.LoginAsync(request, cancellationToken);
+        var result = await _identityClient.LoginAsync(request, cancellationToken);
 
         if (!result.IsSuccess)
         {
@@ -133,7 +133,7 @@ public class AuthController : Controller
         // Call API logout to revoke refresh token
         try
         {
-            await _apiClient.LogoutAsync(cancellationToken);
+            await _identityClient.LogoutAsync(cancellationToken);
         }
         catch (Exception ex)
         {

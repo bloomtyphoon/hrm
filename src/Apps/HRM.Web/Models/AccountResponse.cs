@@ -17,4 +17,19 @@ public sealed class AccountResponse
     public DateTime? LastLoginAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ModifiedAtUtc { get; set; }
+
+    /// <summary>
+    /// Roles assigned to this account.
+    /// </summary>
+    public List<AccountRoleInfo> Roles { get; set; } = [];
+}
+
+/// <summary>
+/// Brief role information for account display.
+/// </summary>
+public sealed class AccountRoleInfo
+{
+    public Guid RoleId { get; set; }
+    public string RoleName { get; set; } = string.Empty;
+    public string RoleType { get; set; } = string.Empty;
 }

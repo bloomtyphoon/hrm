@@ -1,5 +1,5 @@
 using HRM.Web.Models;
-using HRM.Web.Services;
+using HRM.Web.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,14 +12,14 @@ namespace HRM.Web.Controllers;
 [Authorize]
 public class CompanyController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IOrganizationApiClient _organizationClient;
     private readonly ILogger<CompanyController> _logger;
 
     public CompanyController(
-        IApiClient apiClient,
+        IOrganizationApiClient organizationClient,
         ILogger<CompanyController> logger)
     {
-        _apiClient = apiClient;
+        _organizationClient = organizationClient;
         _logger = logger;
     }
 
@@ -33,7 +33,7 @@ public class CompanyController : Controller
         string? status = null,
         CancellationToken cancellationToken = default)
     {
-        var response = await _apiClient.GetCompaniesAsync(cancellationToken);
+        var response = await _organizationClient.GetCompaniesAsync(cancellationToken);
 
         var viewModel = new CompanyListViewModel
         {
@@ -101,7 +101,7 @@ public class CompanyController : Controller
         }
 
         // Call API to create company
-        var response = await _apiClient.CreateCompanyAsync(model, cancellationToken);
+        var response = await _organizationClient.CreateCompanyAsync(model, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
@@ -137,7 +137,7 @@ public class CompanyController : Controller
     [HttpGet]
     public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {
-        var response = await _apiClient.GetCompanyByIdAsync(id, cancellationToken);
+        var response = await _organizationClient.GetCompanyByIdAsync(id, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
