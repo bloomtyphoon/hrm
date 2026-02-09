@@ -42,9 +42,15 @@ BEGIN
 
         -- Security Features
         IsTwoFactorEnabled BIT NOT NULL DEFAULT 0,
-        TwoFactorSecret NVARCHAR(255) NULL,
+        TwoFactorSecretKey NVARCHAR(255) NULL,
         FailedLoginAttempts INT NOT NULL DEFAULT 0,
         LockedUntilUtc DATETIME2 NULL,
+
+        -- Security Audit (ISecurityAuditable)
+        PasswordChangedAtUtc DATETIME2 NULL,
+        LastFailedLoginAtUtc DATETIME2 NULL,
+        TwoFactorChangedAtUtc DATETIME2 NULL,
+        StatusChangedAtUtc DATETIME2 NULL,
 
         -- Audit Trail
         CreatedAtUtc DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
@@ -175,7 +181,8 @@ BEGIN
     (
         Id, Username, Email, PasswordHash, FullName, PhoneNumber,
         AccountType, Status, ActivatedAtUtc, LastLoginAtUtc,
-        IsTwoFactorEnabled, TwoFactorSecret, FailedLoginAttempts, LockedUntilUtc,
+        IsTwoFactorEnabled, TwoFactorSecretKey, FailedLoginAttempts, LockedUntilUtc,
+        PasswordChangedAtUtc, LastFailedLoginAtUtc, TwoFactorChangedAtUtc, StatusChangedAtUtc,
         CreatedAtUtc, ModifiedAtUtc, CreatedById, ModifiedById,
         IsDeleted, DeletedAtUtc
     )
@@ -186,6 +193,7 @@ BEGIN
         1,          -- Status: Active
         GETUTCDATE(), NULL,
         0, NULL, 0, NULL,
+        NULL, NULL, NULL, NULL,
         GETUTCDATE(), NULL, NULL, NULL,
         0, NULL
     )
