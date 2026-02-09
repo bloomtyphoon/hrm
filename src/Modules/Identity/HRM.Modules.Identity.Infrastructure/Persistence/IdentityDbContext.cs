@@ -48,6 +48,11 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     /// <summary>
+    /// Roles table for role-based access control.
+    /// </summary>
+    public DbSet<Role> Roles => Set<Role>();
+
+    /// <summary>
     /// Configure entity mappings.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

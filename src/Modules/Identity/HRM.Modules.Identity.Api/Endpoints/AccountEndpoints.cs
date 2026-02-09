@@ -3,7 +3,10 @@ using HRM.Modules.Identity.Domain.Enums;
 using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Identity.Api.Contracts;
 using HRM.Modules.Identity.Application.Commands.ActivateAccount;
+using HRM.Modules.Identity.Application.Commands.DeactivateAccount;
 using HRM.Modules.Identity.Application.Commands.RegisterAccount;
+using HRM.Modules.Identity.Application.Commands.SuspendAccount;
+using HRM.Modules.Identity.Application.Queries.GetAccountById;
 using HRM.Modules.Identity.Application.Queries.GetAccounts;
 using HRM.Modules.Identity.Domain.Repositories;
 using MediatR;
@@ -51,6 +54,35 @@ public static class AccountEndpoints
             .Produces<PagedResult<AccountSummaryDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/{id:guid}", GetAccountById)
+            .WithName("GetAccountById")
+            .WithSummary("Get account by ID")
+            .WithDescription("Retrieve a single account by ID. Requires Identity.Account.View permission.")
+            .Produces<AccountResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/suspend", SuspendAccount)
+            .WithName("SuspendAccount")
+            .WithSummary("Suspend an active account")
+            .WithDescription("Change account status to Suspended. Requires Identity.Account.Update permission.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/deactivate", DeactivateAccount)
+            .WithName("DeactivateAccount")
+            .WithSummary("Deactivate an account")
+            .WithDescription("Change account status to Deactivated. Requires Identity.Account.Update permission.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -166,5 +198,66 @@ public static class AccountEndpoints
 
         var result = await sender.Send(query, cancellationToken);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetAccountById(
+        Guid id,
+        ISender sender,
+        IAccountRepository accountRepository,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetAccountByIdQuery(id);
+        var result = await sender.Send(query, cancellationToken);
+
+        return result.ToHttpResult(dto =>
+        {
+            var response = new AccountResponse(
+                Id: dto.Id,
+                Username: dto.Username,
+                Email: dto.Email,
+                FullName: dto.FullName,
+                PhoneNumber: null,
+                Status: dto.Status.ToString(),
+                AccountType: dto.AccountType.ToString(),
+                IsTwoFactorEnabled: false,
+                ActivatedAtUtc: null,
+                LastLoginAtUtc: dto.LastLoginAtUtc,
+                CreatedAtUtc: dto.CreatedAtUtc,
+                ModifiedAtUtc: null
+            );
+            return Results.Ok(response);
+        });
+    }
+
+    private static async Task<IResult> SuspendAccount(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new SuspendAccountCommand(AccountId: id);
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> DeactivateAccount(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new DeactivateAccountCommand(AccountId: id);
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
     }
 }

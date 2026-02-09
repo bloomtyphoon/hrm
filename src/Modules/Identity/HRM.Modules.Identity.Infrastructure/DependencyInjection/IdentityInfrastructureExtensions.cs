@@ -118,6 +118,7 @@ public static class IdentityInfrastructureExtensions
         // Scoped: One instance per HTTP request
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
 
         // Singleton: Dapper-based repository for permission queries (uses connection string directly)
         services.AddSingleton<IAccountPermissionRepository, AccountPermissionRepository>();
