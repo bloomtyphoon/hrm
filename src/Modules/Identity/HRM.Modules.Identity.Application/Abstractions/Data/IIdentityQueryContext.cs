@@ -41,4 +41,9 @@ public interface IIdentityQueryContext
     /// Roles table (read-only access).
     /// </summary>
     DbSet<Role> Roles { get; }
+
+    /// <summary>
+    /// Account-Role assignments table (read-only access).
+    /// </summary>
+    DbSet<AccountRole> AccountRoles { get; }
 }

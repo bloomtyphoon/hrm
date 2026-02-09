@@ -53,6 +53,11 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
     public DbSet<Role> Roles => Set<Role>();
 
     /// <summary>
+    /// Account-Role assignments table.
+    /// </summary>
+    public DbSet<AccountRole> AccountRoles => Set<AccountRole>();
+
+    /// <summary>
     /// Configure entity mappings.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

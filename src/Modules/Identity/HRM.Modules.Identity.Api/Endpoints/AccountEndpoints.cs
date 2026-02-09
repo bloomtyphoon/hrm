@@ -3,10 +3,15 @@ using HRM.Modules.Identity.Domain.Enums;
 using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Identity.Api.Contracts;
 using HRM.Modules.Identity.Application.Commands.ActivateAccount;
+using HRM.Modules.Identity.Application.Commands.AssignRolesToAccount;
+using HRM.Modules.Identity.Application.Commands.ChangePassword;
 using HRM.Modules.Identity.Application.Commands.DeactivateAccount;
 using HRM.Modules.Identity.Application.Commands.RegisterAccount;
+using HRM.Modules.Identity.Application.Commands.RemoveRolesFromAccount;
 using HRM.Modules.Identity.Application.Commands.SuspendAccount;
+using HRM.Modules.Identity.Application.Commands.UpdateProfile;
 using HRM.Modules.Identity.Application.Queries.GetAccountById;
+using HRM.Modules.Identity.Application.Queries.GetAccountRoles;
 using HRM.Modules.Identity.Application.Queries.GetAccounts;
 using HRM.Modules.Identity.Domain.Repositories;
 using MediatR;
@@ -82,6 +87,50 @@ public static class AccountEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/profile", UpdateProfile)
+            .WithName("UpdateProfile")
+            .WithSummary("Update account profile")
+            .WithDescription("Update account profile information (fullName, phoneNumber).")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/change-password", ChangePassword)
+            .WithName("ChangePassword")
+            .WithSummary("Change account password")
+            .WithDescription("Change account password. Requires current password for self-change, or IsAdminReset=true for admin reset.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/roles", GetAccountRoles)
+            .WithName("GetAccountRoles")
+            .WithSummary("Get account's assigned roles")
+            .WithDescription("Returns all roles assigned to the account.")
+            .Produces<List<AccountRoleDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/roles", AssignRoles)
+            .WithName("AssignRolesToAccount")
+            .WithSummary("Assign roles to account")
+            .WithDescription("Assign one or more roles to an account. Skips already assigned roles.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/roles", RemoveRoles)
+            .WithName("RemoveRolesFromAccount")
+            .WithSummary("Remove roles from account")
+            .WithDescription("Remove one or more roles from an account.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
@@ -251,6 +300,104 @@ public static class AccountEndpoints
         CancellationToken cancellationToken)
     {
         var command = new DeactivateAccountCommand(AccountId: id);
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> UpdateProfile(
+        Guid id,
+        UpdateProfileRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateProfileCommand(
+            AccountId: id,
+            FullName: request.FullName,
+            PhoneNumber: request.PhoneNumber
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> ChangePassword(
+        Guid id,
+        ChangePasswordRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new ChangePasswordCommand(
+            AccountId: id,
+            CurrentPassword: request.CurrentPassword,
+            NewPassword: request.NewPassword,
+            IsAdminReset: request.IsAdminReset
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetAccountRoles(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetAccountRolesQuery(id);
+        var result = await sender.Send(query, cancellationToken);
+
+        return result.ToHttpResult(roles => Results.Ok(roles));
+    }
+
+    private static async Task<IResult> AssignRoles(
+        Guid id,
+        AssignRolesRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new AssignRolesToAccountCommand(
+            AccountId: id,
+            RoleIds: request.RoleIds
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> RemoveRoles(
+        Guid id,
+        AssignRolesRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new RemoveRolesFromAccountCommand(
+            AccountId: id,
+            RoleIds: request.RoleIds
+        );
+
         var result = await sender.Send(command, cancellationToken);
 
         if (result.IsSuccess)
