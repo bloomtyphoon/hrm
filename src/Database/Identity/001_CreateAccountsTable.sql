@@ -32,8 +32,8 @@ BEGIN
         FullName NVARCHAR(200) NOT NULL,
         PhoneNumber NVARCHAR(20) NULL,
 
-        -- Account Type: 1=System, 2=Employee
-        AccountType INT NOT NULL DEFAULT 1,
+        -- Account Type: 0=System, 1=Employee
+        AccountType INT NOT NULL DEFAULT 0,
 
         -- Status Management: 0=Pending, 1=Active, 2=Suspended, 3=Deactivated
         Status INT NOT NULL DEFAULT 0,
@@ -67,7 +67,7 @@ BEGIN
         CONSTRAINT UQ_Accounts_Username UNIQUE (Username),
         CONSTRAINT UQ_Accounts_Email UNIQUE (Email),
         CONSTRAINT CK_Accounts_Status CHECK (Status BETWEEN 0 AND 3),
-        CONSTRAINT CK_Accounts_AccountType CHECK (AccountType IN (1, 2)),
+        CONSTRAINT CK_Accounts_AccountType CHECK (AccountType IN (0, 1)),
         CONSTRAINT CK_Accounts_FailedLoginAttempts CHECK (FailedLoginAttempts >= 0)
     )
 
@@ -189,7 +189,7 @@ BEGIN
     VALUES
     (
         @AdminId, 'admin', 'admin@hrm.local', @PasswordHash, 'System Administrator', NULL,
-        1,          -- AccountType: System
+        0,          -- AccountType: System
         1,          -- Status: Active
         GETUTCDATE(), NULL,
         0, NULL, 0, NULL,
