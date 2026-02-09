@@ -33,7 +33,7 @@ BEGIN
         PhoneNumber NVARCHAR(20) NULL,
 
         -- Account Type: 1=System, 2=Employee
-        AccountType TINYINT NOT NULL DEFAULT 1,
+        AccountType INT NOT NULL DEFAULT 1,
 
         -- Status Management: 0=Pending, 1=Active, 2=Suspended, 3=Deactivated
         Status INT NOT NULL DEFAULT 0,
