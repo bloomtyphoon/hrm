@@ -157,10 +157,8 @@
                 }
                 else
                 {
-                    @{
-                        var assignedByType = Model.AssignedRoles.GroupBy(r => r.RoleType).OrderBy(g => g.Key);
-                    }
-                    @foreach (var typeGroup in assignedByType)
+                    var assignedByType = Model.AssignedRoles.GroupBy(r => r.RoleType).OrderBy(g => g.Key);
+                    foreach (var typeGroup in assignedByType)
                     {
                         var typeBadgeClass = typeGroup.Key == "System" ? "bg-primary" : "bg-info";
                         var isCrossTypeAssigned = typeGroup.Key != accountType;

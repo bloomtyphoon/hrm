@@ -98,11 +98,9 @@
                 }
                 else
                 {
-                    @{
-                        var groupedPermissions = Model.Role.Permissions
-                            .GroupBy(p => p.Module)
-                            .OrderBy(g => g.Key);
-                    }
+                    var groupedPermissions = Model.Role.Permissions
+                        .GroupBy(p => p.Module)
+                        .OrderBy(g => g.Key);
                     <div class="accordion" id="permissionsAccordion">
                         @foreach (var moduleGroup in groupedPermissions)
                         {
