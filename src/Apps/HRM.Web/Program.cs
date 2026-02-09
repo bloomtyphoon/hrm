@@ -37,6 +37,13 @@ var apiBaseUrl = builder.Configuration["HRM:ApiBaseUrl"] ?? "https://localhost:5
 // Register module-specific API clients
 // Each module has its own typed HttpClient for future microservice migration
 
+// Named client for internal use (e.g., token refresh in AuthTokenHandler)
+builder.Services.AddHttpClient("HRM.Api", client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
 // Identity module client (auth, accounts, sessions)
 builder.Services.AddHttpClient<IIdentityApiClient, IdentityApiClient>(client =>
 {
