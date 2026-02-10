@@ -7,4 +7,7 @@ namespace HRM.Modules.Identity.Application.Commands.ActivateAccount;
 /// </summary>
 public sealed record ActivateAccountCommand(
     Guid AccountId
-) : ICommand;
+) : IModuleCommand
+{
+    public string ModuleName => "Identity";
+}
