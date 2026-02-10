@@ -138,6 +138,14 @@ public static class AccountErrors
             $"Account '{username}' is already activated.");
 
     /// <summary>
+    /// Account is not locked.
+    /// Maps to HTTP 409 Conflict in API layer.
+    /// </summary>
+    public static readonly ConflictError AccountNotLocked =
+        new("Account.AccountNotLocked",
+            "Account is not currently locked.");
+
+    /// <summary>
     /// Two-factor authentication already enabled.
     /// Maps to HTTP 409 Conflict in API layer.
     /// </summary>

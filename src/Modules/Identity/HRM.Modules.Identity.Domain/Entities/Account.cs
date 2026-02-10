@@ -295,6 +295,17 @@ public class Account : AuditableEntity, ISecurityAuditable
     }
 
     /// <summary>
+    /// Force unlock account regardless of lockout expiry (admin operation).
+    /// Resets failed login attempts and clears lockout timestamp.
+    /// </summary>
+    public void ForceUnlock()
+    {
+        LockedUntilUtc = null;
+        FailedLoginAttempts = 0;
+        MarkAsModified();
+    }
+
+    /// <summary>
     /// Check if account can login
     /// </summary>
     public bool CanLogin()
