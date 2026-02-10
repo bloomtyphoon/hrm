@@ -707,6 +707,574 @@ public sealed class IdentityApiClient : IIdentityApiClient
 
     #endregion
 
+    #region Account Detail Management
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<AccountDetailResponse>> GetAccountByIdAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/identity/accounts/{accountId}",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<AccountDetailResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<AccountDetailResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<AccountDetailResponse>(response, "Failed to retrieve account", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<AccountDetailResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<AccountDetailResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> SuspendAccountAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/suspend",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to suspend account", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> DeactivateAccountAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/deactivate",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to deactivate account", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> UnlockAccountAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/unlock",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to unlock account", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    #endregion
+
+    #region Two-Factor Authentication
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<EnableTwoFactorResponse>> EnableTwoFactorAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/enable-2fa",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<EnableTwoFactorResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<EnableTwoFactorResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<EnableTwoFactorResponse>(response, "Failed to enable two-factor authentication", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<EnableTwoFactorResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<EnableTwoFactorResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> DisableTwoFactorAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/disable-2fa",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to disable two-factor authentication", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    #endregion
+
+    #region Account Security
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> ChangePasswordAsync(
+        Guid accountId,
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                request.CurrentPassword,
+                request.NewPassword,
+                request.IsAdminReset
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/change-password",
+                apiRequest,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to change password", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> UpdateProfileAsync(
+        Guid accountId,
+        UpdateProfileRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                request.FullName,
+                request.PhoneNumber
+            };
+
+            var response = await _httpClient.PutAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/profile",
+                apiRequest,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to update profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    #endregion
+
+    #region System Profile Management
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<SystemProfileResponse>> GetSystemProfileAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/identity/accounts/{accountId}/system-profile",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<SystemProfileResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<SystemProfileResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<SystemProfileResponse>(response, "Failed to retrieve system profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<SystemProfileResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<SystemProfileResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> CreateSystemProfileAsync(
+        Guid accountId,
+        CreateSystemProfileWebRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/system-profile",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to create system profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> UpdateSystemProfileAsync(
+        Guid accountId,
+        UpdateSystemProfileWebRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/system-profile",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to update system profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> GrantSuperAdminAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/system-profile/grant-super-admin",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to grant super admin", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> RevokeSuperAdminAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"/api/identity/accounts/{accountId}/system-profile/revoke-super-admin",
+                null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to revoke super admin", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    #endregion
+
+    #region Employee Profile Management
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<EmployeeProfileResponse>> GetEmployeeProfileAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/identity/accounts/{accountId}/employee-profile",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<EmployeeProfileResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<EmployeeProfileResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<EmployeeProfileResponse>(response, "Failed to retrieve employee profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<EmployeeProfileResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<EmployeeProfileResponse>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> CreateEmployeeProfileAsync(
+        Guid accountId,
+        CreateEmployeeProfileWebRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/employee-profile",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to create employee profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> UpdateEmployeeProfileAsync(
+        Guid accountId,
+        UpdateEmployeeProfileWebRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/employee-profile",
+                request,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to update employee profile", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    #endregion
+
     #region Private Helpers
 
     private async Task<ApiResponse<T>> HandleErrorResponseAsync<T>(
