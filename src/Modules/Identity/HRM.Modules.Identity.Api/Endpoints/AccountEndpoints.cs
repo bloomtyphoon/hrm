@@ -422,7 +422,7 @@ public static class AccountEndpoints
 
     private static async Task<IResult> RemoveRoles(
         Guid id,
-        AssignRolesRequest request,
+        [Microsoft.AspNetCore.Http.FromBody] AssignRolesRequest request,
         ISender sender,
         CancellationToken cancellationToken)
     {
