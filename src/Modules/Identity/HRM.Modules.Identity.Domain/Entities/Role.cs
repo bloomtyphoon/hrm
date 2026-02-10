@@ -158,6 +158,12 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
         }
 
         _permissions.Add(permission);
+
+        AddDomainEvent(new RolePermissionsModifiedDomainEvent(
+            Id, Name,
+            PermissionsAdded: 1,
+            PermissionsRemoved: 0,
+            TotalPermissions: _permissions.Count));
     }
 
     /// <summary>
@@ -216,6 +222,12 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
 
         // All validations passed - add all permissions
         _permissions.AddRange(permissionList);
+
+        AddDomainEvent(new RolePermissionsModifiedDomainEvent(
+            Id, Name,
+            PermissionsAdded: permissionList.Count,
+            PermissionsRemoved: 0,
+            TotalPermissions: _permissions.Count));
     }
 
     /// <summary>
@@ -244,6 +256,12 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
                 $"Permission {permission} not found in role '{Name}'"
             );
         }
+
+        AddDomainEvent(new RolePermissionsModifiedDomainEvent(
+            Id, Name,
+            PermissionsAdded: 0,
+            PermissionsRemoved: 1,
+            TotalPermissions: _permissions.Count));
     }
 
     /// <summary>
@@ -291,6 +309,12 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
         {
             _permissions.Remove(permission);
         }
+
+        AddDomainEvent(new RolePermissionsModifiedDomainEvent(
+            Id, Name,
+            PermissionsAdded: 0,
+            PermissionsRemoved: permissionList.Count,
+            TotalPermissions: _permissions.Count));
     }
 
     /// <summary>
@@ -329,7 +353,12 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
             );
         }
 
-        var oldCount = _permissions.Count;
+        var oldPermissions = _permissions.ToHashSet();
+        var newPermissions = permissionList.ToHashSet();
+
+        var added = newPermissions.Except(oldPermissions).Count();
+        var removed = oldPermissions.Except(newPermissions).Count();
+
         _permissions.Clear();
         _permissions.AddRange(permissionList);
 
@@ -337,8 +366,8 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
         AddDomainEvent(new RolePermissionsModifiedDomainEvent(
             Id,
             Name,
-            PermissionsAdded: permissionList.Count,
-            PermissionsRemoved: oldCount,
+            PermissionsAdded: added,
+            PermissionsRemoved: removed,
             TotalPermissions: _permissions.Count
         ));
     }

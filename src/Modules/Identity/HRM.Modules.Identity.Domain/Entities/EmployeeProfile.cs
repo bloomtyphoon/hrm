@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
+using HRM.Modules.Identity.Domain.Events;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
@@ -82,7 +83,7 @@ public class EmployeeProfile : AuditableEntity
         Guid? primaryDepartmentId = null,
         Guid? primaryPositionId = null)
     {
-        return new EmployeeProfile
+        var profile = new EmployeeProfile
         {
             Id = Guid.NewGuid(),
             AccountId = accountId,
@@ -93,6 +94,11 @@ public class EmployeeProfile : AuditableEntity
             PrimaryPositionId = primaryPositionId
             // CreatedAtUtc is set automatically by AuditableEntity constructor
         };
+
+        profile.AddDomainEvent(new EmployeeProfileCreatedDomainEvent(
+            profile.Id, accountId, employeeId));
+
+        return profile;
     }
 
     /// <summary>
@@ -107,6 +113,9 @@ public class EmployeeProfile : AuditableEntity
         PrimaryDepartmentId = departmentId;
         PrimaryPositionId = positionId;
         MarkAsModified();
+
+        AddDomainEvent(new EmployeeProfileUpdatedDomainEvent(
+            Id, AccountId, EmployeeId));
     }
 
     /// <summary>
@@ -114,8 +123,14 @@ public class EmployeeProfile : AuditableEntity
     /// </summary>
     public void UpdateDefaultScopeLevel(DataScopeLevel scopeLevel)
     {
+        if (DefaultScopeLevel == scopeLevel)
+            return;
+
         DefaultScopeLevel = scopeLevel;
         MarkAsModified();
+
+        AddDomainEvent(new EmployeeProfileUpdatedDomainEvent(
+            Id, AccountId, EmployeeId));
     }
 
     /// <summary>
@@ -123,7 +138,13 @@ public class EmployeeProfile : AuditableEntity
     /// </summary>
     public void SetCanAccessAllAssignedCompanies(bool value)
     {
+        if (CanAccessAllAssignedCompanies == value)
+            return;
+
         CanAccessAllAssignedCompanies = value;
         MarkAsModified();
+
+        AddDomainEvent(new EmployeeProfileUpdatedDomainEvent(
+            Id, AccountId, EmployeeId));
     }
 }
