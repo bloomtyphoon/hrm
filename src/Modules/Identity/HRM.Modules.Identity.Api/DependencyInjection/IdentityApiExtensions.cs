@@ -36,6 +36,10 @@ public static class IdentityApiExtensions
         // Map permission catalog endpoints
         app.MapPermissionEndpoints();
 
+        // Map profile management endpoints
+        app.MapSystemProfileEndpoints();
+        app.MapEmployeeProfileEndpoints();
+
         return app;
     }
 }
