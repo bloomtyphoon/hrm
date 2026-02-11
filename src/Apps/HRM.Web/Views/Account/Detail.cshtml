@@ -612,13 +612,25 @@
                                             var isAssigned = assignedRoleIds.Contains(role.Id);
                                             <div class="col-md-6 mb-2">
                                                 <div class="form-check">
-                                                    <input type="checkbox"
-                                                           class="form-check-input role-checkbox"
-                                                           id="role-@role.Id"
-                                                           name="roleIds"
-                                                           value="@role.Id"
-                                                           data-role-type="@role.RoleType"
-                                                           @(isAssigned ? "checked" : "") />
+                                                    @if (isAssigned)
+                                                    {
+                                                        <input type="checkbox"
+                                                               class="form-check-input role-checkbox"
+                                                               id="role-@role.Id"
+                                                               name="roleIds"
+                                                               value="@role.Id"
+                                                               data-role-type="@role.RoleType"
+                                                               checked="checked" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox"
+                                                               class="form-check-input role-checkbox"
+                                                               id="role-@role.Id"
+                                                               name="roleIds"
+                                                               value="@role.Id"
+                                                               data-role-type="@role.RoleType" />
+                                                    }
                                                     <label class="form-check-label" for="role-@role.Id">
                                                         <strong>@role.Name</strong>
                                                         <br />
@@ -792,17 +804,35 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="editScopeLevel" class="form-label">Default Scope Level</label>
+                            @{
+                                var editScopeLevel = Model.EmployeeProfile.DefaultScopeLevel;
+                                var editScopeOptions = new[] { (0, "Global"), (1, "Company"), (2, "Department"), (3, "Position"), (4, "Self") };
+                            }
                             <select class="form-select" id="editScopeLevel" name="defaultScopeLevel">
-                                <option value="0" @(Model.EmployeeProfile.DefaultScopeLevel == 0 ? "selected" : "")>Global</option>
-                                <option value="1" @(Model.EmployeeProfile.DefaultScopeLevel == 1 ? "selected" : "")>Company</option>
-                                <option value="2" @(Model.EmployeeProfile.DefaultScopeLevel == 2 ? "selected" : "")>Department</option>
-                                <option value="3" @(Model.EmployeeProfile.DefaultScopeLevel == 3 ? "selected" : "")>Position</option>
-                                <option value="4" @(Model.EmployeeProfile.DefaultScopeLevel == 4 ? "selected" : "")>Self</option>
+                                @foreach (var (val, name) in editScopeOptions)
+                                {
+                                    if (editScopeLevel == val)
+                                    {
+                                        <option value="@val" selected="selected">@name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@val">@name</option>
+                                    }
+                                }
                             </select>
                         </div>
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="editCanAccessAll" name="canAccessAllAssignedCompanies"
-                                   value="true" @(Model.EmployeeProfile.CanAccessAllAssignedCompanies ? "checked" : "") />
+                            @if (Model.EmployeeProfile.CanAccessAllAssignedCompanies)
+                            {
+                                <input type="checkbox" class="form-check-input" id="editCanAccessAll" name="canAccessAllAssignedCompanies"
+                                       value="true" checked="checked" />
+                            }
+                            else
+                            {
+                                <input type="checkbox" class="form-check-input" id="editCanAccessAll" name="canAccessAllAssignedCompanies"
+                                       value="true" />
+                            }
                             <label class="form-check-label" for="editCanAccessAll">Can Access All Assigned Companies</label>
                         </div>
                         <div class="mb-3">
