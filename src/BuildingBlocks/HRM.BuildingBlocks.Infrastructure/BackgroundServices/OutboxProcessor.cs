@@ -88,25 +88,22 @@ public abstract class OutboxProcessor : BackgroundService
     private readonly int _maxAttempts;
 
     /// <summary>
-    /// Constructor with dependencies
+    /// Constructor with OutboxSettings configuration.
     /// </summary>
     /// <param name="serviceScopeFactory">Factory to create scopes for each iteration</param>
     /// <param name="logger">Logger for tracking processing</param>
-    /// <param name="pollingInterval">How often to check for messages (default: 60 seconds)</param>
-    /// <param name="batchSize">Max messages to process per iteration (default: 100)</param>
-    /// <param name="maxAttempts">Max retry attempts before dead letter (default: 5)</param>
+    /// <param name="settings">Outbox processing settings from configuration</param>
     protected OutboxProcessor(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<OutboxProcessor> logger,
-        TimeSpan? pollingInterval = null,
-        int batchSize = 100,
-        int maxAttempts = 5)
+        OutboxSettings settings)
     {
         _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _pollingInterval = pollingInterval ?? TimeSpan.FromMinutes(1); // 1 minute
-        _batchSize = batchSize;
-        _maxAttempts = maxAttempts;
+        ArgumentNullException.ThrowIfNull(settings);
+        _pollingInterval = TimeSpan.FromSeconds(settings.PollingIntervalSeconds);
+        _batchSize = settings.BatchSize;
+        _maxAttempts = settings.MaxAttempts;
     }
 
     /// <summary>

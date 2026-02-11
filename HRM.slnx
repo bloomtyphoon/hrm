@@ -41,6 +41,8 @@
     <File Path="src/Database/Identity/004_CreateAccountRolesTable.sql" />
     <File Path="src/Database/Identity/005_SeedAdminRoleAndPermissions.sql" />
     <File Path="src/Database/Identity/006_CreateOutboxMessagesTable.sql" />
+    <File Path="src/Database/Identity/007_CreateSystemProfilesTable.sql" />
+    <File Path="src/Database/Identity/008_CreateEmployeeProfilesTable.sql" />
     <File Path="src/Database/Identity/README.md" />
   </Folder>
 </Solution>

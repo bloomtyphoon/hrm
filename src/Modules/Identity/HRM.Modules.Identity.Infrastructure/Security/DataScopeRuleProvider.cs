@@ -2,8 +2,10 @@ using System.Data;
 using Dapper;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authorization;
+using HRM.Modules.Identity.Infrastructure.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace HRM.Modules.Identity.Infrastructure.Security;
 
@@ -17,20 +19,21 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
     private readonly IDbConnection _connection;
     private readonly IMemoryCache _cache;
     private readonly ILogger<DataScopeRuleProvider> _logger;
+    private readonly TimeSpan _cacheDuration;
 
     private DataScopeRule? _cachedRule;
     private DataScopeContext? _cachedContext;
 
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
-
     public DataScopeRuleProvider(
         IDbConnection connection,
         IMemoryCache cache,
-        ILogger<DataScopeRuleProvider> logger)
+        ILogger<DataScopeRuleProvider> logger,
+        IOptions<IdentityCacheSettings> cacheSettings)
     {
         _connection = connection;
         _cache = cache;
         _logger = logger;
+        _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.DataScopeRuleCacheDurationMinutes);
     }
 
     /// <inheritdoc />
@@ -253,7 +256,7 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             new { EmployeeId = employeeId }
         )).ToList();
 
-        _cache.Set(cacheKey, assignments, CacheDuration);
+        _cache.Set(cacheKey, assignments, _cacheDuration);
 
         return assignments;
     }

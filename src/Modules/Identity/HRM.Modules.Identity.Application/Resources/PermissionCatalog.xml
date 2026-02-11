@@ -126,6 +126,66 @@
 
       </Entity>
 
+      <!-- SystemProfile Entity -->
+      <Entity name="SystemProfile" displayName="Hồ sơ hệ thống">
+
+        <Action name="View" displayName="Xem hồ sơ hệ thống" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo hồ sơ hệ thống" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật hồ sơ hệ thống" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="ManageSuperAdmin" displayName="Quản lý quyền Super Admin" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+      <!-- EmployeeProfile Entity -->
+      <Entity name="EmployeeProfile" displayName="Hồ sơ nhân viên">
+
+        <Action name="View" displayName="Xem hồ sơ nhân viên" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo hồ sơ nhân viên" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật hồ sơ nhân viên" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
     </Module>
 
   </Permissions>
