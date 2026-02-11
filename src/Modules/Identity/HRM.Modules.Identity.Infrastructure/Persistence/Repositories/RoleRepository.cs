@@ -30,21 +30,21 @@ internal sealed class RoleRepository : IRoleRepository
                 cancellationToken);
     }
 
-    public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsByNameAsync(string name, Guid? companyId, CancellationToken cancellationToken = default)
     {
         return await _context.Roles
             .AsNoTracking()
             .AnyAsync(
-                r => r.Name.ToLower() == name.ToLower(),
+                r => r.Name.ToLower() == name.ToLower() && r.CompanyId == companyId,
                 cancellationToken);
     }
 
-    public async Task<bool> ExistsByNameAsync(string name, Guid excludeId, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsByNameAsync(string name, Guid? companyId, Guid excludeId, CancellationToken cancellationToken = default)
     {
         return await _context.Roles
             .AsNoTracking()
             .AnyAsync(
-                r => r.Name.ToLower() == name.ToLower() && r.Id != excludeId,
+                r => r.Name.ToLower() == name.ToLower() && r.CompanyId == companyId && r.Id != excludeId,
                 cancellationToken);
     }
 

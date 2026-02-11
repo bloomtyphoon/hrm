@@ -18,14 +18,14 @@ internal sealed class CreateRoleCommandHandler : ICommandHandler<CreateRoleComma
 
     public async Task<Result<Guid>> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
     {
-        // 1. Check name uniqueness
-        if (await _roleRepository.ExistsByNameAsync(request.Name, cancellationToken))
+        // 1. Check name uniqueness within same company scope
+        if (await _roleRepository.ExistsByNameAsync(request.Name, request.CompanyId, cancellationToken))
         {
             return Result.Failure<Guid>(RoleErrors.NameAlreadyExists(request.Name));
         }
 
         // 2. Create Role aggregate
-        var role = Role.Create(request.Name, request.Description, request.IsSystemRole);
+        var role = Role.Create(request.Name, request.Description, request.IsSystemRole, request.CompanyId);
 
         // 3. Add permissions
         var permissions = request.Permissions

@@ -11,6 +11,7 @@ public sealed record RoleDetailDto
     public required string Name { get; init; }
     public string? Description { get; init; }
     public required bool IsSystemRole { get; init; }
+    public Guid? CompanyId { get; init; }
     public required int PermissionCount { get; init; }
     public required List<RolePermissionDto> Permissions { get; init; }
     public required DateTime CreatedAtUtc { get; init; }

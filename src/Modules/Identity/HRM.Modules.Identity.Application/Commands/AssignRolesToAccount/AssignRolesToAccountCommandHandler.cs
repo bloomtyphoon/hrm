@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Entities;
 using HRM.Modules.Identity.Domain.Repositories;
@@ -42,6 +43,12 @@ internal sealed class AssignRolesToAccountCommandHandler : ICommandHandler<Assig
             if (role is null)
             {
                 return Result.Failure(RoleErrors.NotFound(roleId));
+            }
+
+            // Validate: company-scoped roles cannot be assigned to System accounts
+            if (role.CompanyId.HasValue && account.AccountType == AccountType.System)
+            {
+                return Result.Failure(RoleErrors.CompanyRoleNotAllowedForSystemAccount(role.Name));
             }
 
             // Skip if already assigned

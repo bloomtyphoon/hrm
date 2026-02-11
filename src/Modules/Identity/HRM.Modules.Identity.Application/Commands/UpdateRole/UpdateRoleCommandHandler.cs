@@ -24,8 +24,8 @@ internal sealed class UpdateRoleCommandHandler : ICommandHandler<UpdateRoleComma
             return Result.Failure(RoleErrors.NotFound(request.RoleId));
         }
 
-        // 2. Check name uniqueness (exclude current role)
-        if (await _roleRepository.ExistsByNameAsync(request.Name, request.RoleId, cancellationToken))
+        // 2. Check name uniqueness within same company scope (exclude current role)
+        if (await _roleRepository.ExistsByNameAsync(request.Name, role.CompanyId, request.RoleId, cancellationToken))
         {
             return Result.Failure(RoleErrors.NameAlreadyExists(request.Name));
         }

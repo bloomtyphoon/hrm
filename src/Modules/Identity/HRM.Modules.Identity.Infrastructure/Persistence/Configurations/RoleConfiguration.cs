@@ -35,13 +35,19 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
             .IsRequired()
             .HasDefaultValue(false);
 
-        // Unique index on Name
-        builder.HasIndex(r => r.Name)
+        builder.Property(r => r.CompanyId)
+            .IsRequired(false);
+
+        // Unique index on (Name, CompanyId) - role name unique within same company scope
+        builder.HasIndex(r => new { r.Name, r.CompanyId })
             .IsUnique()
-            .HasDatabaseName("IX_Roles_Name");
+            .HasDatabaseName("IX_Roles_Name_CompanyId");
 
         builder.HasIndex(r => r.IsSystemRole)
             .HasDatabaseName("IX_Roles_IsSystemRole");
+
+        builder.HasIndex(r => r.CompanyId)
+            .HasDatabaseName("IX_Roles_CompanyId");
 
         builder.HasIndex(r => r.CreatedAtUtc)
             .HasDatabaseName("IX_Roles_CreatedAtUtc");

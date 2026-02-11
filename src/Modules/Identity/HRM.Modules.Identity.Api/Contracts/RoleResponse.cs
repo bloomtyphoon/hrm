@@ -10,6 +10,7 @@ public sealed record RoleResponse(
     string Name,
     string? Description,
     bool IsSystemRole,
+    Guid? CompanyId,
     int PermissionCount,
     List<RolePermissionResponse> Permissions,
     DateTime CreatedAtUtc,

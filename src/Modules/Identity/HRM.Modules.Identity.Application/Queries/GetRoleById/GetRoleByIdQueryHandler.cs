@@ -32,6 +32,7 @@ public sealed class GetRoleByIdQueryHandler
             Name = role.Name,
             Description = role.Description,
             IsSystemRole = role.IsSystemRole,
+            CompanyId = role.CompanyId,
             PermissionCount = role.PermissionCount,
             Permissions = role.Permissions.Select(p => new RolePermissionDto
             {

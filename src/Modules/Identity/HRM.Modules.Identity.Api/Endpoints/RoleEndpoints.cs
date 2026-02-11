@@ -74,6 +74,7 @@ public static class RoleEndpoints
         ISender sender,
         string? searchTerm = null,
         bool? isSystemRole = null,
+        Guid? companyId = null,
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -86,6 +87,7 @@ public static class RoleEndpoints
         {
             SearchTerm = searchTerm,
             IsSystemRole = isSystemRole,
+            CompanyId = companyId,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
@@ -107,6 +109,7 @@ public static class RoleEndpoints
             Name: dto.Name,
             Description: dto.Description,
             IsSystemRole: dto.IsSystemRole,
+            CompanyId: dto.CompanyId,
             PermissionCount: dto.PermissionCount,
             Permissions: dto.Permissions.Select(p => new RolePermissionResponse(
                 Module: p.Module,
@@ -130,6 +133,7 @@ public static class RoleEndpoints
             Name: request.Name,
             Description: request.Description,
             IsSystemRole: request.IsSystemRole,
+            CompanyId: request.CompanyId,
             Permissions: request.Permissions.Select(p => new PermissionDto(
                 Module: p.Module,
                 Entity: p.Entity,
@@ -157,6 +161,7 @@ public static class RoleEndpoints
                 Name: role.Name,
                 Description: role.Description,
                 IsSystemRole: role.IsSystemRole,
+                CompanyId: role.CompanyId,
                 PermissionCount: role.PermissionCount,
                 Permissions: role.Permissions.Select(p => new RolePermissionResponse(
                     Module: p.Module,
@@ -211,6 +216,7 @@ public static class RoleEndpoints
                 Name: role.Name,
                 Description: role.Description,
                 IsSystemRole: role.IsSystemRole,
+                CompanyId: role.CompanyId,
                 PermissionCount: role.PermissionCount,
                 Permissions: role.Permissions.Select(p => new RolePermissionResponse(
                     Module: p.Module,

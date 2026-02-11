@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,15 +9,20 @@ namespace HRM.Modules.Identity.Application.Queries.GetAccounts;
 /// <summary>
 /// Handler for GetAccountsQuery.
 /// Returns paginated list of accounts with search and filter support.
+/// Applies visibility filtering based on current user's company assignments.
 /// </summary>
 public sealed class GetAccountsQueryHandler
     : IQueryHandler<GetAccountsQuery, PagedResult<AccountSummaryDto>>
 {
     private readonly IIdentityQueryContext _context;
+    private readonly IAccountVisibilityFilter _visibilityFilter;
 
-    public GetAccountsQueryHandler(IIdentityQueryContext context)
+    public GetAccountsQueryHandler(
+        IIdentityQueryContext context,
+        IAccountVisibilityFilter visibilityFilter)
     {
         _context = context;
+        _visibilityFilter = visibilityFilter;
     }
 
     public async Task<PagedResult<AccountSummaryDto>> Handle(
@@ -24,6 +30,13 @@ public sealed class GetAccountsQueryHandler
         CancellationToken cancellationToken)
     {
         var query = _context.Accounts.AsNoTracking();
+
+        // Apply visibility filter (Employee accounts only see accounts in their companies)
+        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
+        if (visibleAccountIds != null)
+        {
+            query = query.Where(a => visibleAccountIds.Contains(a.Id));
+        }
 
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))

@@ -109,4 +109,12 @@ public static class RoleErrors
     public static ValidationError ScopeNotAllowed(string permissionKey, string scope) =>
         new("Role.ScopeNotAllowed",
             $"Scope '{scope}' is not allowed for permission '{permissionKey}'. Please select a valid scope for this action.");
+
+    /// <summary>
+    /// Company-scoped role cannot be assigned to a System account.
+    /// Company roles are only for Employee accounts within that company.
+    /// </summary>
+    public static ValidationError CompanyRoleNotAllowedForSystemAccount(string roleName) =>
+        new("Role.CompanyRoleNotAllowedForSystemAccount",
+            $"Company-scoped role '{roleName}' cannot be assigned to a System account. Company roles are only for Employee accounts.");
 }

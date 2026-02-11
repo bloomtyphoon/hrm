@@ -9,6 +9,7 @@ public sealed record GetRolesQuery : IPagedQuery<RoleSummaryDto>
 {
     public string? SearchTerm { get; init; }
     public bool? IsSystemRole { get; init; }
+    public Guid? CompanyId { get; init; }
     public int PageNumber { get; init; } = 1;
     public int PageSize { get; init; } = 20;
 }

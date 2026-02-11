@@ -11,6 +11,7 @@ public sealed record CreateRoleCommand(
     string Name,
     string? Description,
     bool IsSystemRole,
+    Guid? CompanyId,
     List<PermissionDto> Permissions
 ) : IModuleCommand<Guid>
 {

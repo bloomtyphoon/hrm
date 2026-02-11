@@ -5,9 +5,12 @@ using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
 using HRM.BuildingBlocks.Infrastructure.Security;
+using Microsoft.Data.SqlClient;
+using System.Data;
 using HRM.Modules.Identity.Infrastructure.Configuration;
 using HRM.Modules.Identity.Application;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Application.Configuration;
 using HRM.Modules.Identity.Domain.Repositories;
@@ -16,6 +19,7 @@ using HRM.Modules.Identity.Infrastructure.Authentication;
 using HRM.Modules.Identity.Infrastructure.BackgroundServices;
 using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.Infrastructure.Persistence.Repositories;
+using HRM.Modules.Identity.Infrastructure.Security;
 using HRM.Modules.Identity.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -118,6 +122,14 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IIdentityQueryContext>(
             sp => sp.GetRequiredService<IdentityDbContext>());
 
+        // Register IDbConnection for Dapper-based queries (DataScopeRuleProvider, AccountVisibilityFilter)
+        services.AddScoped<IDbConnection>(sp =>
+        {
+            var connectionString = configuration.GetConnectionString("HrmDatabase")
+                ?? throw new InvalidOperationException("Connection string 'HrmDatabase' not found");
+            return new SqlConnection(connectionString);
+        });
+
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
         services.AddScoped<IAccountRepository, AccountRepository>();
@@ -183,6 +195,12 @@ public static class IdentityInfrastructureExtensions
         // IPermissionService: Checks user permissions for authorization
         // Scoped: Uses scoped repositories for database access
         services.AddScoped<IPermissionService, PermissionService>();
+
+        // IDataScopeRuleProvider: Single source of truth for data scope rules
+        services.AddScoped<IDataScopeRuleProvider, DataScopeRuleProvider>();
+
+        // IAccountVisibilityFilter: Filters account visibility by company for Employee accounts
+        services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();
 
         // 7. Register Route Security Map Source
         // Register Identity module's RouteSecurityMap.xml to be loaded at startup

@@ -36,6 +36,14 @@ public sealed class GetRolesQueryHandler
             query = query.Where(r => r.IsSystemRole == request.IsSystemRole.Value);
         }
 
+        // Apply company filter
+        if (request.CompanyId.HasValue)
+        {
+            // Show roles for the specific company AND global roles (CompanyId = null)
+            var companyId = request.CompanyId.Value;
+            query = query.Where(r => r.CompanyId == null || r.CompanyId == companyId);
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
@@ -48,6 +56,7 @@ public sealed class GetRolesQueryHandler
                 Name = r.Name,
                 Description = r.Description,
                 IsSystemRole = r.IsSystemRole,
+                CompanyId = r.CompanyId,
                 PermissionCount = r.Permissions.Count,
                 CreatedAtUtc = r.CreatedAtUtc,
                 ModifiedAtUtc = r.ModifiedAtUtc

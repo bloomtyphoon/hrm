@@ -69,6 +69,18 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
     public bool IsSystemRole { get; private set; }
 
     /// <summary>
+    /// Optional company ID for company-scoped roles.
+    /// - null: Global role (available to all companies)
+    /// - Guid: Company-specific role (only assignable to employees in that company)
+    ///
+    /// Business Rules:
+    /// - Role name must be unique within the same CompanyId scope
+    /// - System roles should have CompanyId = null (global)
+    /// - Company roles can only be assigned to Employee accounts in that company
+    /// </summary>
+    public Guid? CompanyId { get; private set; }
+
+    /// <summary>
     /// Read-only collection of permissions assigned to this role
     /// Permissions cannot be modified directly - use AddPermission/RemovePermission methods
     /// </summary>
@@ -104,16 +116,23 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
     /// <param name="isSystemRole">True for system role, false for employee role</param>
     /// <returns>New empty role</returns>
     /// <exception cref="ArgumentException">If name is invalid</exception>
-    public static Role Create(string name, string? description = null, bool isSystemRole = false)
+    public static Role Create(string name, string? description = null, bool isSystemRole = false, Guid? companyId = null)
     {
         ValidateName(name);
+
+        if (isSystemRole && companyId.HasValue)
+        {
+            throw new InvalidOperationException(
+                "System roles cannot be company-scoped. Set companyId to null for system roles.");
+        }
 
         var role = new Role
         {
             Id = Guid.NewGuid(),
             Name = name.Trim(),
             Description = description?.Trim(),
-            IsSystemRole = isSystemRole
+            IsSystemRole = isSystemRole,
+            CompanyId = companyId
         };
 
         return role;

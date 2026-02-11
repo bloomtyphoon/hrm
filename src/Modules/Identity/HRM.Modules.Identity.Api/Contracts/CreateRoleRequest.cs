@@ -9,6 +9,7 @@ public sealed record CreateRoleRequest(
     string Name,
     string? Description,
     bool IsSystemRole,
+    Guid? CompanyId,
     List<PermissionRequest> Permissions
 );
 

@@ -9,6 +9,7 @@ public sealed record RoleSummaryDto
     public required string Name { get; init; }
     public string? Description { get; init; }
     public required bool IsSystemRole { get; init; }
+    public Guid? CompanyId { get; init; }
     public required int PermissionCount { get; init; }
     public required DateTime CreatedAtUtc { get; init; }
     public DateTime? ModifiedAtUtc { get; init; }
