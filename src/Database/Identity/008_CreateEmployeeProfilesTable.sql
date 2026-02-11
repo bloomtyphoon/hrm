@@ -82,5 +82,56 @@ BEGIN
 END
 GO
 
+-- =============================================
+-- Create EmployeeProfileCompanies Table (Owned Entity)
+-- =============================================
+-- Denormalized copy of company assignments from Personnel module.
+-- Used for account visibility filtering and data scope resolution
+-- without cross-module queries to personnel.EmployeeAssignments.
+-- Synced via admin API or integration events from Personnel module.
+-- =============================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'EmployeeProfileCompanies' AND schema_id = SCHEMA_ID('Identity'))
+BEGIN
+    CREATE TABLE [Identity].EmployeeProfileCompanies
+    (
+        Id                      INT                 IDENTITY(1,1) NOT NULL,
+        EmployeeProfileId       UNIQUEIDENTIFIER    NOT NULL,
+        CompanyId               UNIQUEIDENTIFIER    NOT NULL,
+
+        CONSTRAINT PK_Identity_EmployeeProfileCompanies PRIMARY KEY CLUSTERED (Id),
+        CONSTRAINT FK_Identity_EmployeeProfileCompanies_EmployeeProfiles FOREIGN KEY (EmployeeProfileId)
+            REFERENCES [Identity].EmployeeProfiles (Id)
+            ON DELETE CASCADE
+    )
+
+    PRINT 'Table [Identity].EmployeeProfileCompanies created successfully'
+END
+ELSE
+BEGIN
+    PRINT 'Table [Identity].EmployeeProfileCompanies already exists'
+END
+GO
+
+-- Unique: one entry per (EmployeeProfile, Company)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_EmployeeProfileCompanies_Unique' AND object_id = OBJECT_ID('[Identity].EmployeeProfileCompanies'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX IX_Identity_EmployeeProfileCompanies_Unique
+    ON [Identity].EmployeeProfileCompanies (EmployeeProfileId, CompanyId)
+
+    PRINT 'Index IX_Identity_EmployeeProfileCompanies_Unique created'
+END
+GO
+
+-- Filter by CompanyId (for visibility queries: "find all employees in company X")
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_EmployeeProfileCompanies_CompanyId' AND object_id = OBJECT_ID('[Identity].EmployeeProfileCompanies'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Identity_EmployeeProfileCompanies_CompanyId
+    ON [Identity].EmployeeProfileCompanies (CompanyId)
+    INCLUDE (EmployeeProfileId)
+
+    PRINT 'Index IX_Identity_EmployeeProfileCompanies_CompanyId created'
+END
+GO
+
 PRINT 'Script 008_CreateEmployeeProfilesTable.sql completed'
 GO

@@ -42,5 +42,23 @@ internal sealed class EmployeeProfileConfiguration : IEntityTypeConfiguration<Em
         builder.HasIndex(ep => ep.EmployeeId)
             .IsUnique()
             .HasDatabaseName("IX_EmployeeProfiles_EmployeeId");
+
+        // Company access collection (denormalized from Personnel.EmployeeAssignments)
+        builder.OwnsMany(ep => ep.CompanyAccess, companyBuilder =>
+        {
+            companyBuilder.ToTable("EmployeeProfileCompanies");
+
+            companyBuilder.WithOwner().HasForeignKey("EmployeeProfileId");
+
+            companyBuilder.Property(ca => ca.CompanyId)
+                .IsRequired();
+
+            companyBuilder.HasIndex("EmployeeProfileId", "CompanyId")
+                .IsUnique()
+                .HasDatabaseName("IX_EmployeeProfileCompanies_Unique");
+
+            companyBuilder.HasIndex(ca => ca.CompanyId)
+                .HasDatabaseName("IX_EmployeeProfileCompanies_CompanyId");
+        });
     }
 }

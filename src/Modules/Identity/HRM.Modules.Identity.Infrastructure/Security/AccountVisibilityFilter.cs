@@ -8,16 +8,12 @@ namespace HRM.Modules.Identity.Infrastructure.Security;
 
 /// <summary>
 /// Implementation of IAccountVisibilityFilter.
-/// Uses only Identity schema data (EmployeeProfile.PrimaryCompanyId) — no cross-module queries.
+/// Uses only Identity schema data — no cross-module queries.
 ///
 /// Visibility Rules:
 /// - System accounts: see all accounts (no filter)
-/// - Employee accounts: see accounts whose EmployeeProfile.PrimaryCompanyId matches
-///   one of the current user's company IDs
-///
-/// Note: Currently uses PrimaryCompanyId for matching.
-/// For full multi-company support, consider syncing company assignments
-/// into Identity schema via integration events from Personnel module.
+/// - Employee accounts: see accounts whose EmployeeProfile shares
+///   at least one company via EmployeeProfileCompanies table
 /// </summary>
 public sealed class AccountVisibilityFilter : IAccountVisibilityFilter
 {
@@ -47,28 +43,27 @@ public sealed class AccountVisibilityFilter : IAccountVisibilityFilter
             return null;
         }
 
-        // Get current user's EmployeeProfile to find their PrimaryCompanyId
-        var currentProfile = await _context.EmployeeProfiles
+        // Get current user's company IDs from EmployeeProfileCompanies
+        var userCompanyIds = await _context.EmployeeProfiles
             .AsNoTracking()
             .Where(ep => ep.AccountId == _currentUser.UserId)
-            .Select(ep => new { ep.PrimaryCompanyId })
-            .FirstOrDefaultAsync(cancellationToken);
+            .SelectMany(ep => ep.CompanyAccess)
+            .Select(ca => ca.CompanyId)
+            .ToListAsync(cancellationToken);
 
-        // No EmployeeProfile or no PrimaryCompanyId → can only see own account
-        if (currentProfile?.PrimaryCompanyId == null)
+        // No company access → can only see own account
+        if (userCompanyIds.Count == 0)
         {
             _logger.LogWarning(
-                "Employee account {UserId} has no PrimaryCompanyId, returning self-only visibility",
+                "Employee account {UserId} has no company access, returning self-only visibility",
                 _currentUser.UserId);
             return [_currentUser.UserId];
         }
 
-        var companyId = currentProfile.PrimaryCompanyId.Value;
-
-        // Find all accounts whose EmployeeProfile has the same PrimaryCompanyId
+        // Find all accounts whose EmployeeProfile shares at least one company
         var visibleAccountIds = await _context.EmployeeProfiles
             .AsNoTracking()
-            .Where(ep => ep.PrimaryCompanyId == companyId)
+            .Where(ep => ep.CompanyAccess.Any(ca => userCompanyIds.Contains(ca.CompanyId)))
             .Select(ep => ep.AccountId)
             .ToListAsync(cancellationToken);
 
@@ -78,8 +73,8 @@ public sealed class AccountVisibilityFilter : IAccountVisibilityFilter
         result.Add(_currentUser.UserId);
 
         _logger.LogDebug(
-            "Employee account {UserId} (company {CompanyId}) can see {Count} accounts",
-            _currentUser.UserId, companyId, result.Count);
+            "Employee account {UserId} ({CompanyCount} companies) can see {Count} accounts",
+            _currentUser.UserId, userCompanyIds.Count, result.Count);
 
         return result;
     }

@@ -5,8 +5,6 @@ using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
 using HRM.BuildingBlocks.Infrastructure.Security;
-using Microsoft.Data.SqlClient;
-using System.Data;
 using HRM.Modules.Identity.Infrastructure.Configuration;
 using HRM.Modules.Identity.Application;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
@@ -121,14 +119,6 @@ public static class IdentityInfrastructureExtensions
         // Keeps Application layer independent of Infrastructure (Dependency Inversion)
         services.AddScoped<IIdentityQueryContext>(
             sp => sp.GetRequiredService<IdentityDbContext>());
-
-        // Register IDbConnection for Dapper-based queries (DataScopeRuleProvider, DataScopingService)
-        services.AddScoped<IDbConnection>(sp =>
-        {
-            var connectionString = configuration.GetConnectionString("HrmDatabase")
-                ?? throw new InvalidOperationException("Connection string 'HrmDatabase' not found");
-            return new SqlConnection(connectionString);
-        });
 
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
