@@ -122,7 +122,7 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IIdentityQueryContext>(
             sp => sp.GetRequiredService<IdentityDbContext>());
 
-        // Register IDbConnection for Dapper-based queries (DataScopeRuleProvider, AccountVisibilityFilter)
+        // Register IDbConnection for Dapper-based queries (DataScopeRuleProvider, DataScopingService)
         services.AddScoped<IDbConnection>(sp =>
         {
             var connectionString = configuration.GetConnectionString("HrmDatabase")

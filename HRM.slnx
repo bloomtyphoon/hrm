@@ -43,7 +43,6 @@
     <File Path="src/Database/Identity/006_CreateOutboxMessagesTable.sql" />
     <File Path="src/Database/Identity/007_CreateSystemProfilesTable.sql" />
     <File Path="src/Database/Identity/008_CreateEmployeeProfilesTable.sql" />
-    <File Path="src/Database/Identity/009_AddCompanyIdToRoles.sql" />
     <File Path="src/Database/Identity/README.md" />
   </Folder>
 </Solution>
