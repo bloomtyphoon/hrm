@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Entities;
@@ -14,21 +15,31 @@ internal sealed class AssignRolesToAccountCommandHandler : ICommandHandler<Assig
     private readonly IRoleRepository _roleRepository;
     private readonly IAccountRoleRepository _accountRoleRepository;
     private readonly IExecutionContext _executionContext;
+    private readonly IAccountVisibilityFilter _visibilityFilter;
 
     public AssignRolesToAccountCommandHandler(
         IAccountRepository accountRepository,
         IRoleRepository roleRepository,
         IAccountRoleRepository accountRoleRepository,
-        IExecutionContext executionContext)
+        IExecutionContext executionContext,
+        IAccountVisibilityFilter visibilityFilter)
     {
         _accountRepository = accountRepository;
         _roleRepository = roleRepository;
         _accountRoleRepository = accountRoleRepository;
         _executionContext = executionContext;
+        _visibilityFilter = visibilityFilter;
     }
 
     public async Task<Result> Handle(AssignRolesToAccountCommand request, CancellationToken cancellationToken)
     {
+        // Visibility check
+        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
+        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        {
+            return Result.Failure(AccountErrors.NotFound(request.AccountId));
+        }
+
         // 1. Verify account exists
         var account = await _accountRepository.GetByIdAsync(request.AccountId, cancellationToken);
         if (account is null)

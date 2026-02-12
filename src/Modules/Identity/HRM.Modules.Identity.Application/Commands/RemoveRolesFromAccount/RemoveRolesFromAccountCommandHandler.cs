@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
 
@@ -9,17 +10,27 @@ internal sealed class RemoveRolesFromAccountCommandHandler : ICommandHandler<Rem
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IAccountRoleRepository _accountRoleRepository;
+    private readonly IAccountVisibilityFilter _visibilityFilter;
 
     public RemoveRolesFromAccountCommandHandler(
         IAccountRepository accountRepository,
-        IAccountRoleRepository accountRoleRepository)
+        IAccountRoleRepository accountRoleRepository,
+        IAccountVisibilityFilter visibilityFilter)
     {
         _accountRepository = accountRepository;
         _accountRoleRepository = accountRoleRepository;
+        _visibilityFilter = visibilityFilter;
     }
 
     public async Task<Result> Handle(RemoveRolesFromAccountCommand request, CancellationToken cancellationToken)
     {
+        // Visibility check
+        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
+        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        {
+            return Result.Failure(AccountErrors.NotFound(request.AccountId));
+        }
+
         // 1. Verify account exists
         var account = await _accountRepository.GetByIdAsync(request.AccountId, cancellationToken);
         if (account is null)

@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Domain.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -10,16 +11,27 @@ public sealed class GetAccountRolesQueryHandler
     : IQueryHandler<GetAccountRolesQuery, Result<List<AccountRoleDto>>>
 {
     private readonly IIdentityQueryContext _context;
+    private readonly IAccountVisibilityFilter _visibilityFilter;
 
-    public GetAccountRolesQueryHandler(IIdentityQueryContext context)
+    public GetAccountRolesQueryHandler(
+        IIdentityQueryContext context,
+        IAccountVisibilityFilter visibilityFilter)
     {
         _context = context;
+        _visibilityFilter = visibilityFilter;
     }
 
     public async Task<Result<List<AccountRoleDto>>> Handle(
         GetAccountRolesQuery request,
         CancellationToken cancellationToken)
     {
+        // Visibility check
+        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
+        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        {
+            return Result.Failure<List<AccountRoleDto>>(AccountErrors.NotFound(request.AccountId));
+        }
+
         // Verify account exists
         var accountExists = await _context.Accounts
             .AsNoTracking()
