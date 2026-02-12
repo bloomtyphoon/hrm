@@ -14,6 +14,7 @@ using HRM.Modules.Identity.Application.Commands.SuspendAccount;
 using HRM.Modules.Identity.Application.Commands.UnlockAccount;
 using HRM.Modules.Identity.Application.Commands.UpdateProfile;
 using HRM.Modules.Identity.Application.Queries.GetAccountRoles;
+using HRM.Modules.Identity.Application.Queries.GetAccountById;
 using HRM.Modules.Identity.Application.Queries.GetAccounts;
 using HRM.Modules.Identity.Domain.Repositories;
 using MediatR;
@@ -287,32 +288,26 @@ public static class AccountEndpoints
 
     private static async Task<IResult> GetAccountById(
         Guid id,
-        IAccountRepository accountRepository,
+        ISender sender,
         CancellationToken cancellationToken)
     {
-        var account = await accountRepository.GetByIdAsync(id, cancellationToken);
+        var query = new GetAccountByIdQuery(id);
+        var result = await sender.Send(query, cancellationToken);
 
-        if (account is null)
-        {
-            return Results.NotFound();
-        }
-
-        var response = new AccountResponse(
-            Id: account.Id,
-            Username: account.Username,
-            Email: account.Email,
-            FullName: account.FullName,
-            PhoneNumber: account.PhoneNumber,
-            Status: account.Status.ToString(),
-            AccountType: account.AccountType.ToString(),
-            IsTwoFactorEnabled: account.IsTwoFactorEnabled,
-            ActivatedAtUtc: account.ActivatedAtUtc,
-            LastLoginAtUtc: account.LastLoginAtUtc,
-            CreatedAtUtc: account.CreatedAtUtc,
-            ModifiedAtUtc: account.ModifiedAtUtc
-        );
-
-        return Results.Ok(response);
+        return result.ToHttpResult(dto => Results.Ok(new AccountResponse(
+            Id: dto.Id,
+            Username: dto.Username,
+            Email: dto.Email,
+            FullName: dto.FullName,
+            PhoneNumber: dto.PhoneNumber,
+            Status: dto.Status.ToString(),
+            AccountType: dto.AccountType.ToString(),
+            IsTwoFactorEnabled: dto.IsTwoFactorEnabled,
+            ActivatedAtUtc: dto.ActivatedAtUtc,
+            LastLoginAtUtc: dto.LastLoginAtUtc,
+            CreatedAtUtc: dto.CreatedAtUtc,
+            ModifiedAtUtc: dto.ModifiedAtUtc
+        )));
     }
 
     private static async Task<IResult> SuspendAccount(
