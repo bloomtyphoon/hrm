@@ -10,8 +10,10 @@ namespace HRM.Modules.Identity.Application.Queries.GetRoleById;
 
 /// <summary>
 /// Handler for GetRoleByIdQuery.
-/// Validates company access — Employee accounts can only view
-/// global roles or roles for their assigned companies.
+/// Access rules:
+/// - System: can view any role (global or company-scoped)
+/// - Employee: can ONLY view company-scoped roles for their assigned companies.
+///   Global roles (CompanyId = null) are NOT accessible to Employee.
 /// </summary>
 public sealed class GetRoleByIdQueryHandler
     : IQueryHandler<GetRoleByIdQuery, Result<RoleDetailDto>>
@@ -41,9 +43,16 @@ public sealed class GetRoleByIdQueryHandler
             return Result.Failure<RoleDetailDto>(RoleErrors.NotFound(request.RoleId));
         }
 
-        // Company access check: Employee can only see global or own-company roles
-        if (role.CompanyId.HasValue && _currentUser.IsEmployeeAccount())
+        // Employee access check
+        if (_currentUser.IsEmployeeAccount())
         {
+            // Employee cannot see global roles
+            if (!role.CompanyId.HasValue)
+            {
+                return Result.Failure<RoleDetailDto>(RoleErrors.NotFound(request.RoleId));
+            }
+
+            // Employee can only see roles for their assigned companies
             var hasAccess = await _context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.AccountId == _currentUser.UserId)

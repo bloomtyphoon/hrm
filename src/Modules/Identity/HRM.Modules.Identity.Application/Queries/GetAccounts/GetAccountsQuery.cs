@@ -5,13 +5,17 @@ namespace HRM.Modules.Identity.Application.Queries.GetAccounts;
 
 /// <summary>
 /// Query to retrieve paginated list of accounts.
-/// Supports search by username/email and filter by status and company.
 ///
-/// Company filter behavior:
+/// Company filter behavior differs by account type:
+///
+/// System account:
 /// - CompanyId specified: filter accounts belonging to that company
-/// - AllCompanies = true: show all visible accounts (no company filter)
-/// - Neither (default): Employee accounts default to PrimaryCompanyId,
-///   System accounts see all
+/// - AllCompanies = true (or default): show all accounts
+///
+/// Employee account (AllCompanies is ignored):
+/// - CompanyId specified: filter by that company (must be in assigned companies)
+/// - Default: filter by PrimaryCompanyId
+/// - Never sees accounts outside assigned companies
 /// </summary>
 public sealed record GetAccountsQuery : IPagedQuery<AccountSummaryDto>
 {

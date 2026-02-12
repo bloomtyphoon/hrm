@@ -9,11 +9,15 @@ namespace HRM.Modules.Identity.Application.Queries.GetAccounts;
 
 /// <summary>
 /// Handler for GetAccountsQuery.
-/// Returns paginated list of accounts with search and filter support.
 ///
-/// Filtering layers (applied in order):
-/// 1. Visibility filter — security boundary (Employee sees only assigned companies)
-/// 2. Company filter — UX convenience (default = PrimaryCompanyId for Employee accounts)
+/// Access rules:
+/// - System: sees all accounts. AllCompanies/CompanyId for UX filtering only.
+/// - Employee: sees ONLY accounts in assigned companies. AllCompanies is ignored.
+///   Default to PrimaryCompanyId when no CompanyId specified.
+///
+/// Filtering layers:
+/// 1. Visibility filter — security boundary (via AccountVisibilityFilter)
+/// 2. Company filter — scoped by account type rules above
 /// 3. Search/Status — user-driven refinement
 /// </summary>
 public sealed class GetAccountsQueryHandler
@@ -46,11 +50,10 @@ public sealed class GetAccountsQueryHandler
             query = query.Where(a => visibleAccountIds.Contains(a.Id));
         }
 
-        // Layer 2: Company filter (UX convenience)
-        if (!request.AllCompanies)
-        {
-            query = await ApplyCompanyFilterAsync(query, request.CompanyId, cancellationToken);
-        }
+        // Layer 2: Company filter — different rules per account type
+        query = _currentUser.IsSystemAccount()
+            ? ApplySystemCompanyFilter(query, request)
+            : await ApplyEmployeeCompanyFilterAsync(query, request.CompanyId, cancellationToken);
 
         // Layer 3: Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -96,20 +99,36 @@ public sealed class GetAccountsQueryHandler
     }
 
     /// <summary>
-    /// Apply company filter to the query.
-    /// - If companyId is explicitly provided, filter by that company.
-    /// - If not provided and user is Employee, default to PrimaryCompanyId.
-    /// - System accounts without explicit companyId see all (no filter).
+    /// System account: sees everything.
+    /// - AllCompanies = true or no CompanyId → all accounts
+    /// - CompanyId specified → accounts in that company only
     /// </summary>
-    private async Task<IQueryable<Domain.Entities.Account>> ApplyCompanyFilterAsync(
+    private IQueryable<Domain.Entities.Account> ApplySystemCompanyFilter(
+        IQueryable<Domain.Entities.Account> query,
+        GetAccountsQuery request)
+    {
+        if (request.AllCompanies || !request.CompanyId.HasValue)
+        {
+            return query;
+        }
+
+        return FilterByCompany(query, request.CompanyId.Value);
+    }
+
+    /// <summary>
+    /// Employee account: ONLY sees accounts in assigned companies.
+    /// AllCompanies is ignored — always filtered by company.
+    /// Default to PrimaryCompanyId when no CompanyId specified.
+    /// </summary>
+    private async Task<IQueryable<Domain.Entities.Account>> ApplyEmployeeCompanyFilterAsync(
         IQueryable<Domain.Entities.Account> query,
         Guid? companyId,
         CancellationToken cancellationToken)
     {
         var filterCompanyId = companyId;
 
-        // Default to PrimaryCompanyId for Employee accounts
-        if (!filterCompanyId.HasValue && _currentUser.IsEmployeeAccount())
+        // Default to PrimaryCompanyId
+        if (!filterCompanyId.HasValue)
         {
             filterCompanyId = await _context.EmployeeProfiles
                 .AsNoTracking()
@@ -118,21 +137,25 @@ public sealed class GetAccountsQueryHandler
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        // No company to filter by → return unfiltered
+        // No company resolved → only own account
         if (!filterCompanyId.HasValue)
         {
-            return query;
+            var userId = _currentUser.UserId;
+            return query.Where(a => a.Id == userId);
         }
 
-        // Get account IDs belonging to the target company
-        var accountIdsInCompany = await _context.EmployeeProfiles
+        return FilterByCompany(query, filterCompanyId.Value);
+    }
+
+    private IQueryable<Domain.Entities.Account> FilterByCompany(
+        IQueryable<Domain.Entities.Account> query,
+        Guid companyId)
+    {
+        var accountIdsInCompany = _context.EmployeeProfiles
             .AsNoTracking()
-            .Where(ep => ep.CompanyAccess.Any(ca => ca.CompanyId == filterCompanyId.Value))
-            .Select(ep => ep.AccountId)
-            .ToListAsync(cancellationToken);
+            .Where(ep => ep.CompanyAccess.Any(ca => ca.CompanyId == companyId))
+            .Select(ep => ep.AccountId);
 
-        var accountIdSet = accountIdsInCompany.ToHashSet();
-
-        return query.Where(a => accountIdSet.Contains(a.Id));
+        return query.Where(a => accountIdsInCompany.Contains(a.Id));
     }
 }

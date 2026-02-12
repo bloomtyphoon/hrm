@@ -9,9 +9,10 @@ namespace HRM.Modules.Identity.Application.Queries.GetRoles;
 /// <summary>
 /// Handler for GetRolesQuery.
 ///
-/// Filtering layers:
-/// 1. Company filter — default to PrimaryCompanyId for Employee accounts
-/// 2. Search/SystemRole — user-driven refinement
+/// Access rules:
+/// - System: sees all roles (global + all companies). AllCompanies/CompanyId for UX filtering.
+/// - Employee: sees ONLY company-scoped roles for assigned companies. Never sees global roles.
+///   AllCompanies is ignored — always filtered by company.
 /// </summary>
 public sealed class GetRolesQueryHandler
     : IQueryHandler<GetRolesQuery, PagedResult<RoleSummaryDto>>
@@ -33,13 +34,12 @@ public sealed class GetRolesQueryHandler
     {
         var query = _context.Roles.AsNoTracking();
 
-        // Layer 1: Company filter (default to PrimaryCompanyId for Employee)
-        if (!request.AllCompanies)
-        {
-            query = await ApplyCompanyFilterAsync(query, request.CompanyId, cancellationToken);
-        }
+        // Company filter — different rules per account type
+        query = _currentUser.IsSystemAccount()
+            ? ApplySystemCompanyFilter(query, request)
+            : await ApplyEmployeeCompanyFilterAsync(query, request.CompanyId, cancellationToken);
 
-        // Layer 2: Search filter
+        // Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var searchTerm = request.SearchTerm.ToLower();
@@ -48,7 +48,7 @@ public sealed class GetRolesQueryHandler
                 (r.Description != null && r.Description.ToLower().Contains(searchTerm)));
         }
 
-        // Layer 2: System role filter
+        // System role filter
         if (request.IsSystemRole.HasValue)
         {
             query = query.Where(r => r.IsSystemRole == request.IsSystemRole.Value);
@@ -83,20 +83,38 @@ public sealed class GetRolesQueryHandler
     }
 
     /// <summary>
-    /// Apply company filter.
-    /// - If companyId is explicitly provided, show global + that company's roles.
-    /// - If not provided and user is Employee, default to PrimaryCompanyId.
-    /// - System accounts without explicit companyId see all roles.
+    /// System account: sees everything.
+    /// - AllCompanies = true or no CompanyId → all roles (global + all companies)
+    /// - CompanyId specified → global + that company's roles
     /// </summary>
-    private async Task<IQueryable<Domain.Entities.Role>> ApplyCompanyFilterAsync(
+    private static IQueryable<Domain.Entities.Role> ApplySystemCompanyFilter(
+        IQueryable<Domain.Entities.Role> query,
+        GetRolesQuery request)
+    {
+        if (request.AllCompanies || !request.CompanyId.HasValue)
+        {
+            return query;
+        }
+
+        var cid = request.CompanyId.Value;
+        return query.Where(r => r.CompanyId == null || r.CompanyId == cid);
+    }
+
+    /// <summary>
+    /// Employee account: ONLY sees company-scoped roles for assigned companies.
+    /// Global roles (CompanyId = null) are never visible to Employee.
+    /// AllCompanies is ignored — always filtered by company.
+    /// Default to PrimaryCompanyId when no CompanyId specified.
+    /// </summary>
+    private async Task<IQueryable<Domain.Entities.Role>> ApplyEmployeeCompanyFilterAsync(
         IQueryable<Domain.Entities.Role> query,
         Guid? companyId,
         CancellationToken cancellationToken)
     {
         var filterCompanyId = companyId;
 
-        // Default to PrimaryCompanyId for Employee accounts
-        if (!filterCompanyId.HasValue && _currentUser.IsEmployeeAccount())
+        // Default to PrimaryCompanyId
+        if (!filterCompanyId.HasValue)
         {
             filterCompanyId = await _context.EmployeeProfiles
                 .AsNoTracking()
@@ -105,14 +123,14 @@ public sealed class GetRolesQueryHandler
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        // No company to filter by → return unfiltered (all roles)
+        // No company resolved → empty result (Employee must belong to a company)
         if (!filterCompanyId.HasValue)
         {
-            return query;
+            return query.Where(_ => false);
         }
 
-        // Show global roles (CompanyId = null) + roles for the target company
+        // Only company-scoped roles for this company (NO global roles)
         var cid = filterCompanyId.Value;
-        return query.Where(r => r.CompanyId == null || r.CompanyId == cid);
+        return query.Where(r => r.CompanyId == cid);
     }
 }

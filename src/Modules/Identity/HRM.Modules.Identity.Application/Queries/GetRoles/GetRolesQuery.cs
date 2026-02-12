@@ -5,11 +5,16 @@ namespace HRM.Modules.Identity.Application.Queries.GetRoles;
 /// <summary>
 /// Query to retrieve paginated list of roles.
 ///
-/// Company filter behavior:
-/// - CompanyId specified: show global roles + roles for that company
-/// - AllCompanies = true: show all roles (no company filter)
-/// - Neither (default): Employee accounts default to PrimaryCompanyId,
-///   System accounts see all
+/// Company filter behavior differs by account type:
+///
+/// System account:
+/// - CompanyId specified: global roles + roles for that company
+/// - AllCompanies = true (or default): all roles (global + all companies)
+///
+/// Employee account (AllCompanies is ignored):
+/// - CompanyId specified: ONLY roles for that company (no global)
+/// - Default: ONLY roles for PrimaryCompanyId (no global)
+/// - Never sees global roles (CompanyId = null)
 /// </summary>
 public sealed record GetRolesQuery : IPagedQuery<RoleSummaryDto>
 {
