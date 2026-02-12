@@ -261,6 +261,8 @@ public static class AccountEndpoints
         ISender sender,
         string? searchTerm = null,
         AccountStatus? status = null,
+        Guid? companyId = null,
+        bool allCompanies = false,
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -273,6 +275,8 @@ public static class AccountEndpoints
         {
             SearchTerm = searchTerm,
             Status = status,
+            CompanyId = companyId,
+            AllCompanies = allCompanies,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
