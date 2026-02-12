@@ -60,14 +60,21 @@ public sealed class EnableTwoFactorResponse
 }
 
 /// <summary>
-/// Change password request model for Web UI.
+/// Request model for a user changing their own password (requires current password).
 /// </summary>
-public sealed class ChangePasswordRequest
+public sealed class ChangeMyPasswordRequest
 {
-    public string? CurrentPassword { get; set; }
+    public string CurrentPassword { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
     public string ConfirmPassword { get; set; } = string.Empty;
-    public bool IsAdminReset { get; set; }
+}
+
+/// <summary>
+/// Request model for admin resetting another account's password.
+/// </summary>
+public sealed class ResetAccountPasswordRequest
+{
+    public string NewPassword { get; set; } = string.Empty;
 }
 
 /// <summary>

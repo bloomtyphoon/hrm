@@ -129,6 +129,7 @@ public interface IIdentityApiClient
     /// </summary>
     Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetAccountRolesAsync(
         Guid accountId,
+        Guid? companyId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -177,8 +178,11 @@ public interface IIdentityApiClient
     /// <summary>Disable two-factor authentication.</summary>
     Task<ApiResponse<object>> DisableTwoFactorAsync(Guid accountId, CancellationToken cancellationToken = default);
 
-    /// <summary>Change account password.</summary>
-    Task<ApiResponse<object>> ChangePasswordAsync(Guid accountId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
+    /// <summary>Change own password (requires current password).</summary>
+    Task<ApiResponse<object>> ChangeMyPasswordAsync(Guid accountId, ChangeMyPasswordRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Admin reset another account's password.</summary>
+    Task<ApiResponse<object>> ResetAccountPasswordAsync(Guid accountId, ResetAccountPasswordRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Update account profile.</summary>
     Task<ApiResponse<object>> UpdateProfileAsync(Guid accountId, UpdateProfileRequest request, CancellationToken cancellationToken = default);

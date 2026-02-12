@@ -4,7 +4,8 @@ using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Identity.Api.Contracts;
 using HRM.Modules.Identity.Application.Commands.ActivateAccount;
 using HRM.Modules.Identity.Application.Commands.AssignRolesToAccount;
-using HRM.Modules.Identity.Application.Commands.ChangePassword;
+using HRM.Modules.Identity.Application.Commands.ChangeMyPassword;
+using HRM.Modules.Identity.Application.Commands.ResetAccountPassword;
 using HRM.Modules.Identity.Application.Commands.DeactivateAccount;
 using HRM.Modules.Identity.Application.Commands.RegisterAccount;
 using HRM.Modules.Identity.Application.Commands.DisableTwoFactor;
@@ -101,13 +102,23 @@ public static class AccountEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapPost("/{id:guid}/change-password", ChangePassword)
-            .WithName("ChangePassword")
-            .WithSummary("Change account password")
-            .WithDescription("Change account password. Requires current password for self-change, or IsAdminReset=true for admin reset.")
+        group.MapPost("/{id:guid}/change-my-password", ChangeMyPassword)
+            .WithName("ChangeMyPassword")
+            .WithSummary("Change own password")
+            .WithDescription("Change your own password. Requires current password verification.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/reset-password", ResetAccountPassword)
+            .WithName("ResetAccountPassword")
+            .WithSummary("Admin reset account password")
+            .WithDescription("Reset another account's password. Admin operation with visibility check.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id:guid}/roles", GetAccountRoles)
@@ -364,17 +375,37 @@ public static class AccountEndpoints
         return result.ToHttpResult();
     }
 
-    private static async Task<IResult> ChangePassword(
+    private static async Task<IResult> ChangeMyPassword(
         Guid id,
-        ChangePasswordRequest request,
+        ChangeMyPasswordRequest request,
         ISender sender,
         CancellationToken cancellationToken)
     {
-        var command = new ChangePasswordCommand(
+        var command = new ChangeMyPasswordCommand(
             AccountId: id,
             CurrentPassword: request.CurrentPassword,
-            NewPassword: request.NewPassword,
-            IsAdminReset: request.IsAdminReset
+            NewPassword: request.NewPassword
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> ResetAccountPassword(
+        Guid id,
+        ResetAccountPasswordRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new ResetAccountPasswordCommand(
+            AccountId: id,
+            NewPassword: request.NewPassword
         );
 
         var result = await sender.Send(command, cancellationToken);
@@ -390,9 +421,10 @@ public static class AccountEndpoints
     private static async Task<IResult> GetAccountRoles(
         Guid id,
         ISender sender,
-        CancellationToken cancellationToken)
+        Guid? companyId = null,
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetAccountRolesQuery(id);
+        var query = new GetAccountRolesQuery(id, companyId);
         var result = await sender.Send(query, cancellationToken);
 
         return result.ToHttpResult(roles => Results.Ok(roles));

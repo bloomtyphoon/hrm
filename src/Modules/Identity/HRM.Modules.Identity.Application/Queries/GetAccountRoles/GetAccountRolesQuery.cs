@@ -6,4 +6,4 @@ namespace HRM.Modules.Identity.Application.Queries.GetAccountRoles;
 /// <summary>
 /// Query to get all roles assigned to an account.
 /// </summary>
-public sealed record GetAccountRolesQuery(Guid AccountId) : IQuery<Result<List<AccountRoleDto>>>;
+public sealed record GetAccountRolesQuery(Guid AccountId, Guid? CompanyId = null) : IQuery<Result<List<AccountRoleDto>>>;
