@@ -5,6 +5,20 @@
     var assignedRoleIds = Model.AssignedRoles.Select(r => r.Id).ToHashSet();
     var accountType = Model.Account.AccountType;
     var rolesByType = Model.AvailableRoles.GroupBy(r => r.RoleType).OrderBy(g => g.Key);
+    var typeBadge = accountType switch
+    {
+        "System" => "bg-info",
+        "Employee" => "bg-primary",
+        _ => "bg-secondary"
+    };
+    var statusBadge = Model.Account.Status switch
+    {
+        "Active" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Suspended" => "bg-danger",
+        "Deactivated" => "bg-secondary",
+        _ => "bg-secondary"
+    };
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -14,28 +28,40 @@
     </ol>
 </nav>
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["TwoFactorSecretKey"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="bi bi-key me-2"></i><strong>2FA Secret Key:</strong>
+        <code class="ms-2">@TempData["TwoFactorSecretKey"]</code>
+        <br /><small class="text-muted">Save this key securely. It will not be shown again.</small>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2>@Model.Account.FullName</h2>
-        <div class="d-flex gap-2">
-            @{
-                var typeBadge = Model.Account.AccountType switch
-                {
-                    "System" => "bg-info",
-                    "Employee" => "bg-primary",
-                    _ => "bg-secondary"
-                };
-                var statusBadge = Model.Account.Status switch
-                {
-                    "Active" => "bg-success",
-                    "Pending" => "bg-warning text-dark",
-                    "Suspended" => "bg-danger",
-                    "Deactivated" => "bg-secondary",
-                    _ => "bg-secondary"
-                };
-            }
-            <span class="badge @typeBadge">@Model.Account.AccountType</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge @typeBadge">@accountType</span>
             <span class="badge @statusBadge">@Model.Account.Status</span>
+            @if (Model.Account.IsTwoFactorEnabled)
+            {
+                <span class="badge bg-success"><i class="bi bi-shield-lock me-1"></i>2FA</span>
+            }
         </div>
     </div>
     <a asp-action="Index" class="btn btn-outline-secondary">
@@ -44,11 +70,15 @@
 </div>
 
 <div class="row">
-    <!-- Account Info -->
-    <div class="col-md-6">
+    <!-- Left Column -->
+    <div class="col-lg-6">
+        <!-- Account Info Card -->
         <div class="card mb-4">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="bi bi-person me-2"></i>Account Information</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </button>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -62,35 +92,74 @@
                     <dd class="col-sm-8">@Model.Account.FullName</dd>
 
                     <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8"><a href="mailto:@Model.Account.Email">@Model.Account.Email</a></dd>
+
+                    <dt class="col-sm-4">Phone</dt>
                     <dd class="col-sm-8">
-                        <a href="mailto:@Model.Account.Email">@Model.Account.Email</a>
+                        @if (!string.IsNullOrEmpty(Model.Account.PhoneNumber))
+                        {
+                            @Model.Account.PhoneNumber
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not set</span>
+                        }
                     </dd>
 
                     <dt class="col-sm-4">Account Type</dt>
-                    <dd class="col-sm-8">
-                        <span class="badge @typeBadge">@Model.Account.AccountType</span>
-                    </dd>
+                    <dd class="col-sm-8"><span class="badge @typeBadge">@accountType</span></dd>
 
                     <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8"><span class="badge @statusBadge">@Model.Account.Status</span></dd>
+
+                    <dt class="col-sm-4">2FA</dt>
                     <dd class="col-sm-8">
-                        <span class="badge @statusBadge">@Model.Account.Status</span>
+                        @if (Model.Account.IsTwoFactorEnabled)
+                        {
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Enabled</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Disabled</span>
+                        }
                     </dd>
 
                     <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">@Model.Account.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                    <dt class="col-sm-4">Activated</dt>
                     <dd class="col-sm-8">
-                        @Model.Account.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC
+                        @if (Model.Account.ActivatedAtUtc.HasValue)
+                        {
+                            @Model.Account.ActivatedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") <text>UTC</text>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not activated</span>
+                        }
                     </dd>
 
                     <dt class="col-sm-4">Last Login</dt>
                     <dd class="col-sm-8">
                         @if (Model.Account.LastLoginAtUtc.HasValue)
                         {
-                            @Model.Account.LastLoginAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
-                            <text> UTC</text>
+                            @Model.Account.LastLoginAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") <text>UTC</text>
                         }
                         else
                         {
                             <span class="text-muted">Never</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Modified</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Account.ModifiedAtUtc.HasValue)
+                        {
+                            @Model.Account.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") <text>UTC</text>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
                         }
                     </dd>
                 </dl>
@@ -102,42 +171,270 @@
             <div class="card-header">
                 <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Actions</h6>
             </div>
-            <div class="card-body d-grid gap-2">
-                @if (Model.Account.Status == "Pending")
-                {
-                    <form asp-action="Activate" asp-route-id="@Model.Account.Id" method="post">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    @if (Model.Account.Status == "Pending")
+                    {
+                        <form asp-action="Activate" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success"
+                                    onclick="return confirm('Activate this account?')">
+                                <i class="bi bi-check-circle me-1"></i>Activate
+                            </button>
+                        </form>
+                    }
+
+                    @if (Model.Account.Status == "Active")
+                    {
+                        <form asp-action="Suspend" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-warning"
+                                    onclick="return confirm('Suspend this account?')">
+                                <i class="bi bi-pause-circle me-1"></i>Suspend
+                            </button>
+                        </form>
+                        <form asp-action="Deactivate" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('Deactivate this account? This action may be difficult to reverse.')">
+                                <i class="bi bi-x-circle me-1"></i>Deactivate
+                            </button>
+                        </form>
+                    }
+
+                    @if (Model.Account.Status == "Suspended")
+                    {
+                        <form asp-action="Activate" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success"
+                                    onclick="return confirm('Reactivate this account?')">
+                                <i class="bi bi-check-circle me-1"></i>Reactivate
+                            </button>
+                        </form>
+                    }
+
+                    <form asp-action="Unlock" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-success w-100"
-                                onclick="return confirm('Are you sure you want to activate this account?')">
-                            <i class="bi bi-check-circle me-1"></i>Activate Account
+                        <button type="submit" class="btn btn-outline-info"
+                                onclick="return confirm('Unlock this account?')">
+                            <i class="bi bi-unlock me-1"></i>Unlock
                         </button>
                     </form>
-                }
-                else if (Model.Account.Status == "Active")
-                {
-                    <div class="text-success">
-                        <i class="bi bi-check-circle-fill me-1"></i>Account is active
-                    </div>
-                }
-                else if (Model.Account.Status == "Suspended")
-                {
-                    <div class="text-danger">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i>Account is suspended
-                    </div>
-                }
-                else if (Model.Account.Status == "Deactivated")
-                {
-                    <div class="text-secondary">
-                        <i class="bi bi-dash-circle-fill me-1"></i>Account is deactivated
-                    </div>
-                }
+
+                    @if (Model.Account.IsTwoFactorEnabled)
+                    {
+                        <form asp-action="DisableTwoFactor" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-warning"
+                                    onclick="return confirm('Disable two-factor authentication?')">
+                                <i class="bi bi-shield-x me-1"></i>Disable 2FA
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="EnableTwoFactor" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-shield-lock me-1"></i>Enable 2FA
+                            </button>
+                        </form>
+                    }
+
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                        <i class="bi bi-key me-1"></i>Reset Password
+                    </button>
+                </div>
             </div>
         </div>
+
+        <!-- Profile Card (System or Employee) -->
+        @if (accountType == "System")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-server me-2"></i>System Profile</h6>
+                    @if (Model.SystemProfile != null)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSystemProfileModal">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (Model.SystemProfile == null)
+                    {
+                        <div class="text-center py-3">
+                            <i class="bi bi-server display-4 text-muted"></i>
+                            <p class="mt-2 text-muted">No system profile created yet.</p>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createSystemProfileModal">
+                                <i class="bi bi-plus-circle me-1"></i>Create System Profile
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        var sp = Model.SystemProfile;
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Super Admin</dt>
+                            <dd class="col-sm-8">
+                                @if (sp.IsSuperAdmin)
+                                {
+                                    <span class="badge bg-danger"><i class="bi bi-star-fill me-1"></i>Yes</span>
+                                    <form asp-action="RevokeSuperAdmin" asp-route-id="@Model.Account.Id" method="post" class="d-inline ms-2">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Revoke super admin privileges?')">
+                                            Revoke
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                    <form asp-action="GrantSuperAdmin" asp-route-id="@Model.Account.Id" method="post" class="d-inline ms-2">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                onclick="return confirm('Grant super admin privileges?')">
+                                            Grant
+                                        </button>
+                                    </form>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Department</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrEmpty(sp.Department))
+                                {
+                                    @sp.Department
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not set</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Job Title</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrEmpty(sp.JobTitle))
+                                {
+                                    @sp.JobTitle
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not set</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Notes</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrEmpty(sp.Notes))
+                                {
+                                    @sp.Notes
+                                }
+                                else
+                                {
+                                    <span class="text-muted">None</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Created</dt>
+                            <dd class="col-sm-8">@sp.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                            @if (sp.ModifiedAtUtc.HasValue)
+                            {
+                                <dt class="col-sm-4">Modified</dt>
+                                <dd class="col-sm-8">@sp.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                            }
+                        </dl>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (accountType == "Employee")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Employee Profile</h6>
+                    @if (Model.EmployeeProfile != null)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editEmployeeProfileModal">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (Model.EmployeeProfile == null)
+                    {
+                        <div class="text-center py-3">
+                            <i class="bi bi-person-badge display-4 text-muted"></i>
+                            <p class="mt-2 text-muted">No employee profile created yet.</p>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createEmployeeProfileModal">
+                                <i class="bi bi-plus-circle me-1"></i>Create Employee Profile
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        var ep = Model.EmployeeProfile;
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Employee ID</dt>
+                            <dd class="col-sm-7"><code>@ep.EmployeeId</code></dd>
+
+                            <dt class="col-sm-5">Scope Level</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge @ScopeLevelHelper.GetBadgeClass(ep.DefaultScopeLevel)">
+                                    @ScopeLevelHelper.GetDisplayName(ep.DefaultScopeLevel)
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-5">Access All Companies</dt>
+                            <dd class="col-sm-7">
+                                @if (ep.CanAccessAllAssignedCompanies)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </dd>
+
+                            @if (ep.PrimaryCompanyId.HasValue)
+                            {
+                                <dt class="col-sm-5">Primary Company</dt>
+                                <dd class="col-sm-7"><code>@ep.PrimaryCompanyId</code></dd>
+                            }
+                            @if (ep.PrimaryDepartmentId.HasValue)
+                            {
+                                <dt class="col-sm-5">Primary Department</dt>
+                                <dd class="col-sm-7"><code>@ep.PrimaryDepartmentId</code></dd>
+                            }
+                            @if (ep.PrimaryPositionId.HasValue)
+                            {
+                                <dt class="col-sm-5">Primary Position</dt>
+                                <dd class="col-sm-7"><code>@ep.PrimaryPositionId</code></dd>
+                            }
+
+                            <dt class="col-sm-5">Created</dt>
+                            <dd class="col-sm-7">@ep.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                            @if (ep.ModifiedAtUtc.HasValue)
+                            {
+                                <dt class="col-sm-5">Modified</dt>
+                                <dd class="col-sm-7">@ep.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                            }
+                        </dl>
+                    }
+                </div>
+            </div>
+        }
     </div>
 
-    <!-- Roles Section -->
-    <div class="col-md-6">
-        <div class="card">
+    <!-- Right Column: Roles -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Assigned Roles (@Model.AssignedRoles.Count)</h6>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#manageRolesModal">
@@ -197,6 +494,69 @@
     </div>
 </div>
 
+<!-- ========== MODALS ========== -->
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="UpdateProfile" asp-route-id="@Model.Account.Id" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person me-2"></i>Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="fullName" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="fullName" name="fullName"
+                               value="@Model.Account.FullName" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="phoneNumber" class="form-label">Phone Number</label>
+                        <input type="text" class="form-control" id="phoneNumber" name="phoneNumber"
+                               value="@Model.Account.PhoneNumber" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="ChangePassword" asp-route-id="@Model.Account.Id" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-key me-2"></i>Reset Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        This will reset the password for <strong>@Model.Account.Username</strong>.
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" required minlength="8" />
+                        <div class="form-text">Minimum 8 characters.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-key me-1"></i>Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Manage Roles Modal -->
 <div class="modal fade" id="manageRolesModal" tabindex="-1" aria-labelledby="manageRolesModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -223,11 +583,9 @@
                             Select roles for this <strong>@accountType</strong> account:
                         </p>
 
-                        <!-- Cross-type warning alert (hidden by default, shown via JS) -->
                         <div id="crossTypeWarning" class="alert alert-warning d-none mb-3">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             <strong>Note:</strong> You are assigning roles from a different type than the account type.
-                            This may require additional approval depending on your organization's policy.
                         </div>
 
                         @foreach (var roleGroup in rolesByType)
@@ -235,21 +593,14 @@
                             var groupRoleType = roleGroup.Key;
                             var isCrossType = groupRoleType != accountType;
                             var groupBadgeClass = groupRoleType == "System" ? "bg-primary" : "bg-info";
-                            var groupTooltip = groupRoleType == "System"
-                                ? "System roles are for administrative and service accounts with elevated privileges"
-                                : "Employee roles are for regular staff members with standard business permissions";
 
                             <div class="card mb-3 @(isCrossType ? "border-warning" : "")">
                                 <div class="card-header d-flex align-items-center @(isCrossType ? "bg-warning bg-opacity-10" : "")">
                                     <span class="badge @groupBadgeClass me-2">@groupRoleType</span>
                                     <span class="fw-semibold">@groupRoleType Roles</span>
-                                    <span class="ms-2 text-muted" data-bs-toggle="tooltip" title="@groupTooltip">
-                                        <i class="bi bi-info-circle"></i>
-                                    </span>
                                     @if (isCrossType)
                                     {
-                                        <span class="badge bg-warning text-dark ms-auto" data-bs-toggle="tooltip"
-                                              title="This account is @accountType type. Assigning @groupRoleType roles may require approval.">
+                                        <span class="badge bg-warning text-dark ms-auto">
                                             <i class="bi bi-exclamation-triangle me-1"></i>Cross-type
                                         </span>
                                     }
@@ -261,19 +612,31 @@
                                             var isAssigned = assignedRoleIds.Contains(role.Id);
                                             <div class="col-md-6 mb-2">
                                                 <div class="form-check">
-                                                    <input type="checkbox"
-                                                           class="form-check-input role-checkbox"
-                                                           id="role-@role.Id"
-                                                           name="roleIds"
-                                                           value="@role.Id"
-                                                           data-role-type="@role.RoleType"
-                                                           @(isAssigned ? "checked" : "") />
+                                                    @if (isAssigned)
+                                                    {
+                                                        <input type="checkbox"
+                                                               class="form-check-input role-checkbox"
+                                                               id="role-@role.Id"
+                                                               name="roleIds"
+                                                               value="@role.Id"
+                                                               data-role-type="@role.RoleType"
+                                                               checked="checked" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox"
+                                                               class="form-check-input role-checkbox"
+                                                               id="role-@role.Id"
+                                                               name="roleIds"
+                                                               value="@role.Id"
+                                                               data-role-type="@role.RoleType" />
+                                                    }
                                                     <label class="form-check-label" for="role-@role.Id">
                                                         <strong>@role.Name</strong>
                                                         <br />
                                                         <small class="text-muted">
                                                             @(role.Description ?? "No description")
-                                                            <span class="badge bg-light text-dark ms-1">@role.PermissionCount permissions</span>
+                                                            <span class="badge bg-light text-dark ms-1">@role.PermissionCount perm.</span>
                                                         </small>
                                                     </label>
                                                 </div>
@@ -286,14 +649,10 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i>Cancel
-                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                     @if (Model.AvailableRoles.Count > 0)
                     {
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Save Changes
-                        </button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
                     }
                 </div>
             </form>
@@ -301,41 +660,237 @@
     </div>
 </div>
 
+<!-- Create System Profile Modal -->
+@if (accountType == "System" && Model.SystemProfile == null)
+{
+    <div class="modal fade" id="createSystemProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="CreateSystemProfile" asp-route-id="@Model.Account.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-server me-2"></i>Create System Profile</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="createIsSuperAdmin" name="isSuperAdmin" value="true" />
+                            <label class="form-check-label" for="createIsSuperAdmin">Super Admin</label>
+                            <div class="form-text">Grants full system access.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createDepartment" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="createDepartment" name="department" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="createJobTitle" class="form-label">Job Title</label>
+                            <input type="text" class="form-control" id="createJobTitle" name="jobTitle" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit System Profile Modal -->
+@if (accountType == "System" && Model.SystemProfile != null)
+{
+    <div class="modal fade" id="editSystemProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="UpdateSystemProfile" asp-route-id="@Model.Account.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-server me-2"></i>Edit System Profile</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editDepartment" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="editDepartment" name="department"
+                                   value="@Model.SystemProfile.Department" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="editJobTitle" class="form-label">Job Title</label>
+                            <input type="text" class="form-control" id="editJobTitle" name="jobTitle"
+                                   value="@Model.SystemProfile.JobTitle" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="editNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="editNotes" name="notes" rows="3">@Model.SystemProfile.Notes</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Create Employee Profile Modal -->
+@if (accountType == "Employee" && Model.EmployeeProfile == null)
+{
+    <div class="modal fade" id="createEmployeeProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="CreateEmployeeProfile" asp-route-id="@Model.Account.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Create Employee Profile</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="createEmployeeId" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="createEmployeeId" name="employeeId" required
+                                   placeholder="Enter existing Employee GUID" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="createScopeLevel" class="form-label">Default Scope Level</label>
+                            <select class="form-select" id="createScopeLevel" name="defaultScopeLevel">
+                                <option value="0">Global</option>
+                                <option value="1">Company</option>
+                                <option value="2">Department</option>
+                                <option value="3">Position</option>
+                                <option value="4" selected>Self</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createPrimaryCompanyId" class="form-label">Primary Company ID</label>
+                            <input type="text" class="form-control" id="createPrimaryCompanyId" name="primaryCompanyId"
+                                   placeholder="Optional GUID" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="createPrimaryDepartmentId" class="form-label">Primary Department ID</label>
+                            <input type="text" class="form-control" id="createPrimaryDepartmentId" name="primaryDepartmentId"
+                                   placeholder="Optional GUID" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="createPrimaryPositionId" class="form-label">Primary Position ID</label>
+                            <input type="text" class="form-control" id="createPrimaryPositionId" name="primaryPositionId"
+                                   placeholder="Optional GUID" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Employee Profile Modal -->
+@if (accountType == "Employee" && Model.EmployeeProfile != null)
+{
+    <div class="modal fade" id="editEmployeeProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="UpdateEmployeeProfile" asp-route-id="@Model.Account.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Employee Profile</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editScopeLevel" class="form-label">Default Scope Level</label>
+                            @{
+                                var editScopeLevel = Model.EmployeeProfile.DefaultScopeLevel;
+                                var editScopeOptions = new[] { (0, "Global"), (1, "Company"), (2, "Department"), (3, "Position"), (4, "Self") };
+                            }
+                            <select class="form-select" id="editScopeLevel" name="defaultScopeLevel">
+                                @foreach (var (val, name) in editScopeOptions)
+                                {
+                                    if (editScopeLevel == val)
+                                    {
+                                        <option value="@val" selected="selected">@name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@val">@name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3 form-check">
+                            @if (Model.EmployeeProfile.CanAccessAllAssignedCompanies)
+                            {
+                                <input type="checkbox" class="form-check-input" id="editCanAccessAll" name="canAccessAllAssignedCompanies"
+                                       value="true" checked="checked" />
+                            }
+                            else
+                            {
+                                <input type="checkbox" class="form-check-input" id="editCanAccessAll" name="canAccessAllAssignedCompanies"
+                                       value="true" />
+                            }
+                            <label class="form-check-label" for="editCanAccessAll">Can Access All Assigned Companies</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPrimaryCompanyId" class="form-label">Primary Company ID</label>
+                            <input type="text" class="form-control" id="editPrimaryCompanyId" name="primaryCompanyId"
+                                   value="@Model.EmployeeProfile.PrimaryCompanyId" placeholder="Optional GUID" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPrimaryDepartmentId" class="form-label">Primary Department ID</label>
+                            <input type="text" class="form-control" id="editPrimaryDepartmentId" name="primaryDepartmentId"
+                                   value="@Model.EmployeeProfile.PrimaryDepartmentId" placeholder="Optional GUID" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPrimaryPositionId" class="form-label">Primary Position ID</label>
+                            <input type="text" class="form-control" id="editPrimaryPositionId" name="primaryPositionId"
+                                   value="@Model.EmployeeProfile.PrimaryPositionId" placeholder="Optional GUID" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Initialize Bootstrap tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+            tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el);
             });
 
-            // Cross-type warning logic
+            // Cross-type warning logic for role management modal
             var accountType = '@accountType';
             var warningAlert = document.getElementById('crossTypeWarning');
             var roleCheckboxes = document.querySelectorAll('.role-checkbox');
 
             function updateCrossTypeWarning() {
-                var hasCrossTypeSelection = false;
+                var hasCrossType = false;
                 roleCheckboxes.forEach(function (cb) {
                     if (cb.checked && cb.dataset.roleType !== accountType) {
-                        hasCrossTypeSelection = true;
+                        hasCrossType = true;
                     }
                 });
-
-                if (hasCrossTypeSelection) {
-                    warningAlert.classList.remove('d-none');
-                } else {
-                    warningAlert.classList.add('d-none');
+                if (warningAlert) {
+                    warningAlert.classList.toggle('d-none', !hasCrossType);
                 }
             }
 
-            // Attach event listeners
             roleCheckboxes.forEach(function (cb) {
                 cb.addEventListener('change', updateCrossTypeWarning);
             });
 
-            // Initial check
             updateCrossTypeWarning();
         });
     </script>

@@ -48,6 +48,26 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     /// <summary>
+    /// Roles table for role-based access control.
+    /// </summary>
+    public DbSet<Role> Roles => Set<Role>();
+
+    /// <summary>
+    /// Account-Role assignments table.
+    /// </summary>
+    public DbSet<AccountRole> AccountRoles => Set<AccountRole>();
+
+    /// <summary>
+    /// System profiles table for system/admin accounts.
+    /// </summary>
+    public DbSet<SystemProfile> SystemProfiles => Set<SystemProfile>();
+
+    /// <summary>
+    /// Employee profiles table linking accounts to employees.
+    /// </summary>
+    public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
+
+    /// <summary>
     /// Configure entity mappings.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

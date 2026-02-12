@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<RouteSecurityMap Module="Identity" Version="2.0" xmlns="http://hrm.system/route-security">
+<RouteSecurityMap Module="Identity" Version="3.0" xmlns="http://hrm.system/route-security">
   <!--
     Identity Module Route Security Map
     Maps API routes to permissions
+    Version 3.0: Added all profile, 2FA, session, and permission catalog routes
   -->
 
   <!-- Public Routes - No authentication required -->
   <PublicRoutes>
     <Route Method="POST" Path="/api/identity/auth/login" />
     <Route Method="POST" Path="/api/identity/auth/refresh" />
-    <Route Method="GET" Path="/api/identity/auth/me" />
     <Route Method="GET" Path="/health" />
   </PublicRoutes>
 
@@ -42,29 +42,119 @@
         Path="/api/identity/accounts/{id}/activate"
         Permission="Identity.Account.Update" />
 
-    <!-- Update account -->
-    <Route
-        Method="PUT"
-        Path="/api/identity/accounts/{id}"
-        Permission="Identity.Account.Update" />
-
-    <!-- Delete account -->
-    <Route
-        Method="DELETE"
-        Path="/api/identity/accounts/{id}"
-        Permission="Identity.Account.Delete" />
-
-    <!-- Reset account password -->
+    <!-- Suspend account -->
     <Route
         Method="POST"
-        Path="/api/identity/accounts/{id}/reset-password"
+        Path="/api/identity/accounts/{id}/suspend"
+        Permission="Identity.Account.Update" />
+
+    <!-- Deactivate account -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/deactivate"
+        Permission="Identity.Account.Update" />
+
+    <!-- Unlock account -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/unlock"
+        Permission="Identity.Account.Update" />
+
+    <!-- Update account profile (FullName, PhoneNumber) -->
+    <Route
+        Method="PUT"
+        Path="/api/identity/accounts/{id}/profile"
+        Permission="Identity.Account.Update" />
+
+    <!-- Change account password -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/change-password"
         Permission="Identity.Account.ResetPassword" />
 
-    <!-- Assign role to account -->
+    <!-- Enable two-factor authentication -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/enable-2fa"
+        Permission="Identity.Account.Update" />
+
+    <!-- Disable two-factor authentication -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/disable-2fa"
+        Permission="Identity.Account.Update" />
+
+    <!-- ==================== Account-Role Management ==================== -->
+
+    <!-- Get roles assigned to an account -->
+    <Route
+        Method="GET"
+        Path="/api/identity/accounts/{id}/roles"
+        Permission="Identity.Account.View" />
+
+    <!-- Assign roles to account -->
     <Route
         Method="POST"
         Path="/api/identity/accounts/{id}/roles"
         Permission="Identity.Account.AssignRole" />
+
+    <!-- Remove roles from account -->
+    <Route
+        Method="DELETE"
+        Path="/api/identity/accounts/{id}/roles"
+        Permission="Identity.Account.AssignRole" />
+
+    <!-- ==================== System Profile Management ==================== -->
+
+    <!-- Get system profile -->
+    <Route
+        Method="GET"
+        Path="/api/identity/accounts/{id}/system-profile"
+        Permission="Identity.SystemProfile.View" />
+
+    <!-- Create system profile -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/system-profile"
+        Permission="Identity.SystemProfile.Create" />
+
+    <!-- Update system profile -->
+    <Route
+        Method="PUT"
+        Path="/api/identity/accounts/{id}/system-profile"
+        Permission="Identity.SystemProfile.Update" />
+
+    <!-- Grant super admin privileges -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/system-profile/grant-super-admin"
+        Permission="Identity.SystemProfile.ManageSuperAdmin" />
+
+    <!-- Revoke super admin privileges -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/system-profile/revoke-super-admin"
+        Permission="Identity.SystemProfile.ManageSuperAdmin" />
+
+    <!-- ==================== Employee Profile Management ==================== -->
+
+    <!-- Get employee profile -->
+    <Route
+        Method="GET"
+        Path="/api/identity/accounts/{id}/employee-profile"
+        Permission="Identity.EmployeeProfile.View" />
+
+    <!-- Create employee profile -->
+    <Route
+        Method="POST"
+        Path="/api/identity/accounts/{id}/employee-profile"
+        Permission="Identity.EmployeeProfile.Create" />
+
+    <!-- Update employee profile -->
+    <Route
+        Method="PUT"
+        Path="/api/identity/accounts/{id}/employee-profile"
+        Permission="Identity.EmployeeProfile.Update" />
 
     <!-- ==================== Role Management ==================== -->
 
@@ -104,18 +194,32 @@
         Path="/api/identity/roles/{id}/permissions"
         Permission="Identity.Role.AssignPermission" />
 
+    <!-- ==================== Permission Catalog ==================== -->
+
+    <!-- Get permission catalog -->
+    <Route
+        Method="GET"
+        Path="/api/identity/permissions/catalog"
+        Permission="Identity.Role.View" />
+
     <!-- ==================== Session Management ==================== -->
 
     <!-- Get active sessions -->
     <Route
         Method="GET"
-        Path="/api/identity/sessions"
+        Path="/api/identity/auth/sessions"
         Permission="Identity.Account.View" />
 
-    <!-- Revoke session -->
+    <!-- Revoke specific session -->
     <Route
         Method="DELETE"
-        Path="/api/identity/sessions/{id}"
+        Path="/api/identity/auth/sessions/{sessionId}"
+        Permission="Identity.Account.Update" />
+
+    <!-- Revoke all sessions except current -->
+    <Route
+        Method="POST"
+        Path="/api/identity/auth/sessions/revoke-all-except-current"
         Permission="Identity.Account.Update" />
 
     <!-- Logout (revoke current session) -->

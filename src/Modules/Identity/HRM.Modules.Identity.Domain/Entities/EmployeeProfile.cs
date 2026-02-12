@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
+using HRM.Modules.Identity.Domain.Events;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
@@ -62,11 +63,19 @@ public class EmployeeProfile : AuditableEntity
     /// </summary>
     public bool CanAccessAllAssignedCompanies { get; private set; } = true;
 
-    // Audit fields inherited from AuditableEntity:
-    // - CreatedAtUtc, ModifiedAtUtc, CreatedById, ModifiedById
+    private readonly List<EmployeeCompanyAccess> _companyAccess = new();
 
-    // Navigation property (configured in EF)
-    // public Account Account { get; private set; } = null!;
+    /// <summary>
+    /// All companies this employee has access to.
+    /// Denormalized copy from Personnel module's EmployeeAssignments.
+    /// Used for account visibility filtering and data scope resolution
+    /// without cross-module queries.
+    ///
+    /// Synced via:
+    /// - Admin API when creating/updating EmployeeProfile
+    /// - Integration events from Personnel module when assignments change
+    /// </summary>
+    public IReadOnlyCollection<EmployeeCompanyAccess> CompanyAccess => _companyAccess.AsReadOnly();
 
     // Private constructor for EF
     private EmployeeProfile() { }
@@ -80,9 +89,10 @@ public class EmployeeProfile : AuditableEntity
         DataScopeLevel defaultScopeLevel = DataScopeLevel.Self,
         Guid? primaryCompanyId = null,
         Guid? primaryDepartmentId = null,
-        Guid? primaryPositionId = null)
+        Guid? primaryPositionId = null,
+        IReadOnlyList<Guid>? companyIds = null)
     {
-        return new EmployeeProfile
+        var profile = new EmployeeProfile
         {
             Id = Guid.NewGuid(),
             AccountId = accountId,
@@ -91,8 +101,26 @@ public class EmployeeProfile : AuditableEntity
             PrimaryCompanyId = primaryCompanyId,
             PrimaryDepartmentId = primaryDepartmentId,
             PrimaryPositionId = primaryPositionId
-            // CreatedAtUtc is set automatically by AuditableEntity constructor
         };
+
+        // Initialize company access list
+        if (companyIds != null)
+        {
+            foreach (var companyId in companyIds.Distinct())
+            {
+                profile._companyAccess.Add(EmployeeCompanyAccess.Create(companyId));
+            }
+        }
+        else if (primaryCompanyId.HasValue)
+        {
+            // Default: at least the primary company
+            profile._companyAccess.Add(EmployeeCompanyAccess.Create(primaryCompanyId.Value));
+        }
+
+        profile.AddDomainEvent(new EmployeeProfileCreatedDomainEvent(
+            profile.Id, accountId, employeeId));
+
+        return profile;
     }
 
     /// <summary>
@@ -107,6 +135,9 @@ public class EmployeeProfile : AuditableEntity
         PrimaryDepartmentId = departmentId;
         PrimaryPositionId = positionId;
         MarkAsModified();
+
+        AddDomainEvent(new EmployeeProfileUpdatedDomainEvent(
+            Id, AccountId, EmployeeId));
     }
 
     /// <summary>
@@ -114,7 +145,29 @@ public class EmployeeProfile : AuditableEntity
     /// </summary>
     public void UpdateDefaultScopeLevel(DataScopeLevel scopeLevel)
     {
+        if (DefaultScopeLevel == scopeLevel)
+            return;
+
         DefaultScopeLevel = scopeLevel;
+        MarkAsModified();
+
+        AddDomainEvent(new EmployeeProfileUpdatedDomainEvent(
+            Id, AccountId, EmployeeId));
+    }
+
+    /// <summary>
+    /// Sync company access list.
+    /// Replaces current list with the provided company IDs.
+    /// Called when Personnel module notifies about assignment changes,
+    /// or when admin updates the employee profile.
+    /// </summary>
+    public void SyncCompanyAccess(IReadOnlyList<Guid> companyIds)
+    {
+        _companyAccess.Clear();
+        foreach (var companyId in companyIds.Distinct())
+        {
+            _companyAccess.Add(EmployeeCompanyAccess.Create(companyId));
+        }
         MarkAsModified();
     }
 
@@ -123,7 +176,13 @@ public class EmployeeProfile : AuditableEntity
     /// </summary>
     public void SetCanAccessAllAssignedCompanies(bool value)
     {
+        if (CanAccessAllAssignedCompanies == value)
+            return;
+
         CanAccessAllAssignedCompanies = value;
         MarkAsModified();
+
+        AddDomainEvent(new EmployeeProfileUpdatedDomainEvent(
+            Id, AccountId, EmployeeId));
     }
 }

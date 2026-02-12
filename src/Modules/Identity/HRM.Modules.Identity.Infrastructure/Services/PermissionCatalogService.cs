@@ -3,7 +3,9 @@ using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
+using HRM.Modules.Identity.Infrastructure.Configuration;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 
 namespace HRM.Modules.Identity.Infrastructure.Services;
 
@@ -27,13 +29,16 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
     private const string CatalogCacheKey = "PermissionCatalog";
     private readonly IEnumerable<IPermissionCatalogSource> _sources;
     private readonly IMemoryCache _cache;
+    private readonly TimeSpan _cacheDuration;
 
     public PermissionCatalogService(
         IEnumerable<IPermissionCatalogSource> sources,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IOptions<IdentityCacheSettings> cacheSettings)
     {
         _sources = sources ?? throw new ArgumentNullException(nameof(sources));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.CatalogCacheDurationMinutes);
     }
 
     /// <summary>
@@ -80,8 +85,7 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
                 $"Duplicate module names found in permission catalogs: {string.Join(", ", duplicateModules)}");
         }
 
-        // Cache for 1 hour (catalog rarely changes)
-        _cache.Set(CatalogCacheKey, allModules, TimeSpan.FromHours(1));
+        _cache.Set(CatalogCacheKey, allModules, _cacheDuration);
 
         return allModules;
     }

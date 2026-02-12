@@ -36,4 +36,24 @@ public interface IIdentityQueryContext
     /// Refresh tokens table (read-only access).
     /// </summary>
     DbSet<RefreshToken> RefreshTokens { get; }
+
+    /// <summary>
+    /// Roles table (read-only access).
+    /// </summary>
+    DbSet<Role> Roles { get; }
+
+    /// <summary>
+    /// Account-Role assignments table (read-only access).
+    /// </summary>
+    DbSet<AccountRole> AccountRoles { get; }
+
+    /// <summary>
+    /// System profiles table (read-only access).
+    /// </summary>
+    DbSet<SystemProfile> SystemProfiles { get; }
+
+    /// <summary>
+    /// Employee profiles table (read-only access).
+    /// </summary>
+    DbSet<EmployeeProfile> EmployeeProfiles { get; }
 }

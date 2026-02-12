@@ -21,14 +21,14 @@ public sealed class AccountListViewModel
 }
 
 /// <summary>
-/// ViewModel for account detail page with roles.
+/// ViewModel for account detail page with roles and profiles.
 /// </summary>
 public sealed class AccountDetailViewModel
 {
     /// <summary>
-    /// Account information.
+    /// Account information (full detail).
     /// </summary>
-    public AccountSummary Account { get; set; } = new();
+    public AccountDetailResponse Account { get; set; } = new();
 
     /// <summary>
     /// Roles currently assigned to this account.
@@ -39,4 +39,14 @@ public sealed class AccountDetailViewModel
     /// All available roles for assignment.
     /// </summary>
     public IReadOnlyList<RoleResponse> AvailableRoles { get; set; } = [];
+
+    /// <summary>
+    /// System profile (only for System accounts).
+    /// </summary>
+    public SystemProfileResponse? SystemProfile { get; set; }
+
+    /// <summary>
+    /// Employee profile (only for Employee accounts).
+    /// </summary>
+    public EmployeeProfileResponse? EmployeeProfile { get; set; }
 }

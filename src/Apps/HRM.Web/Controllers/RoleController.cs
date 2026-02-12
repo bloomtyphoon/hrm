@@ -13,13 +13,16 @@ namespace HRM.Web.Controllers;
 public class RoleController : Controller
 {
     private readonly IIdentityApiClient _identityClient;
+    private readonly ICompanyContext _companyContext;
     private readonly ILogger<RoleController> _logger;
 
     public RoleController(
         IIdentityApiClient identityClient,
+        ICompanyContext companyContext,
         ILogger<RoleController> logger)
     {
         _identityClient = identityClient;
+        _companyContext = companyContext;
         _logger = logger;
     }
 
@@ -33,7 +36,10 @@ public class RoleController : Controller
         string? roleType = null,
         CancellationToken cancellationToken = default)
     {
-        var response = await _identityClient.GetRolesAsync(cancellationToken);
+        var response = await _identityClient.GetRolesAsync(
+            _companyContext.SelectedCompanyId,
+            _companyContext.IsAllCompanies,
+            cancellationToken);
 
         var viewModel = new RoleListViewModel
         {
@@ -103,7 +109,11 @@ public class RoleController : Controller
     [HttpGet]
     public IActionResult Create()
     {
-        return View(new CreateRoleRequest());
+        var model = new CreateRoleRequest
+        {
+            CompanyId = _companyContext.SelectedCompanyId
+        };
+        return View(model);
     }
 
     /// <summary>
@@ -116,6 +126,9 @@ public class RoleController : Controller
         CreateRoleRequest model,
         CancellationToken cancellationToken)
     {
+        // Auto-fill CompanyId from global context if not set
+        model.CompanyId ??= _companyContext.SelectedCompanyId;
+
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -167,6 +180,7 @@ public class RoleController : Controller
 
             ViewBag.RoleId = id;
             ViewBag.RoleType = response.Data.RoleType;
+            ViewBag.CompanyId = response.Data.CompanyId;
             return View(model);
         }
 

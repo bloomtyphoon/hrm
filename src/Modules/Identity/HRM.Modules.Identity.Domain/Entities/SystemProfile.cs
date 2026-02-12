@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Domain.Entities;
+using HRM.Modules.Identity.Domain.Events;
 
 namespace HRM.Modules.Identity.Domain.Entities;
 
@@ -59,7 +60,7 @@ public class SystemProfile : AuditableEntity
         string? department = null,
         string? jobTitle = null)
     {
-        return new SystemProfile
+        var profile = new SystemProfile
         {
             Id = Guid.NewGuid(),
             AccountId = accountId,
@@ -68,24 +69,39 @@ public class SystemProfile : AuditableEntity
             JobTitle = jobTitle
             // CreatedAtUtc is set automatically by AuditableEntity constructor
         };
+
+        profile.AddDomainEvent(new SystemProfileCreatedDomainEvent(
+            profile.Id, accountId, isSuperAdmin));
+
+        return profile;
     }
 
     /// <summary>
-    /// Grant super admin privileges
+    /// Grant super admin privileges (idempotent - no-op if already super admin)
     /// </summary>
     public void GrantSuperAdmin()
     {
+        if (IsSuperAdmin)
+            return;
+
         IsSuperAdmin = true;
         MarkAsModified();
+
+        AddDomainEvent(new SuperAdminGrantedDomainEvent(Id, AccountId));
     }
 
     /// <summary>
-    /// Revoke super admin privileges
+    /// Revoke super admin privileges (idempotent - no-op if not super admin)
     /// </summary>
     public void RevokeSuperAdmin()
     {
+        if (!IsSuperAdmin)
+            return;
+
         IsSuperAdmin = false;
         MarkAsModified();
+
+        AddDomainEvent(new SuperAdminRevokedDomainEvent(Id, AccountId));
     }
 
     /// <summary>
@@ -97,5 +113,8 @@ public class SystemProfile : AuditableEntity
         JobTitle = jobTitle;
         Notes = notes;
         MarkAsModified();
+
+        AddDomainEvent(new SystemProfileUpdatedDomainEvent(
+            Id, AccountId, Department, JobTitle));
     }
 }

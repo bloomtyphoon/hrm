@@ -1,7 +1,9 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Domain.Repositories;
+using HRM.Modules.Identity.Infrastructure.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace HRM.Modules.Identity.Infrastructure.Services;
 
@@ -25,19 +27,21 @@ public sealed class PermissionService : IPermissionService
     private readonly IAccountPermissionRepository _permissionRepository;
     private readonly IMemoryCache _cache;
     private readonly ILogger<PermissionService> _logger;
+    private readonly TimeSpan _cacheDuration;
 
     private const string PermissionCacheKeyPrefix = "UserPermissions_";
     private const string SuperAdminCacheKeyPrefix = "IsSuperAdmin_";
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
     public PermissionService(
         IAccountPermissionRepository permissionRepository,
         IMemoryCache cache,
-        ILogger<PermissionService> logger)
+        ILogger<PermissionService> logger,
+        IOptions<IdentityCacheSettings> cacheSettings)
     {
         _permissionRepository = permissionRepository ?? throw new ArgumentNullException(nameof(permissionRepository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.PermissionCacheDurationMinutes);
     }
 
     /// <inheritdoc />
@@ -111,7 +115,7 @@ public sealed class PermissionService : IPermissionService
         _logger.LogDebug("Cache miss for user {UserId} permissions, loading from database", userId);
         var permissions = await _permissionRepository.GetPermissionsAsync(accountId, cancellationToken);
 
-        _cache.Set(cacheKey, permissions, CacheDuration);
+        _cache.Set(cacheKey, permissions, _cacheDuration);
 
         _logger.LogDebug(
             "Loaded {Count} permissions for user {UserId}",
@@ -140,7 +144,7 @@ public sealed class PermissionService : IPermissionService
 
         var isSuperAdmin = await _permissionRepository.IsSuperAdminAsync(accountId, cancellationToken);
 
-        _cache.Set(cacheKey, isSuperAdmin, CacheDuration);
+        _cache.Set(cacheKey, isSuperAdmin, _cacheDuration);
 
         if (isSuperAdmin)
         {

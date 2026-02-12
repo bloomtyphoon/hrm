@@ -30,6 +30,16 @@ public static class IdentityApiExtensions
         // Map authentication endpoints (login, logout, refresh, sessions)
         app.MapAuthenticationEndpoints();
 
+        // Map role management endpoints (CRUD)
+        app.MapRoleEndpoints();
+
+        // Map permission catalog endpoints
+        app.MapPermissionEndpoints();
+
+        // Map profile management endpoints
+        app.MapSystemProfileEndpoints();
+        app.MapEmployeeProfileEndpoints();
+
         return app;
     }
 }

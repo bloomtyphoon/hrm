@@ -20,6 +20,9 @@ BEGIN
         Description         NVARCHAR(500)       NULL,
         IsSystemRole        BIT                 NOT NULL DEFAULT 0,
 
+        -- Company scope: NULL = global role, GUID = company-specific role
+        CompanyId           UNIQUEIDENTIFIER    NULL,
+
         -- Audit Fields
         CreatedAtUtc        DATETIME2(7)        NOT NULL,
         ModifiedAtUtc       DATETIME2(7)        NULL,
@@ -30,8 +33,7 @@ BEGIN
         IsDeleted           BIT                 NOT NULL DEFAULT 0,
         DeletedAtUtc        DATETIME2(7)        NULL,
 
-        CONSTRAINT PK_Identity_Roles PRIMARY KEY CLUSTERED (Id),
-        CONSTRAINT UQ_Identity_Roles_Name UNIQUE (Name)
+        CONSTRAINT PK_Identity_Roles PRIMARY KEY CLUSTERED (Id)
     )
 
     PRINT 'Table [Identity].Roles created successfully'
@@ -42,7 +44,18 @@ BEGIN
 END
 GO
 
--- Roles Indexes
+-- Unique index on (Name, CompanyId) - role name unique within same company scope
+-- SQL Server treats NULL as a value for UNIQUE, so global roles have unique names
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_Name_CompanyId' AND object_id = OBJECT_ID('[Identity].Roles'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX IX_Identity_Roles_Name_CompanyId
+    ON [Identity].Roles (Name, CompanyId)
+    WHERE IsDeleted = 0
+
+    PRINT 'Index IX_Identity_Roles_Name_CompanyId created'
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_IsSystemRole' AND object_id = OBJECT_ID('[Identity].Roles'))
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Identity_Roles_IsSystemRole
@@ -50,6 +63,17 @@ BEGIN
     WHERE IsDeleted = 0
 
     PRINT 'Index IX_Identity_Roles_IsSystemRole created'
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_CompanyId' AND object_id = OBJECT_ID('[Identity].Roles'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Identity_Roles_CompanyId
+    ON [Identity].Roles (CompanyId)
+    WHERE IsDeleted = 0
+    INCLUDE (Name, IsSystemRole)
+
+    PRINT 'Index IX_Identity_Roles_CompanyId created'
 END
 GO
 
@@ -117,13 +141,21 @@ BEGIN
 END
 GO
 
--- Extended properties for Scope column
+-- Extended properties
 EXEC sys.sp_addextendedproperty
     @name = N'MS_Description',
     @value = N'Scope level (ScopeLevel enum): 0=Global, 1=Company, 2=Department, 3=Position, 4=Self',
     @level0type = N'SCHEMA', @level0name = N'Identity',
     @level1type = N'TABLE', @level1name = N'RolePermissions',
     @level2type = N'COLUMN', @level2name = N'Scope'
+GO
+
+EXEC sys.sp_addextendedproperty
+    @name = N'MS_Description',
+    @value = N'Optional company ID for company-scoped roles. NULL = global role, GUID = company-specific role.',
+    @level0type = N'SCHEMA', @level0name = N'Identity',
+    @level1type = N'TABLE', @level1name = N'Roles',
+    @level2type = N'COLUMN', @level2name = N'CompanyId'
 GO
 
 PRINT 'Script 003_CreateRolesAndPermissionsTable.sql completed'

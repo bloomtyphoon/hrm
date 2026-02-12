@@ -1,36 +1,48 @@
-using System.Data;
-using Dapper;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authorization;
+using HRM.Modules.Identity.Application.Abstractions.Data;
+using HRM.Modules.Identity.Infrastructure.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace HRM.Modules.Identity.Infrastructure.Security;
 
 /// <summary>
 /// Implementation of IDataScopeRuleProvider.
 /// SINGLE SOURCE OF TRUTH for all data scoping logic.
-/// Lives in Identity.Infrastructure — scope business rules belong to Identity module.
+/// Uses only Identity schema data — no cross-module queries.
+///
+/// Data sources (all in Identity schema):
+/// - Company scope: EmployeeProfile.CompanyAccess (denormalized from Personnel)
+/// - Department scope: EmployeeProfile.PrimaryDepartmentId
+/// - Position scope: EmployeeProfile.PrimaryPositionId
+///
+/// Note: Department/Position currently use primary values only.
+/// For multi-department/position support, add DepartmentAccess/PositionAccess
+/// collections following the same pattern as CompanyAccess.
 /// </summary>
 public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 {
-    private readonly IDbConnection _connection;
+    private readonly IIdentityQueryContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<DataScopeRuleProvider> _logger;
+    private readonly TimeSpan _cacheDuration;
 
     private DataScopeRule? _cachedRule;
     private DataScopeContext? _cachedContext;
 
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
-
     public DataScopeRuleProvider(
-        IDbConnection connection,
+        IIdentityQueryContext context,
         IMemoryCache cache,
-        ILogger<DataScopeRuleProvider> logger)
+        ILogger<DataScopeRuleProvider> logger,
+        IOptions<IdentityCacheSettings> cacheSettings)
     {
-        _connection = connection;
+        _context = context;
         _cache = cache;
         _logger = logger;
+        _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.DataScopeRuleCacheDurationMinutes);
     }
 
     /// <inheritdoc />
@@ -129,27 +141,28 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             return DataScopeRule.None();
         }
 
-        var assignments = await LoadEmployeeAssignmentsAsync(
-            context.EmployeeId.Value, cancellationToken);
-
-        if (assignments.Count == 0)
+        var profile = await LoadEmployeeProfileAsync(context.EmployeeId.Value, cancellationToken);
+        if (profile == null)
         {
             _logger.LogWarning(
-                "No active assignments found for employee {EmployeeId}",
+                "No EmployeeProfile found for employee {EmployeeId}",
                 context.EmployeeId.Value);
             return DataScopeRule.None();
         }
 
-        var companyIds = assignments
-            .Select(a => a.CompanyId)
-            .Distinct()
-            .ToList();
+        if (profile.CompanyIds.Count == 0)
+        {
+            _logger.LogWarning(
+                "No company access found for employee {EmployeeId}",
+                context.EmployeeId.Value);
+            return DataScopeRule.None();
+        }
 
         _logger.LogDebug(
             "Company scope for user {UserId}: {CompanyCount} companies",
-            context.UserId, companyIds.Count);
+            context.UserId, profile.CompanyIds.Count);
 
-        return DataScopeRule.Company(companyIds);
+        return DataScopeRule.Company(profile.CompanyIds);
     }
 
     private async Task<DataScopeRule> BuildDepartmentScopeRuleAsync(
@@ -161,24 +174,17 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             return DataScopeRule.None();
         }
 
-        var assignments = await LoadEmployeeAssignmentsAsync(
-            context.EmployeeId.Value, cancellationToken);
-
-        if (assignments.Count == 0)
+        var profile = await LoadEmployeeProfileAsync(context.EmployeeId.Value, cancellationToken);
+        if (profile?.PrimaryDepartmentId == null)
         {
             return DataScopeRule.None();
         }
 
-        var departmentIds = assignments
-            .Select(a => a.DepartmentId)
-            .Distinct()
-            .ToList();
-
         _logger.LogDebug(
-            "Department scope for user {UserId}: {DepartmentCount} departments",
-            context.UserId, departmentIds.Count);
+            "Department scope for user {UserId}: department {DepartmentId}",
+            context.UserId, profile.PrimaryDepartmentId);
 
-        return DataScopeRule.Department(departmentIds);
+        return DataScopeRule.Department([profile.PrimaryDepartmentId.Value]);
     }
 
     private async Task<DataScopeRule> BuildPositionScopeRuleAsync(
@@ -190,24 +196,17 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             return DataScopeRule.None();
         }
 
-        var assignments = await LoadEmployeeAssignmentsAsync(
-            context.EmployeeId.Value, cancellationToken);
-
-        if (assignments.Count == 0)
+        var profile = await LoadEmployeeProfileAsync(context.EmployeeId.Value, cancellationToken);
+        if (profile?.PrimaryPositionId == null)
         {
             return DataScopeRule.None();
         }
 
-        var positionIds = assignments
-            .Select(a => a.PositionId)
-            .Distinct()
-            .ToList();
-
         _logger.LogDebug(
-            "Position scope for user {UserId}: {PositionCount} positions",
-            context.UserId, positionIds.Count);
+            "Position scope for user {UserId}: position {PositionId}",
+            context.UserId, profile.PrimaryPositionId);
 
-        return DataScopeRule.Position(positionIds);
+        return DataScopeRule.Position([profile.PrimaryPositionId.Value]);
     }
 
     private DataScopeRule BuildSelfScopeRule(DataScopeContext context)
@@ -227,41 +226,40 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
         return DataScopeRule.Self(context.EmployeeId.Value);
     }
 
-    private async Task<List<EmployeeAssignmentDto>> LoadEmployeeAssignmentsAsync(
+    private async Task<EmployeeScopeData?> LoadEmployeeProfileAsync(
         Guid employeeId,
         CancellationToken cancellationToken)
     {
-        var cacheKey = $"EmployeeAssignments_{employeeId}";
+        var cacheKey = $"EmployeeScopeData_{employeeId}";
 
-        if (_cache.TryGetValue<List<EmployeeAssignmentDto>>(cacheKey, out var cached) && cached != null)
+        if (_cache.TryGetValue<EmployeeScopeData>(cacheKey, out var cached) && cached != null)
         {
             return cached;
         }
 
-        const string sql = """
-            SELECT
-                CompanyId,
-                DepartmentId,
-                PositionId
-            FROM personnel.EmployeeAssignments
-            WHERE EmployeeId = @EmployeeId
-                AND (EndDate IS NULL OR EndDate > GETUTCDATE())
-            """;
+        var profile = await _context.EmployeeProfiles
+            .AsNoTracking()
+            .Where(ep => ep.EmployeeId == employeeId)
+            .Select(ep => new EmployeeScopeData
+            {
+                PrimaryDepartmentId = ep.PrimaryDepartmentId,
+                PrimaryPositionId = ep.PrimaryPositionId,
+                CompanyIds = ep.CompanyAccess.Select(ca => ca.CompanyId).ToList()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var assignments = (await _connection.QueryAsync<EmployeeAssignmentDto>(
-            sql,
-            new { EmployeeId = employeeId }
-        )).ToList();
+        if (profile != null)
+        {
+            _cache.Set(cacheKey, profile, _cacheDuration);
+        }
 
-        _cache.Set(cacheKey, assignments, CacheDuration);
-
-        return assignments;
+        return profile;
     }
 
-    private sealed class EmployeeAssignmentDto
+    private sealed class EmployeeScopeData
     {
-        public Guid CompanyId { get; init; }
-        public Guid DepartmentId { get; init; }
-        public Guid PositionId { get; init; }
+        public Guid? PrimaryDepartmentId { get; init; }
+        public Guid? PrimaryPositionId { get; init; }
+        public List<Guid> CompanyIds { get; init; } = [];
     }
 }

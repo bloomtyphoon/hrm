@@ -62,6 +62,18 @@
                         <span class="badge @statusBadgeClass">@(Model.Role.IsActive ? "Active" : "Inactive")</span>
                     </dd>
 
+                    <dt class="col-sm-4">Company</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Role.CompanyId.HasValue)
+                        {
+                            <span class="badge bg-info"><i class="bi bi-building me-1"></i>Company-scoped</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark"><i class="bi bi-globe me-1"></i>Global</span>
+                        }
+                    </dd>
+
                     <dt class="col-sm-4">Description</dt>
                     <dd class="col-sm-8">@(Model.Role.Description ?? "-")</dd>
 

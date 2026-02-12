@@ -34,6 +34,8 @@ public interface IIdentityApiClient
     Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
+        Guid? companyId = null,
+        bool allCompanies = false,
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
@@ -77,6 +79,8 @@ public interface IIdentityApiClient
     /// Get all roles.
     /// </summary>
     Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetRolesAsync(
+        Guid? companyId = null,
+        bool allCompanies = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -150,6 +154,66 @@ public interface IIdentityApiClient
     /// </summary>
     Task<ApiResponse<UserPermissionsResponse>> GetMyPermissionsAsync(
         CancellationToken cancellationToken = default);
+
+    #endregion
+
+    #region Account Management
+
+    /// <summary>Get account by ID.</summary>
+    Task<ApiResponse<AccountDetailResponse>> GetAccountByIdAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Suspend an active account.</summary>
+    Task<ApiResponse<object>> SuspendAccountAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Deactivate an account.</summary>
+    Task<ApiResponse<object>> DeactivateAccountAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Unlock a locked account.</summary>
+    Task<ApiResponse<object>> UnlockAccountAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Enable two-factor authentication.</summary>
+    Task<ApiResponse<EnableTwoFactorResponse>> EnableTwoFactorAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Disable two-factor authentication.</summary>
+    Task<ApiResponse<object>> DisableTwoFactorAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Change account password.</summary>
+    Task<ApiResponse<object>> ChangePasswordAsync(Guid accountId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Update account profile.</summary>
+    Task<ApiResponse<object>> UpdateProfileAsync(Guid accountId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
+
+    #endregion
+
+    #region System Profile
+
+    /// <summary>Get system profile for an account.</summary>
+    Task<ApiResponse<SystemProfileResponse>> GetSystemProfileAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Create system profile.</summary>
+    Task<ApiResponse<object>> CreateSystemProfileAsync(Guid accountId, CreateSystemProfileWebRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Update system profile.</summary>
+    Task<ApiResponse<object>> UpdateSystemProfileAsync(Guid accountId, UpdateSystemProfileWebRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Grant super admin privileges.</summary>
+    Task<ApiResponse<object>> GrantSuperAdminAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Revoke super admin privileges.</summary>
+    Task<ApiResponse<object>> RevokeSuperAdminAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    #endregion
+
+    #region Employee Profile
+
+    /// <summary>Get employee profile for an account.</summary>
+    Task<ApiResponse<EmployeeProfileResponse>> GetEmployeeProfileAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Create employee profile.</summary>
+    Task<ApiResponse<object>> CreateEmployeeProfileAsync(Guid accountId, CreateEmployeeProfileWebRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Update employee profile.</summary>
+    Task<ApiResponse<object>> UpdateEmployeeProfileAsync(Guid accountId, UpdateEmployeeProfileWebRequest request, CancellationToken cancellationToken = default);
 
     #endregion
 }

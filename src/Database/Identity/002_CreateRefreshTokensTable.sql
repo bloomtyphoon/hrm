@@ -14,7 +14,7 @@ BEGIN
         Id UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
 
         -- Account reference (polymorphic: AccountType + AccountId)
-        AccountType TINYINT NOT NULL,       -- 1=System, 2=Employee
+        AccountType TINYINT NOT NULL,       -- 0=System, 1=Employee
         AccountId UNIQUEIDENTIFIER NOT NULL, -- References [Identity].Accounts.Id
 
         -- Token Information
@@ -43,7 +43,7 @@ BEGIN
         -- Constraints
         CONSTRAINT PK_RefreshTokens PRIMARY KEY CLUSTERED (Id),
         CONSTRAINT UQ_RefreshTokens_Token UNIQUE (Token),
-        CONSTRAINT CK_RefreshTokens_AccountType CHECK (AccountType IN (1, 2))
+        CONSTRAINT CK_RefreshTokens_AccountType CHECK (AccountType IN (0, 1))
     )
 
     PRINT 'Table [Identity].[RefreshTokens] created successfully'
@@ -92,7 +92,7 @@ GO
 
 EXEC sys.sp_addextendedproperty
     @name = N'MS_Description',
-    @value = N'Account type: 1=System, 2=Employee. Used as discriminator for polymorphic association.',
+    @value = N'Account type: 0=System, 1=Employee. Used as discriminator for polymorphic association.',
     @level0type = N'SCHEMA', @level0name = N'Identity',
     @level1type = N'TABLE', @level1name = N'RefreshTokens',
     @level2type = N'COLUMN', @level2name = N'AccountType'

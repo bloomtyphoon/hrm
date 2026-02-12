@@ -2,9 +2,13 @@ using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
+using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
+using HRM.BuildingBlocks.Infrastructure.Persistence;
 using HRM.BuildingBlocks.Infrastructure.Security;
+using HRM.Modules.Identity.Infrastructure.Configuration;
 using HRM.Modules.Identity.Application;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Application.Configuration;
 using HRM.Modules.Identity.Domain.Repositories;
@@ -13,6 +17,7 @@ using HRM.Modules.Identity.Infrastructure.Authentication;
 using HRM.Modules.Identity.Infrastructure.BackgroundServices;
 using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.Infrastructure.Persistence.Repositories;
+using HRM.Modules.Identity.Infrastructure.Security;
 using HRM.Modules.Identity.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -74,20 +79,21 @@ public static class IdentityInfrastructureExtensions
                     "Please add it to appsettings.json: " +
                     "\"ConnectionStrings\": { \"HrmDatabase\": \"Server=...;Database=HrmDb;...\" }");
 
+            var dbSettings = configuration
+                .GetSection(DatabaseSettings.SectionName)
+                .Get<DatabaseSettings>() ?? new DatabaseSettings();
+
             options.UseSqlServer(connectionString, sqlOptions =>
             {
                 // Enable retry on transient failures (network issues, deadlocks)
                 sqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    maxRetryCount: dbSettings.MaxRetryCount,
+                    maxRetryDelay: TimeSpan.FromSeconds(dbSettings.MaxRetryDelaySeconds),
                     errorNumbersToAdd: null
                 );
 
-                // Set command timeout (30 seconds)
-                sqlOptions.CommandTimeout(30);
-
-                // Use SQL Server 2022 features
-                // sqlOptions.UseCompatibilityLevel(160);
+                // Set command timeout
+                sqlOptions.CommandTimeout(dbSettings.CommandTimeoutSeconds);
             });
 
             // Get AuditInterceptor from DI (registered by BuildingBlocks)
@@ -118,6 +124,10 @@ public static class IdentityInfrastructureExtensions
         // Scoped: One instance per HTTP request
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IAccountRoleRepository, AccountRoleRepository>();
+        services.AddScoped<ISystemProfileRepository, SystemProfileRepository>();
+        services.AddScoped<IEmployeeProfileRepository, EmployeeProfileRepository>();
 
         // Singleton: Dapper-based repository for permission queries (uses connection string directly)
         services.AddSingleton<IAccountPermissionRepository, AccountPermissionRepository>();
@@ -139,7 +149,14 @@ public static class IdentityInfrastructureExtensions
             configuration.GetSection(JwtOptions.SectionName)
         );
 
+        // Configure Identity cache settings from appsettings.json
+        services.Configure<IdentityCacheSettings>(
+            configuration.GetSection(IdentityCacheSettings.SectionName));
+
         // 4. Register Background Services
+        // Configure OutboxSettings from appsettings.json
+        services.Configure<OutboxSettings>(
+            configuration.GetSection(OutboxSettings.SectionName));
         // Singleton: Runs continuously in background
         // IHostedService: Starts automatically with application
         services.AddHostedService<IdentityOutboxProcessor>();
@@ -168,6 +185,12 @@ public static class IdentityInfrastructureExtensions
         // IPermissionService: Checks user permissions for authorization
         // Scoped: Uses scoped repositories for database access
         services.AddScoped<IPermissionService, PermissionService>();
+
+        // IDataScopeRuleProvider: Single source of truth for data scope rules
+        services.AddScoped<IDataScopeRuleProvider, DataScopeRuleProvider>();
+
+        // IAccountVisibilityFilter: Filters account visibility by company for Employee accounts
+        services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();
 
         // 7. Register Route Security Map Source
         // Register Identity module's RouteSecurityMap.xml to be loaded at startup

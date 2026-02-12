@@ -1,0 +1,48 @@
+@model HRM.Web.Models.CompanySwitcherViewModel
+
+@if (Model.Companies.Count > 0)
+{
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-building me-1"></i>
+            <span class="d-none d-md-inline">@Model.DisplayName</span>
+            <span class="d-inline d-md-none"><i class="bi bi-building"></i></span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" style="max-height: 400px; overflow-y: auto;">
+            <li>
+                <h6 class="dropdown-header">
+                    <i class="bi bi-buildings me-1"></i>Company Context
+                </h6>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            @if (Model.IsSystemAccount)
+            {
+                <li>
+                    <form asp-controller="CompanyContext" asp-action="Switch" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="dropdown-item @(Model.IsAllCompanies ? "active" : "")">
+                            <i class="bi bi-globe me-2"></i>All Companies
+                        </button>
+                    </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+            }
+            @foreach (var company in Model.Companies)
+            {
+                var isSelected = !Model.IsAllCompanies && Model.SelectedCompanyId == company.Id;
+                <li>
+                    <form asp-controller="CompanyContext" asp-action="Switch" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="companyId" value="@company.Id" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="dropdown-item @(isSelected ? "active" : "")">
+                            <i class="bi bi-building me-2"></i>@company.Name
+                            <small class="text-muted ms-1">(@company.Code)</small>
+                        </button>
+                    </form>
+                </li>
+            }
+        </ul>
+    </li>
+}

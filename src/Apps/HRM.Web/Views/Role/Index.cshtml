@@ -62,7 +62,7 @@
                             <th>Role Name</th>
                             <th>Description</th>
                             <th>Type</th>
-                            <th>Status</th>
+                            <th>Scope</th>
                             <th>Permissions</th>
                             <th>Created</th>
                             <th class="text-end">Actions</th>
@@ -92,13 +92,13 @@
                                     <span class="badge @typeBadgeClass">@role.RoleType</span>
                                 </td>
                                 <td>
-                                    @if (role.IsActive)
+                                    @if (role.CompanyId.HasValue)
                                     {
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-info"><i class="bi bi-building me-1"></i>Company</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-globe me-1"></i>Global</span>
                                     }
                                 </td>
                                 <td>

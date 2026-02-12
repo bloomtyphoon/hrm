@@ -63,6 +63,9 @@ builder.Services.AddHttpClient<IOrganizationApiClient, OrganizationApiClient>(cl
 // Aggregate API client (facade for cross-module access)
 builder.Services.AddScoped<IApiClient, ApiClient>();
 
+// Company context (cookie-based company switcher)
+builder.Services.AddScoped<ICompanyContext, CompanyContext>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline

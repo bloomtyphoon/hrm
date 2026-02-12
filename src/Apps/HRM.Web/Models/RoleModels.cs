@@ -3,33 +3,45 @@ using System.ComponentModel.DataAnnotations;
 namespace HRM.Web.Models;
 
 /// <summary>
-/// Response model for role data.
+/// Response model for role data (matches backend RoleSummaryDto / RoleResponse).
 /// </summary>
 public sealed class RoleResponse
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string RoleType { get; set; } = string.Empty; // System or Employee
-    public bool IsActive { get; set; }
+    public bool IsSystemRole { get; set; }
+    public Guid? CompanyId { get; set; }
     public int PermissionCount { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ModifiedAtUtc { get; set; }
+
+    /// <summary>Computed display value: "System" or "Employee".</summary>
+    public string RoleType => IsSystemRole ? "System" : "Employee";
+
+    /// <summary>Roles from the API are active (soft-deleted ones are excluded).</summary>
+    public bool IsActive => true;
 }
 
 /// <summary>
-/// Detailed role response including permissions.
+/// Detailed role response including permissions (matches backend RoleDetailDto / RoleResponse).
 /// </summary>
 public sealed class RoleDetailResponse
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string RoleType { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
+    public bool IsSystemRole { get; set; }
+    public Guid? CompanyId { get; set; }
     public List<RolePermissionResponse> Permissions { get; set; } = [];
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ModifiedAtUtc { get; set; }
+
+    /// <summary>Computed display value: "System" or "Employee".</summary>
+    public string RoleType => IsSystemRole ? "System" : "Employee";
+
+    /// <summary>Roles from the API are active (soft-deleted ones are excluded).</summary>
+    public bool IsActive => true;
 }
 
 /// <summary>
@@ -65,6 +77,11 @@ public sealed class CreateRoleRequest
     [Required(ErrorMessage = "Role type is required")]
     [Display(Name = "Role Type")]
     public string RoleType { get; set; } = "Employee"; // System or Employee
+
+    /// <summary>
+    /// Company ID for scoping the role. Auto-filled from CompanyContext.
+    /// </summary>
+    public Guid? CompanyId { get; set; }
 }
 
 /// <summary>
