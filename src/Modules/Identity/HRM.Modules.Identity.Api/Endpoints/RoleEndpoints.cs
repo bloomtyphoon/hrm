@@ -75,6 +75,7 @@ public static class RoleEndpoints
         string? searchTerm = null,
         bool? isSystemRole = null,
         Guid? companyId = null,
+        bool allCompanies = false,
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -88,6 +89,7 @@ public static class RoleEndpoints
             SearchTerm = searchTerm,
             IsSystemRole = isSystemRole,
             CompanyId = companyId,
+            AllCompanies = allCompanies,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
