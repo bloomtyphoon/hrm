@@ -34,6 +34,8 @@ public interface IIdentityApiClient
     Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
+        Guid? companyId = null,
+        bool allCompanies = false,
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
@@ -77,6 +79,8 @@ public interface IIdentityApiClient
     /// Get all roles.
     /// </summary>
     Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetRolesAsync(
+        Guid? companyId = null,
+        bool allCompanies = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>

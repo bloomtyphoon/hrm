@@ -13,13 +13,16 @@ namespace HRM.Web.Controllers;
 public class RoleController : Controller
 {
     private readonly IIdentityApiClient _identityClient;
+    private readonly ICompanyContext _companyContext;
     private readonly ILogger<RoleController> _logger;
 
     public RoleController(
         IIdentityApiClient identityClient,
+        ICompanyContext companyContext,
         ILogger<RoleController> logger)
     {
         _identityClient = identityClient;
+        _companyContext = companyContext;
         _logger = logger;
     }
 
@@ -33,7 +36,10 @@ public class RoleController : Controller
         string? roleType = null,
         CancellationToken cancellationToken = default)
     {
-        var response = await _identityClient.GetRolesAsync(cancellationToken);
+        var response = await _identityClient.GetRolesAsync(
+            _companyContext.SelectedCompanyId,
+            _companyContext.IsAllCompanies,
+            cancellationToken);
 
         var viewModel = new RoleListViewModel
         {

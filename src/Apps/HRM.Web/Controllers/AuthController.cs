@@ -1,10 +1,11 @@
+using System.Security.Claims;
+using System.Text.Json;
 using HRM.Web.Models;
 using HRM.Web.Services.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace HRM.Web.Controllers;
 
@@ -83,13 +84,17 @@ public class AuthController : Controller
             return View(request);
         }
 
-        // Login successful - create authentication cookie
+        // Login successful - extract AccountType from JWT payload
+        var accountType = ExtractClaimFromJwt(result.Data!.AccessToken, "AccountType") ?? "Employee";
+
+        // Create authentication cookie
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, result.Data!.User.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, result.Data.User.Id.ToString()),
             new Claim(ClaimTypes.Name, result.Data.User.Username),
             new Claim(ClaimTypes.Email, result.Data.User.Email),
             new Claim("FullName", result.Data.User.FullName),
+            new Claim("AccountType", accountType),
             new Claim("AccessToken", result.Data.AccessToken),
             new Claim("RefreshToken", result.Data.RefreshToken),
             new Claim("AccessTokenExpiry", result.Data.AccessTokenExpiry.ToString("O")),
@@ -141,6 +146,9 @@ public class AuthController : Controller
             // Continue with local logout even if API call fails
         }
 
+        // Clear company context cookie
+        HttpContext.Response.Cookies.Delete("HRM.SelectedCompanyId");
+
         // Sign out from cookie authentication
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
@@ -163,5 +171,35 @@ public class AuthController : Controller
         }
 
         return RedirectToAction("Index", "Home");
+    }
+
+    /// <summary>
+    /// Extract a claim value from a JWT access token without full validation.
+    /// Only used to read AccountType at login time.
+    /// </summary>
+    private static string? ExtractClaimFromJwt(string token, string claimName)
+    {
+        try
+        {
+            var parts = token.Split('.');
+            if (parts.Length < 2) return null;
+
+            var payload = parts[1];
+            // Fix base64url padding
+            payload = payload.Replace('-', '+').Replace('_', '/');
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var json = Convert.FromBase64String(payload);
+            var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty(claimName, out var value) ? value.GetString() : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

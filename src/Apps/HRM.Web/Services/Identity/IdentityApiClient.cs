@@ -147,6 +147,8 @@ public sealed class IdentityApiClient : IIdentityApiClient
     public async Task<ApiResponse<PagedResult<AccountSummary>>> GetAccountsAsync(
         string? searchTerm = null,
         string? status = null,
+        Guid? companyId = null,
+        bool allCompanies = false,
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -158,6 +160,10 @@ public sealed class IdentityApiClient : IIdentityApiClient
                 queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
             if (!string.IsNullOrWhiteSpace(status))
                 queryParams.Add($"status={Uri.EscapeDataString(status)}");
+            if (companyId.HasValue)
+                queryParams.Add($"companyId={companyId.Value}");
+            if (allCompanies)
+                queryParams.Add("allCompanies=true");
             queryParams.Add($"pageNumber={pageNumber}");
             queryParams.Add($"pageSize={pageSize}");
 
@@ -370,11 +376,23 @@ public sealed class IdentityApiClient : IIdentityApiClient
 
     /// <inheritdoc />
     public async Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetRolesAsync(
+        Guid? companyId = null,
+        bool allCompanies = false,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/identity/roles", cancellationToken);
+            var queryParams = new List<string>();
+            if (companyId.HasValue)
+                queryParams.Add($"companyId={companyId.Value}");
+            if (allCompanies)
+                queryParams.Add("allCompanies=true");
+
+            var url = queryParams.Count > 0
+                ? $"/api/identity/roles?{string.Join("&", queryParams)}"
+                : "/api/identity/roles";
+
+            var response = await _httpClient.GetAsync(url, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {

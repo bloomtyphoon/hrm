@@ -12,13 +12,16 @@ namespace HRM.Web.Controllers;
 public class AccountController : Controller
 {
     private readonly IIdentityApiClient _identityClient;
+    private readonly ICompanyContext _companyContext;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         IIdentityApiClient identityClient,
+        ICompanyContext companyContext,
         ILogger<AccountController> logger)
     {
         _identityClient = identityClient;
+        _companyContext = companyContext;
         _logger = logger;
     }
 
@@ -37,7 +40,10 @@ public class AccountController : Controller
         if (pageSize > 100) pageSize = 100;
 
         var response = await _identityClient.GetAccountsAsync(
-            searchTerm, status, pageNumber, pageSize, cancellationToken);
+            searchTerm, status,
+            _companyContext.SelectedCompanyId,
+            _companyContext.IsAllCompanies,
+            pageNumber, pageSize, cancellationToken);
 
         var viewModel = new AccountListViewModel
         {
@@ -81,7 +87,10 @@ public class AccountController : Controller
         var assignedRoles = accountRolesResponse.IsSuccess && accountRolesResponse.Data != null
             ? accountRolesResponse.Data : [];
 
-        var allRolesResponse = await _identityClient.GetRolesAsync(cancellationToken);
+        var allRolesResponse = await _identityClient.GetRolesAsync(
+            _companyContext.SelectedCompanyId,
+            _companyContext.IsAllCompanies,
+            cancellationToken);
         var availableRoles = allRolesResponse.IsSuccess && allRolesResponse.Data != null
             ? allRolesResponse.Data.Where(r => r.IsActive).ToList() : [];
 
