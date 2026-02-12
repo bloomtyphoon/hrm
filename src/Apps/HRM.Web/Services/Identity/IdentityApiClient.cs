@@ -396,11 +396,12 @@ public sealed class IdentityApiClient : IIdentityApiClient
 
             if (response.IsSuccessStatusCode)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<RoleResponse>>(JsonOptions, cancellationToken);
+                // Backend returns PagedResult<RoleSummaryDto> — extract Items
+                var pagedResult = await response.Content.ReadFromJsonAsync<PagedResult<RoleResponse>>(JsonOptions, cancellationToken);
                 return new ApiResponse<IReadOnlyList<RoleResponse>>
                 {
                     IsSuccess = true,
-                    Data = data ?? []
+                    Data = pagedResult?.Items ?? []
                 };
             }
 
@@ -454,9 +455,19 @@ public sealed class IdentityApiClient : IIdentityApiClient
     {
         try
         {
+            // Map Web model (RoleType string) to API model (IsSystemRole bool + CompanyId)
+            var apiRequest = new
+            {
+                request.Name,
+                request.Description,
+                IsSystemRole = request.RoleType == "System",
+                request.CompanyId,
+                Permissions = Array.Empty<object>()
+            };
+
             var response = await _httpClient.PostAsJsonAsync(
                 "/api/identity/roles",
-                request,
+                apiRequest,
                 cancellationToken);
 
             if (response.IsSuccessStatusCode)

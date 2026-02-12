@@ -4,6 +4,7 @@
     ViewData["Title"] = "Edit Role";
     var roleId = ViewBag.RoleId as Guid?;
     var roleType = ViewBag.RoleType as string ?? "Employee";
+    var companyId = ViewBag.CompanyId as Guid?;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -30,6 +31,22 @@
                         <label class="form-label">Role Type</label>
                         <input type="text" class="form-control" value="@roleType" disabled />
                         <div class="form-text">Role type cannot be changed after creation.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Scope</label>
+                        @if (companyId.HasValue)
+                        {
+                            <div class="alert alert-info py-2 mb-0">
+                                <i class="bi bi-building me-1"></i>Company-scoped role
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning py-2 mb-0">
+                                <i class="bi bi-globe me-1"></i>Global role
+                            </div>
+                        }
                     </div>
 
                     <div class="mb-3">

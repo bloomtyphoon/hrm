@@ -109,7 +109,11 @@ public class RoleController : Controller
     [HttpGet]
     public IActionResult Create()
     {
-        return View(new CreateRoleRequest());
+        var model = new CreateRoleRequest
+        {
+            CompanyId = _companyContext.SelectedCompanyId
+        };
+        return View(model);
     }
 
     /// <summary>
@@ -122,6 +126,9 @@ public class RoleController : Controller
         CreateRoleRequest model,
         CancellationToken cancellationToken)
     {
+        // Auto-fill CompanyId from global context if not set
+        model.CompanyId ??= _companyContext.SelectedCompanyId;
+
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -173,6 +180,7 @@ public class RoleController : Controller
 
             ViewBag.RoleId = id;
             ViewBag.RoleType = response.Data.RoleType;
+            ViewBag.CompanyId = response.Data.CompanyId;
             return View(model);
         }
 
