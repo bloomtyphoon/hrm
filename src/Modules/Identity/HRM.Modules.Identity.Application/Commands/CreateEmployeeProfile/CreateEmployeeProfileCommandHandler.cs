@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Domain.Entities;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
@@ -10,17 +11,26 @@ internal sealed class CreateEmployeeProfileCommandHandler : ICommandHandler<Crea
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IEmployeeProfileRepository _employeeProfileRepository;
+    private readonly IAccountVisibilityFilter _visibilityFilter;
 
     public CreateEmployeeProfileCommandHandler(
         IAccountRepository accountRepository,
-        IEmployeeProfileRepository employeeProfileRepository)
+        IEmployeeProfileRepository employeeProfileRepository,
+        IAccountVisibilityFilter visibilityFilter)
     {
         _accountRepository = accountRepository;
         _employeeProfileRepository = employeeProfileRepository;
+        _visibilityFilter = visibilityFilter;
     }
 
     public async Task<Result<Guid>> Handle(CreateEmployeeProfileCommand request, CancellationToken cancellationToken)
     {
+        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
+        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        {
+            return Result.Failure<Guid>(AccountErrors.NotFound(request.AccountId));
+        }
+
         var account = await _accountRepository.GetByIdAsync(request.AccountId, cancellationToken);
 
         if (account is null)
