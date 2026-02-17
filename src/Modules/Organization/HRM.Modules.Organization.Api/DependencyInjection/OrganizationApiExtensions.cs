@@ -11,10 +11,12 @@ namespace HRM.Modules.Organization.Api.DependencyInjection;
 /// - POST /api/organization/companies
 /// - GET /api/organization/companies
 /// - GET /api/organization/companies/{id}
-///
-/// Future:
-/// - /api/organization/departments
-/// - /api/organization/positions
+/// - POST /api/organization/departments
+/// - GET /api/organization/departments
+/// - GET /api/organization/departments/{id}
+/// - POST /api/organization/positions
+/// - GET /api/organization/positions
+/// - GET /api/organization/positions/{id}
 /// </summary>
 public static class OrganizationApiExtensions
 {
@@ -26,9 +28,11 @@ public static class OrganizationApiExtensions
         // Map company management endpoints
         app.MapCompanyEndpoints();
 
-        // Future: Map other endpoint groups
-        // app.MapDepartmentEndpoints();
-        // app.MapPositionEndpoints();
+        // Map department management endpoints
+        app.MapDepartmentEndpoints();
+
+        // Map position management endpoints
+        app.MapPositionEndpoints();
 
         return app;
     }
