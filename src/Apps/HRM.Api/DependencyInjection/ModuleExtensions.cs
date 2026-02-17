@@ -6,6 +6,9 @@ using HRM.Modules.Identity.Infrastructure.DependencyInjection;
 using HRM.Modules.Organization.Api.DependencyInjection;
 using HRM.Modules.Organization.Application.DependencyInjection;
 using HRM.Modules.Organization.Infrastructure;
+using HRM.Modules.Personnel.Api.DependencyInjection;
+using HRM.Modules.Personnel.Application.DependencyInjection;
+using HRM.Modules.Personnel.Infrastructure;
 
 namespace HRM.Api.DependencyInjection;
 
@@ -93,9 +96,11 @@ public static class ModuleExtensions
         // - Repositories (ICompanyRepository → CompanyRepository)
         services.AddOrganizationModule(configuration);
 
-        // Future modules (same pattern):
-        // services.AddPersonnelApplication();
-        // services.AddPersonnelInfrastructure(configuration);
+        // 7. Personnel Module Application Layer
+        services.AddPersonnelApplication();
+
+        // 8. Personnel Module Infrastructure Layer
+        services.AddPersonnelModule(configuration);
 
         return services;
     }
@@ -118,9 +123,8 @@ public static class ModuleExtensions
         // - GET /api/organization/companies/{id}
         app.MapOrganizationEndpoints();
 
-        // Future module endpoints:
-        // app.MapPersonnelEndpoints();
-        // app.MapAttendanceEndpoints();
+        // Map Personnel module endpoints
+        app.MapPersonnelEndpoints();
 
         return app;
     }

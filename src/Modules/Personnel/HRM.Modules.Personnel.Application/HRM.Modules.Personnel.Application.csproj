@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="MediatR" Version="14.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HRM.Modules.Personnel.Domain\HRM.Modules.Personnel.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Application\HRM.BuildingBlocks.Application.csproj" />
   </ItemGroup>
