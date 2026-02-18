@@ -31,3 +31,15 @@ public sealed record CreatePositionRequest(
     string? Description = null,
     int? MaxHeadcount = null
 );
+
+public sealed record UpdatePositionRequest(
+    string Title,
+    int PositionLevel,
+    bool IsManagement,
+    string? Description = null,
+    int? MaxHeadcount = null
+);
+
+public sealed record MovePositionToDepartmentRequest(
+    Guid? DepartmentId
+);

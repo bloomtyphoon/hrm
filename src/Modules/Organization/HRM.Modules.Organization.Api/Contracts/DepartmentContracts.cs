@@ -26,3 +26,16 @@ public sealed record CreateDepartmentRequest(
     Guid? ParentDepartmentId = null,
     Guid? ManagerId = null
 );
+
+public sealed record UpdateDepartmentRequest(
+    string Name,
+    Guid? ManagerId = null
+);
+
+public sealed record MoveDepartmentRequest(
+    Guid? NewParentDepartmentId
+);
+
+public sealed record AssignDepartmentManagerRequest(
+    Guid ManagerId
+);

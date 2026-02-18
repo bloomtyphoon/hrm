@@ -42,3 +42,8 @@ public sealed record CreateCompanyRequest(
     string Name,
     string? TaxId = null
 );
+
+public sealed record UpdateCompanyRequest(
+    string Name,
+    string? TaxId = null
+);

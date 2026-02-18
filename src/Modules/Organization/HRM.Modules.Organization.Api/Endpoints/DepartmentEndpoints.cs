@@ -1,7 +1,15 @@
 using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Organization.Api.Contracts;
+using HRM.Modules.Organization.Application.Commands.ActivateDepartment;
+using HRM.Modules.Organization.Application.Commands.AssignDepartmentManager;
 using HRM.Modules.Organization.Application.Commands.CreateDepartment;
-using HRM.Modules.Organization.Domain.Repositories;
+using HRM.Modules.Organization.Application.Commands.DeactivateDepartment;
+using HRM.Modules.Organization.Application.Commands.MoveDepartment;
+using HRM.Modules.Organization.Application.Commands.RemoveDepartmentManager;
+using HRM.Modules.Organization.Application.Commands.UpdateDepartment;
+using HRM.Modules.Organization.Application.DTOs;
+using HRM.Modules.Organization.Application.Queries.GetDepartmentById;
+using HRM.Modules.Organization.Application.Queries.GetDepartmentsByCompany;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -9,9 +17,6 @@ using Microsoft.AspNetCore.Routing;
 
 namespace HRM.Modules.Organization.Api.Endpoints;
 
-/// <summary>
-/// Minimal API endpoints for Department operations.
-/// </summary>
 public static class DepartmentEndpoints
 {
     public static IEndpointRouteBuilder MapDepartmentEndpoints(this IEndpointRouteBuilder app)
@@ -48,13 +53,68 @@ public static class DepartmentEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapPut("/{id:guid}", UpdateDepartment)
+            .WithName("UpdateDepartment")
+            .WithSummary("Update a department")
+            .WithDescription("Update department name and manager.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/move", MoveDepartment)
+            .WithName("MoveDepartment")
+            .WithSummary("Move department to new parent")
+            .WithDescription("Move a department to a new parent department or make it a root department.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/manager", AssignManager)
+            .WithName("AssignDepartmentManager")
+            .WithSummary("Assign manager to department")
+            .WithDescription("Assign a manager to the department.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/manager", RemoveManager)
+            .WithName("RemoveDepartmentManager")
+            .WithSummary("Remove manager from department")
+            .WithDescription("Remove the manager from the department.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/activate", ActivateDepartment)
+            .WithName("ActivateDepartment")
+            .WithSummary("Activate a department")
+            .WithDescription("Set department status to Active.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/deactivate", DeactivateDepartment)
+            .WithName("DeactivateDepartment")
+            .WithSummary("Deactivate a department")
+            .WithDescription("Set department status to Inactive.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return app;
     }
 
     private static async Task<IResult> CreateDepartment(
         CreateDepartmentRequest request,
         ISender sender,
-        IDepartmentRepository departmentRepository,
         CancellationToken cancellationToken)
     {
         var command = new CreateDepartmentCommand(
@@ -69,7 +129,8 @@ public static class DepartmentEndpoints
 
         return await result.ToHttpResultAsync(async departmentId =>
         {
-            var department = await departmentRepository.GetByIdAsync(departmentId, cancellationToken);
+            var query = new GetDepartmentByIdQuery(departmentId);
+            var department = await sender.Send(query, cancellationToken);
 
             if (department is null)
             {
@@ -79,52 +140,29 @@ public static class DepartmentEndpoints
                 );
             }
 
-            var response = new DepartmentResponse(
-                Id: department.Id,
-                Code: department.Code,
-                Name: department.Name,
-                CompanyId: department.CompanyId,
-                ParentDepartmentId: department.ParentDepartmentId,
-                ManagerId: department.ManagerId,
-                Level: department.Level,
-                Status: department.Status.ToString(),
-                CreatedAtUtc: department.CreatedAtUtc,
-                ModifiedAtUtc: department.ModifiedAtUtc
-            );
-
-            return Results.Created($"/api/organization/departments/{departmentId}", response);
+            return Results.Created($"/api/organization/departments/{departmentId}", MapToResponse(department));
         });
     }
 
     private static async Task<IResult> GetDepartmentsByCompany(
         Guid companyId,
-        IDepartmentRepository departmentRepository,
+        ISender sender,
         CancellationToken cancellationToken)
     {
-        var departments = await departmentRepository.GetByCompanyIdAsync(companyId, cancellationToken);
+        var query = new GetDepartmentsByCompanyQuery(companyId);
+        var departments = await sender.Send(query, cancellationToken);
 
-        var response = departments.Select(d => new DepartmentResponse(
-            Id: d.Id,
-            Code: d.Code,
-            Name: d.Name,
-            CompanyId: d.CompanyId,
-            ParentDepartmentId: d.ParentDepartmentId,
-            ManagerId: d.ManagerId,
-            Level: d.Level,
-            Status: d.Status.ToString(),
-            CreatedAtUtc: d.CreatedAtUtc,
-            ModifiedAtUtc: d.ModifiedAtUtc
-        )).ToList();
-
+        var response = departments.Select(MapToResponse).ToList();
         return Results.Ok(response);
     }
 
     private static async Task<IResult> GetDepartmentById(
         Guid id,
-        IDepartmentRepository departmentRepository,
+        ISender sender,
         CancellationToken cancellationToken)
     {
-        var department = await departmentRepository.GetByIdAsync(id, cancellationToken);
+        var query = new GetDepartmentByIdQuery(id);
+        var department = await sender.Send(query, cancellationToken);
 
         if (department is null)
         {
@@ -135,19 +173,96 @@ public static class DepartmentEndpoints
             });
         }
 
-        var response = new DepartmentResponse(
-            Id: department.Id,
-            Code: department.Code,
-            Name: department.Name,
-            CompanyId: department.CompanyId,
-            ParentDepartmentId: department.ParentDepartmentId,
-            ManagerId: department.ManagerId,
-            Level: department.Level,
-            Status: department.Status.ToString(),
-            CreatedAtUtc: department.CreatedAtUtc,
-            ModifiedAtUtc: department.ModifiedAtUtc
+        return Results.Ok(MapToResponse(department));
+    }
+
+    private static async Task<IResult> UpdateDepartment(
+        Guid id,
+        UpdateDepartmentRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateDepartmentCommand(
+            DepartmentId: id,
+            Name: request.Name,
+            ManagerId: request.ManagerId
         );
 
-        return Results.Ok(response);
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
     }
+
+    private static async Task<IResult> MoveDepartment(
+        Guid id,
+        MoveDepartmentRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new MoveDepartmentCommand(
+            DepartmentId: id,
+            NewParentDepartmentId: request.NewParentDepartmentId
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> AssignManager(
+        Guid id,
+        AssignDepartmentManagerRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new AssignDepartmentManagerCommand(
+            DepartmentId: id,
+            ManagerId: request.ManagerId
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> RemoveManager(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new RemoveDepartmentManagerCommand(id);
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> ActivateDepartment(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new ActivateDepartmentCommand(id);
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> DeactivateDepartment(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new DeactivateDepartmentCommand(id);
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static DepartmentResponse MapToResponse(DepartmentDto dto) =>
+        new(
+            Id: dto.Id,
+            Code: dto.Code,
+            Name: dto.Name,
+            CompanyId: dto.CompanyId,
+            ParentDepartmentId: dto.ParentDepartmentId,
+            ManagerId: dto.ManagerId,
+            Level: dto.Level,
+            Status: dto.Status,
+            CreatedAtUtc: dto.CreatedAtUtc,
+            ModifiedAtUtc: dto.ModifiedAtUtc
+        );
 }
