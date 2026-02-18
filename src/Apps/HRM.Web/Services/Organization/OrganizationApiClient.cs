@@ -129,6 +129,142 @@ public sealed class OrganizationApiClient : IOrganizationApiClient
         }
     }
 
+    #region Departments
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<IReadOnlyList<DepartmentResponse>>> GetDepartmentsByCompanyAsync(
+        Guid companyId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/organization/departments?companyId={companyId}",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<DepartmentResponse>>(JsonOptions, cancellationToken);
+                return new ApiResponse<IReadOnlyList<DepartmentResponse>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? []
+                };
+            }
+
+            return await HandleErrorResponseAsync<IReadOnlyList<DepartmentResponse>>(response, "Failed to retrieve departments", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<IReadOnlyList<DepartmentResponse>>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<IReadOnlyList<DepartmentResponse>>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<DepartmentResponse>> GetDepartmentByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/organization/departments/{id}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<DepartmentResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<DepartmentResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<DepartmentResponse>(response, "Failed to retrieve department", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<DepartmentResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<DepartmentResponse>(ex);
+        }
+    }
+
+    #endregion
+
+    #region Positions
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<IReadOnlyList<PositionResponse>>> GetPositionsByCompanyAsync(
+        Guid companyId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/organization/positions?companyId={companyId}",
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<PositionResponse>>(JsonOptions, cancellationToken);
+                return new ApiResponse<IReadOnlyList<PositionResponse>>
+                {
+                    IsSuccess = true,
+                    Data = data ?? []
+                };
+            }
+
+            return await HandleErrorResponseAsync<IReadOnlyList<PositionResponse>>(response, "Failed to retrieve positions", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<IReadOnlyList<PositionResponse>>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<IReadOnlyList<PositionResponse>>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<PositionResponse>> GetPositionByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/organization/positions/{id}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<PositionResponse>(JsonOptions, cancellationToken);
+                return new ApiResponse<PositionResponse>
+                {
+                    IsSuccess = true,
+                    Data = data
+                };
+            }
+
+            return await HandleErrorResponseAsync<PositionResponse>(response, "Failed to retrieve position", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<PositionResponse>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<PositionResponse>(ex);
+        }
+    }
+
+    #endregion
+
     #region Private Helpers
 
     private async Task<ApiResponse<T>> HandleErrorResponseAsync<T>(

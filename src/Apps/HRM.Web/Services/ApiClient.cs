@@ -10,7 +10,8 @@ namespace HRM.Web.Services;
 ///
 /// For single-module access, prefer injecting the specific module client directly:
 /// - IIdentityApiClient for auth/account operations
-/// - IOrganizationApiClient for company operations
+/// - IOrganizationApiClient for company/department/position operations
+/// - IPersonnelApiClient for employee operations
 /// </summary>
 public sealed class ApiClient : IApiClient
 {
@@ -20,11 +21,16 @@ public sealed class ApiClient : IApiClient
     /// <inheritdoc />
     public IOrganizationApiClient Organization { get; }
 
+    /// <inheritdoc />
+    public IPersonnelApiClient Personnel { get; }
+
     public ApiClient(
         IIdentityApiClient identity,
-        IOrganizationApiClient organization)
+        IOrganizationApiClient organization,
+        IPersonnelApiClient personnel)
     {
         Identity = identity;
         Organization = organization;
+        Personnel = personnel;
     }
 }
