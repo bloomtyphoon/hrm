@@ -1,5 +1,6 @@
 using System.Reflection;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
+using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ namespace HRM.Modules.Personnel.Infrastructure.Persistence;
 /// DbContext for Personnel module.
 /// Inherits from ModuleDbContext for Unit of Work, domain events, soft delete, audit trail.
 /// </summary>
-public sealed class PersonnelDbContext : ModuleDbContext
+public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
 {
     public PersonnelDbContext(
         DbContextOptions<PersonnelDbContext> options,

@@ -1,7 +1,11 @@
+using HRM.BuildingBlocks.Application.Pagination;
 using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Personnel.Api.Contracts;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Commands.CreateEmployee;
+using HRM.Modules.Personnel.Application.Queries.GetDirectReports;
+using HRM.Modules.Personnel.Application.Queries.GetEmployeeById;
+using HRM.Modules.Personnel.Application.Queries.GetEmployees;
 using HRM.Modules.Personnel.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -31,14 +35,30 @@ public static class EmployeeEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group.MapGet("/", GetEmployees)
+            .WithName("GetEmployees")
+            .WithSummary("Get employees")
+            .WithDescription("Retrieve paginated list of employees with optional filtering.")
+            .Produces<PagedResult<EmployeeSummaryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
         group.MapGet("/{id:guid}", GetEmployeeById)
             .WithName("GetEmployeeById")
             .WithSummary("Get employee by ID")
             .WithDescription("Retrieve an employee by their ID.")
-            .Produces<EmployeeResponse>(StatusCodes.Status200OK)
+            .Produces<EmployeeDetailDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{managerId:guid}/direct-reports", GetDirectReports)
+            .WithName("GetDirectReports")
+            .WithSummary("Get direct reports")
+            .WithDescription("Retrieve paginated direct reports for a manager.")
+            .Produces<PagedResult<EmployeeSummaryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         return app;
     }
@@ -79,12 +99,39 @@ public static class EmployeeEndpoints
         });
     }
 
+    private static async Task<IResult> GetEmployees(
+        ISender sender,
+        CancellationToken cancellationToken,
+        string? searchTerm = null,
+        EmploymentStatus? status = null,
+        Guid? companyId = null,
+        Guid? departmentId = null,
+        Guid? managerId = null,
+        int pageNumber = 1,
+        int pageSize = 20)
+    {
+        var query = new GetEmployeesQuery
+        {
+            SearchTerm = searchTerm,
+            Status = status,
+            CompanyId = companyId,
+            DepartmentId = departmentId,
+            ManagerId = managerId,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var result = await sender.Send(query, cancellationToken);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> GetEmployeeById(
         Guid id,
-        IEmployeeRepository employeeRepository,
+        ISender sender,
         CancellationToken cancellationToken)
     {
-        var employee = await employeeRepository.GetByIdAsync(id, cancellationToken);
+        var query = new GetEmployeeByIdQuery { EmployeeId = id };
+        var employee = await sender.Send(query, cancellationToken);
 
         if (employee is null)
         {
@@ -95,7 +142,25 @@ public static class EmployeeEndpoints
             });
         }
 
-        return Results.Ok(MapToResponse(employee));
+        return Results.Ok(employee);
+    }
+
+    private static async Task<IResult> GetDirectReports(
+        Guid managerId,
+        ISender sender,
+        CancellationToken cancellationToken,
+        int pageNumber = 1,
+        int pageSize = 20)
+    {
+        var query = new GetDirectReportsQuery
+        {
+            ManagerId = managerId,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var result = await sender.Send(query, cancellationToken);
+        return Results.Ok(result);
     }
 
     private static EmployeeResponse MapToResponse(Employee employee) =>

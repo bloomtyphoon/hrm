@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.Modules.Personnel.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
 using HRM.Modules.Personnel.Infrastructure.Services;
@@ -31,6 +32,9 @@ public static class DependencyInjection
 
         // Unit of Work
         services.AddScoped<IModuleUnitOfWork>(sp => sp.GetRequiredService<PersonnelDbContext>());
+
+        // Query Context
+        services.AddScoped<IPersonnelQueryContext>(sp => sp.GetRequiredService<PersonnelDbContext>());
 
         // Scope Services
         services.AddScoped<IDataScopeService, DataScopeService>();

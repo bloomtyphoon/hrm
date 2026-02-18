@@ -2,6 +2,7 @@ using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Personnel.Api.Contracts;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Commands.AddAssignment;
+using HRM.Modules.Personnel.Application.Queries.GetEmployeeAssignments;
 using HRM.Modules.Personnel.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -35,10 +36,9 @@ public static class AssignmentEndpoints
             .WithName("GetAssignments")
             .WithSummary("Get employee assignments")
             .WithDescription("Retrieve all assignments for an employee.")
-            .Produces<IReadOnlyList<AssignmentResponse>>(StatusCodes.Status200OK)
+            .Produces<List<AssignmentDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         return app;
     }
@@ -84,25 +84,18 @@ public static class AssignmentEndpoints
 
     private static async Task<IResult> GetAssignments(
         Guid employeeId,
-        IEmployeeRepository employeeRepository,
-        CancellationToken cancellationToken)
+        ISender sender,
+        CancellationToken cancellationToken,
+        AssignmentStatus? status = null)
     {
-        var employee = await employeeRepository.GetWithAssignmentsAsync(employeeId, cancellationToken);
-
-        if (employee is null)
+        var query = new GetEmployeeAssignmentsQuery
         {
-            return Results.NotFound(new
-            {
-                Code = "Employee.NotFound",
-                Message = $"Employee with ID '{employeeId}' was not found."
-            });
-        }
+            EmployeeId = employeeId,
+            Status = status
+        };
 
-        var response = employee.Assignments
-            .Select(MapToResponse)
-            .ToList();
-
-        return Results.Ok(response);
+        var assignments = await sender.Send(query, cancellationToken);
+        return Results.Ok(assignments);
     }
 
     private static AssignmentResponse MapToResponse(EmployeeAssignment assignment) =>
