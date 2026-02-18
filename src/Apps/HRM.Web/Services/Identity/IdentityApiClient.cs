@@ -601,13 +601,16 @@ public sealed class IdentityApiClient : IIdentityApiClient
     /// <inheritdoc />
     public async Task<ApiResponse<IReadOnlyList<RoleResponse>>> GetAccountRolesAsync(
         Guid accountId,
+        Guid? companyId = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.GetAsync(
-                $"/api/identity/accounts/{accountId}/roles",
-                cancellationToken);
+            var url = $"/api/identity/accounts/{accountId}/roles";
+            if (companyId.HasValue)
+                url += $"?companyId={companyId.Value}";
+
+            var response = await _httpClient.GetAsync(url, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
@@ -946,9 +949,9 @@ public sealed class IdentityApiClient : IIdentityApiClient
     #region Account Security
 
     /// <inheritdoc />
-    public async Task<ApiResponse<object>> ChangePasswordAsync(
+    public async Task<ApiResponse<object>> ChangeMyPasswordAsync(
         Guid accountId,
-        ChangePasswordRequest request,
+        ChangeMyPasswordRequest request,
         CancellationToken cancellationToken = default)
     {
         try
@@ -956,12 +959,11 @@ public sealed class IdentityApiClient : IIdentityApiClient
             var apiRequest = new
             {
                 request.CurrentPassword,
-                request.NewPassword,
-                request.IsAdminReset
+                request.NewPassword
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"/api/identity/accounts/{accountId}/change-password",
+                $"/api/identity/accounts/{accountId}/change-my-password",
                 apiRequest,
                 cancellationToken);
 
@@ -975,6 +977,45 @@ public sealed class IdentityApiClient : IIdentityApiClient
             }
 
             return await HandleErrorResponseAsync<object>(response, "Failed to change password", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            return HandleNetworkError<object>(ex);
+        }
+        catch (Exception ex)
+        {
+            return HandleUnexpectedError<object>(ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> ResetAccountPasswordAsync(
+        Guid accountId,
+        ResetAccountPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                request.NewPassword
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                $"/api/identity/accounts/{accountId}/reset-password",
+                apiRequest,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<object>
+                {
+                    IsSuccess = true,
+                    Data = new { }
+                };
+            }
+
+            return await HandleErrorResponseAsync<object>(response, "Failed to reset password", cancellationToken);
         }
         catch (HttpRequestException ex)
         {

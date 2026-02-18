@@ -42,11 +42,19 @@ public sealed class GetAccountRolesQueryHandler
             return Result.Failure<List<AccountRoleDto>>(AccountErrors.NotFound(request.AccountId));
         }
 
+        var rolesQuery = _context.Roles.AsNoTracking().AsQueryable();
+
+        // Company filter: when CompanyId is provided, return roles for that company + global roles
+        if (request.CompanyId.HasValue)
+        {
+            rolesQuery = rolesQuery.Where(r => r.CompanyId == request.CompanyId.Value || r.CompanyId == null);
+        }
+
         var roles = await _context.AccountRoles
             .AsNoTracking()
             .Where(ar => ar.AccountId == request.AccountId)
             .Join(
-                _context.Roles.AsNoTracking(),
+                rolesQuery,
                 ar => ar.RoleId,
                 r => r.Id,
                 (ar, r) => new AccountRoleDto
@@ -55,6 +63,7 @@ public sealed class GetAccountRolesQueryHandler
                     RoleName = r.Name,
                     RoleDescription = r.Description,
                     IsSystemRole = r.IsSystemRole,
+                    CompanyId = r.CompanyId,
                     PermissionCount = r.Permissions.Count,
                     AssignedAtUtc = ar.AssignedAtUtc,
                     AssignedById = ar.AssignedById

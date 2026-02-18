@@ -83,7 +83,7 @@ public class AccountController : Controller
         var account = accountResponse.Data;
 
         // Fetch roles
-        var accountRolesResponse = await _identityClient.GetAccountRolesAsync(id, cancellationToken);
+        var accountRolesResponse = await _identityClient.GetAccountRolesAsync(id, _companyContext.SelectedCompanyId, cancellationToken);
         var assignedRoles = accountRolesResponse.IsSuccess && accountRolesResponse.Data != null
             ? accountRolesResponse.Data : [];
 
@@ -214,21 +214,20 @@ public class AccountController : Controller
     #region Password & Profile
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChangePassword(
+    public async Task<IActionResult> ResetPassword(
         Guid id, string newPassword, CancellationToken cancellationToken = default)
     {
-        var request = new ChangePasswordRequest
+        var request = new ResetAccountPasswordRequest
         {
-            NewPassword = newPassword,
-            IsAdminReset = true
+            NewPassword = newPassword
         };
 
-        var response = await _identityClient.ChangePasswordAsync(id, request, cancellationToken);
+        var response = await _identityClient.ResetAccountPasswordAsync(id, request, cancellationToken);
 
         if (response.IsSuccess)
             TempData["SuccessMessage"] = "Password has been reset.";
         else
-            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to change password.";
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to reset password.";
 
         return RedirectToAction(nameof(Detail), new { id });
     }
