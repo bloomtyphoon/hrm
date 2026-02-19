@@ -25,3 +25,10 @@ public sealed record AddAssignmentRequest(
     DateOnly StartDate,
     bool IsPrimary = false
 );
+
+/// <summary>
+/// Request DTO for ending an assignment.
+/// </summary>
+public sealed record EndAssignmentRequest(
+    DateOnly EndDate
+);

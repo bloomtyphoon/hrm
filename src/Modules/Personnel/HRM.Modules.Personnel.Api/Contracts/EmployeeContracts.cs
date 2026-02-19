@@ -36,3 +36,28 @@ public sealed record CreateEmployeeRequest(
     DateOnly? DateOfBirth = null,
     Guid? ManagerId = null
 );
+
+/// <summary>
+/// Request DTO for updating an employee.
+/// </summary>
+public sealed record UpdateEmployeeRequest(
+    string FirstName,
+    string LastName,
+    string Email,
+    string? Phone = null,
+    DateOnly? DateOfBirth = null
+);
+
+/// <summary>
+/// Request DTO for terminating an employee.
+/// </summary>
+public sealed record TerminateEmployeeRequest(
+    DateOnly TerminationDate
+);
+
+/// <summary>
+/// Request DTO for assigning a manager.
+/// </summary>
+public sealed record AssignManagerRequest(
+    Guid ManagerId
+);

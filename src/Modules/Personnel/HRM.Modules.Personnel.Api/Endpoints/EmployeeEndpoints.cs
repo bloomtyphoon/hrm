@@ -2,7 +2,11 @@ using HRM.BuildingBlocks.Application.Pagination;
 using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Personnel.Api.Contracts;
 using HRM.Modules.Personnel.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Commands.AssignManager;
 using HRM.Modules.Personnel.Application.Commands.CreateEmployee;
+using HRM.Modules.Personnel.Application.Commands.RemoveManager;
+using HRM.Modules.Personnel.Application.Commands.TerminateEmployee;
+using HRM.Modules.Personnel.Application.Commands.UpdateEmployee;
 using HRM.Modules.Personnel.Application.Queries.GetDirectReports;
 using HRM.Modules.Personnel.Application.Queries.GetEmployeeById;
 using HRM.Modules.Personnel.Application.Queries.GetEmployees;
@@ -14,9 +18,6 @@ using Microsoft.AspNetCore.Routing;
 
 namespace HRM.Modules.Personnel.Api.Endpoints;
 
-/// <summary>
-/// Minimal API endpoints for Employee operations.
-/// </summary>
 public static class EmployeeEndpoints
 {
     public static IEndpointRouteBuilder MapEmployeeEndpoints(this IEndpointRouteBuilder app)
@@ -28,37 +29,53 @@ public static class EmployeeEndpoints
         group.MapPost("/", CreateEmployee)
             .WithName("CreateEmployee")
             .WithSummary("Create a new employee")
-            .WithDescription("Create a new employee in the system.")
             .Produces<EmployeeResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapGet("/", GetEmployees)
             .WithName("GetEmployees")
             .WithSummary("Get employees")
-            .WithDescription("Retrieve paginated list of employees with optional filtering.")
-            .Produces<PagedResult<EmployeeSummaryDto>>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
+            .Produces<PagedResult<EmployeeSummaryDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/{id:guid}", GetEmployeeById)
             .WithName("GetEmployeeById")
             .WithSummary("Get employee by ID")
-            .WithDescription("Retrieve an employee by their ID.")
             .Produces<EmployeeDetailDto>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}", UpdateEmployee)
+            .WithName("UpdateEmployee")
+            .WithSummary("Update employee personal information")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapPut("/{id:guid}/terminate", TerminateEmployee)
+            .WithName("TerminateEmployee")
+            .WithSummary("Terminate an employee")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/manager", AssignManager)
+            .WithName("AssignManager")
+            .WithSummary("Assign a manager to an employee")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/manager", RemoveManager)
+            .WithName("RemoveManager")
+            .WithSummary("Remove manager assignment from an employee")
+            .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/{managerId:guid}/direct-reports", GetDirectReports)
             .WithName("GetDirectReports")
             .WithSummary("Get direct reports")
-            .WithDescription("Retrieve paginated direct reports for a manager.")
-            .Produces<PagedResult<EmployeeSummaryDto>>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
+            .Produces<PagedResult<EmployeeSummaryDto>>(StatusCodes.Status200OK);
 
         return app;
     }
@@ -85,18 +102,75 @@ public static class EmployeeEndpoints
         return await result.ToHttpResultAsync(async employeeId =>
         {
             var employee = await employeeRepository.GetByIdAsync(employeeId, cancellationToken);
-
             if (employee is null)
             {
                 return Results.Problem(
                     detail: "Employee was created but could not be retrieved.",
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
+                    statusCode: StatusCodes.Status500InternalServerError);
             }
 
             var response = MapToResponse(employee);
             return Results.Created($"/api/personnel/employees/{employeeId}", response);
         });
+    }
+
+    private static async Task<IResult> UpdateEmployee(
+        Guid id,
+        UpdateEmployeeRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateEmployeeCommand(
+            EmployeeId: id,
+            FirstName: request.FirstName,
+            LastName: request.LastName,
+            Email: request.Email,
+            Phone: request.Phone,
+            DateOfBirth: request.DateOfBirth
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> TerminateEmployee(
+        Guid id,
+        TerminateEmployeeRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new TerminateEmployeeCommand(
+            EmployeeId: id,
+            TerminationDate: request.TerminationDate
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> AssignManager(
+        Guid id,
+        AssignManagerRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new AssignManagerCommand(
+            EmployeeId: id,
+            ManagerId: request.ManagerId
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> RemoveManager(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new RemoveManagerCommand(EmployeeId: id);
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
     }
 
     private static async Task<IResult> GetEmployees(

@@ -2,6 +2,8 @@ using HRM.BuildingBlocks.Infrastructure.Extensions;
 using HRM.Modules.Personnel.Api.Contracts;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Commands.AddAssignment;
+using HRM.Modules.Personnel.Application.Commands.EndAssignment;
+using HRM.Modules.Personnel.Application.Commands.SetPrimaryAssignment;
 using HRM.Modules.Personnel.Application.Queries.GetEmployeeAssignments;
 using HRM.Modules.Personnel.Domain.Entities;
 using MediatR;
@@ -11,9 +13,6 @@ using Microsoft.AspNetCore.Routing;
 
 namespace HRM.Modules.Personnel.Api.Endpoints;
 
-/// <summary>
-/// Minimal API endpoints for Employee Assignment operations.
-/// </summary>
 public static class AssignmentEndpoints
 {
     public static IEndpointRouteBuilder MapAssignmentEndpoints(this IEndpointRouteBuilder app)
@@ -25,20 +24,28 @@ public static class AssignmentEndpoints
         group.MapPost("/", AddAssignment)
             .WithName("AddAssignment")
             .WithSummary("Add assignment to employee")
-            .WithDescription("Assign an employee to a company/department/position.")
             .Produces<AssignmentResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/", GetAssignments)
             .WithName("GetAssignments")
             .WithSummary("Get employee assignments")
-            .WithDescription("Retrieve all assignments for an employee.")
-            .Produces<List<AssignmentDto>>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
+            .Produces<List<AssignmentDto>>(StatusCodes.Status200OK);
+
+        group.MapPut("/{assignmentId:guid}/end", EndAssignment)
+            .WithName("EndAssignment")
+            .WithSummary("End an assignment")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{assignmentId:guid}/primary", SetPrimaryAssignment)
+            .WithName("SetPrimaryAssignment")
+            .WithSummary("Set an assignment as primary")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -63,7 +70,6 @@ public static class AssignmentEndpoints
 
         return await result.ToHttpResultAsync(async assignmentId =>
         {
-            // Reload employee with assignments to get the new assignment
             var employee = await employeeRepository.GetWithAssignmentsAsync(employeeId, cancellationToken);
             var assignment = employee?.Assignments.FirstOrDefault(a => a.Id == assignmentId);
 
@@ -71,8 +77,7 @@ public static class AssignmentEndpoints
             {
                 return Results.Problem(
                     detail: "Assignment was created but could not be retrieved.",
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
+                    statusCode: StatusCodes.Status500InternalServerError);
             }
 
             var response = MapToResponse(assignment);
@@ -80,6 +85,38 @@ public static class AssignmentEndpoints
                 $"/api/personnel/employees/{employeeId}/assignments/{assignmentId}",
                 response);
         });
+    }
+
+    private static async Task<IResult> EndAssignment(
+        Guid employeeId,
+        Guid assignmentId,
+        EndAssignmentRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new EndAssignmentCommand(
+            EmployeeId: employeeId,
+            AssignmentId: assignmentId,
+            EndDate: request.EndDate
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> SetPrimaryAssignment(
+        Guid employeeId,
+        Guid assignmentId,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new SetPrimaryAssignmentCommand(
+            EmployeeId: employeeId,
+            AssignmentId: assignmentId
+        );
+
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
     }
 
     private static async Task<IResult> GetAssignments(
