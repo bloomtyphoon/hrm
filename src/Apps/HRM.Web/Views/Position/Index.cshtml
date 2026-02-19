@@ -6,6 +6,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Positions</h2>
+    @if (!Model.RequiresCompanySelection)
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Create Position
+        </a>
+    }
 </div>
 
 @if (Model.RequiresCompanySelection)
@@ -119,6 +125,12 @@ else
                                         <a asp-action="Details" asp-route-id="@position.Id" class="btn btn-sm btn-outline-primary" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        @if (position.Status != "Closed")
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@position.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        }
                                     </td>
                                 </tr>
                             }

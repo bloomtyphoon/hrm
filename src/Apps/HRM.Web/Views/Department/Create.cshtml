@@ -1,0 +1,55 @@
+@model CreateDepartmentViewModel
+
+@{
+    ViewData["Title"] = "Create Department";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Create New Department</h2>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <form asp-action="Create" method="post" class="needs-validation" novalidate>
+            <input type="hidden" asp-for="Form.CompanyId" />
+
+            <div class="mb-3">
+                <label asp-for="Form.Code" class="form-label"></label>
+                <input asp-for="Form.Code" class="form-control" placeholder="Enter department code" />
+                <span asp-validation-for="Form.Code" class="text-danger"></span>
+                <div class="form-text">
+                    Department code must be 1-50 characters (letters, numbers, underscores, hyphens).
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Form.Name" class="form-label"></label>
+                <input asp-for="Form.Name" class="form-control" placeholder="Enter department name" />
+                <span asp-validation-for="Form.Name" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Form.ParentDepartmentId" class="form-label"></label>
+                <select asp-for="Form.ParentDepartmentId" class="form-select">
+                    <option value="">-- No Parent (Top-level) --</option>
+                    @foreach (var dept in Model.AvailableParentDepartments)
+                    {
+                        <option value="@dept.Id">@(new string('\u2003', dept.Level))@dept.Name (@dept.Code)</option>
+                    }
+                </select>
+                <div class="form-text">Optional. Select a parent to create a sub-department.</div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-diagram-3 me-1"></i>Create Department
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
