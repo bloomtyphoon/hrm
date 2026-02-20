@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RouteSecurityMap Module="Organization" Version="1.0" xmlns="http://hrm.system/route-security">
+  <!--
+    Organization Module Route Security Map
+    Maps API routes to required permissions.
+  -->
+
+  <!-- Public Routes - No authentication required -->
+  <PublicRoutes>
+  </PublicRoutes>
+
+  <!-- Protected Routes - Require authentication and specific permissions -->
+  <ProtectedRoutes>
+
+    <!-- ==================== Company Management ==================== -->
+
+    <!-- List companies -->
+    <Route
+        Method="GET"
+        Path="/api/organization/companies"
+        Permission="Organization.Company.View" />
+
+    <!-- Get company by ID -->
+    <Route
+        Method="GET"
+        Path="/api/organization/companies/{id}"
+        Permission="Organization.Company.View" />
+
+    <!-- Create new company -->
+    <Route
+        Method="POST"
+        Path="/api/organization/companies"
+        Permission="Organization.Company.Create" />
+
+    <!-- Update company -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/companies/{id}"
+        Permission="Organization.Company.Update" />
+
+    <!-- Activate company -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/companies/{id}/activate"
+        Permission="Organization.Company.Update" />
+
+    <!-- Deactivate company -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/companies/{id}/deactivate"
+        Permission="Organization.Company.Update" />
+
+    <!-- ==================== Department Management ==================== -->
+
+    <!-- List departments -->
+    <Route
+        Method="GET"
+        Path="/api/organization/departments"
+        Permission="Organization.Department.View" />
+
+    <!-- Get department by ID -->
+    <Route
+        Method="GET"
+        Path="/api/organization/departments/{id}"
+        Permission="Organization.Department.View" />
+
+    <!-- Create new department -->
+    <Route
+        Method="POST"
+        Path="/api/organization/departments"
+        Permission="Organization.Department.Create" />
+
+    <!-- Update department -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/departments/{id}"
+        Permission="Organization.Department.Update" />
+
+    <!-- Move department to new parent -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/departments/{id}/move"
+        Permission="Organization.Department.Update" />
+
+    <!-- Assign department manager -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/departments/{id}/manager"
+        Permission="Organization.Department.Update" />
+
+    <!-- Remove department manager -->
+    <Route
+        Method="DELETE"
+        Path="/api/organization/departments/{id}/manager"
+        Permission="Organization.Department.Update" />
+
+    <!-- Activate department -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/departments/{id}/activate"
+        Permission="Organization.Department.Update" />
+
+    <!-- Deactivate department -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/departments/{id}/deactivate"
+        Permission="Organization.Department.Update" />
+
+    <!-- ==================== Position Management ==================== -->
+
+    <!-- List positions -->
+    <Route
+        Method="GET"
+        Path="/api/organization/positions"
+        Permission="Organization.Position.View" />
+
+    <!-- Get position by ID -->
+    <Route
+        Method="GET"
+        Path="/api/organization/positions/{id}"
+        Permission="Organization.Position.View" />
+
+    <!-- Get positions by department -->
+    <Route
+        Method="GET"
+        Path="/api/organization/positions/by-department/{departmentId}"
+        Permission="Organization.Position.View" />
+
+    <!-- Create new position -->
+    <Route
+        Method="POST"
+        Path="/api/organization/positions"
+        Permission="Organization.Position.Create" />
+
+    <!-- Update position -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/positions/{id}"
+        Permission="Organization.Position.Update" />
+
+    <!-- Move position to new department -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/positions/{id}/move"
+        Permission="Organization.Position.Update" />
+
+    <!-- Activate position -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/positions/{id}/activate"
+        Permission="Organization.Position.Update" />
+
+    <!-- Deactivate position -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/positions/{id}/deactivate"
+        Permission="Organization.Position.Update" />
+
+    <!-- Close position -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/positions/{id}/close"
+        Permission="Organization.Position.Update" />
+
+  </ProtectedRoutes>
+
+</RouteSecurityMap>

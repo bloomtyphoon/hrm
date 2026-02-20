@@ -1,6 +1,9 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Personnel;
+using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
+using HRM.BuildingBlocks.Infrastructure.Security;
+using HRM.Modules.Personnel.Application;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
@@ -48,6 +51,25 @@ public static class DependencyInjection
 
         // Cross-module query (consumed by Organization and other modules)
         services.AddScoped<IPersonnelQuery, PersonnelQueryService>();
+
+        // Permission catalog source (loaded by IPermissionCatalogService at startup)
+        services.AddSingleton<IPermissionCatalogSource>(sp =>
+        {
+            var factory = sp.GetRequiredService<IPermissionCatalogSourceFactory>();
+            return factory.FromEmbeddedResource(
+                typeof(PersonnelApplicationAssemblyMarker).Assembly,
+                "HRM.Modules.Personnel.Application.Resources.PermissionCatalog.xml");
+        });
+
+        // Route security map source (loaded by RouteSecurityLoaderService at startup)
+        services.Configure<RouteSecurityOptions>(options =>
+        {
+            options.Sources.Add(new RouteSecurityMapSourceConfig
+            {
+                Assembly = typeof(DependencyInjection).Assembly,
+                ResourceName = "HRM.Modules.Personnel.Infrastructure.Security.RouteSecurityMap.xml"
+            });
+        });
 
         return services;
     }
