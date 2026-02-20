@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
@@ -14,10 +15,14 @@ public sealed class GetDirectReportsQueryHandler
     : IQueryHandler<GetDirectReportsQuery, PagedResult<EmployeeSummaryDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IExecutionContext _executionContext;
 
-    public GetDirectReportsQueryHandler(IPersonnelQueryContext context)
+    public GetDirectReportsQueryHandler(
+        IPersonnelQueryContext context,
+        IExecutionContext executionContext)
     {
         _context = context;
+        _executionContext = executionContext;
     }
 
     public async Task<PagedResult<EmployeeSummaryDto>> Handle(
@@ -27,6 +32,23 @@ public sealed class GetDirectReportsQueryHandler
         var query = _context.Employees
             .AsNoTracking()
             .Where(e => e.ManagerId == request.ManagerId);
+
+        // Employee accounts can only see direct reports within their own company
+        var accountType = _executionContext.GetClaimValue("AccountType");
+        if (accountType == "Employee")
+        {
+            var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
+            if (!Guid.TryParse(companyIdClaim, out var employeeCompanyId))
+                return new PagedResult<EmployeeSummaryDto>
+                {
+                    Items = new List<EmployeeSummaryDto>(),
+                    TotalCount = 0,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize
+                };
+
+            query = query.Where(e => e.PrimaryCompanyId == employeeCompanyId);
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 

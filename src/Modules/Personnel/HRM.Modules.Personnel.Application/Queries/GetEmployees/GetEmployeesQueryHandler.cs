@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
@@ -13,10 +14,14 @@ public sealed class GetEmployeesQueryHandler
     : IQueryHandler<GetEmployeesQuery, PagedResult<EmployeeSummaryDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IExecutionContext _executionContext;
 
-    public GetEmployeesQueryHandler(IPersonnelQueryContext context)
+    public GetEmployeesQueryHandler(
+        IPersonnelQueryContext context,
+        IExecutionContext executionContext)
     {
         _context = context;
+        _executionContext = executionContext;
     }
 
     public async Task<PagedResult<EmployeeSummaryDto>> Handle(
@@ -42,9 +47,25 @@ public sealed class GetEmployeesQueryHandler
             query = query.Where(e => e.Status == request.Status.Value);
         }
 
-        // Company filter
-        if (request.CompanyId.HasValue)
+        // Company filter — Employee accounts are always restricted to their own company
+        var accountType = _executionContext.GetClaimValue("AccountType");
+        if (accountType == "Employee")
         {
+            var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
+            if (!Guid.TryParse(companyIdClaim, out var employeeCompanyId))
+                return new PagedResult<EmployeeSummaryDto>
+                {
+                    Items = new List<EmployeeSummaryDto>(),
+                    TotalCount = 0,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize
+                };
+
+            query = query.Where(e => e.PrimaryCompanyId == employeeCompanyId);
+        }
+        else if (request.CompanyId.HasValue)
+        {
+            // System accounts respect the optional filter from the request
             query = query.Where(e => e.PrimaryCompanyId == request.CompanyId.Value);
         }
 

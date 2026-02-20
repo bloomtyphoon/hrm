@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,14 @@ public sealed class GetEmployeeAssignmentsQueryHandler
     : IQueryHandler<GetEmployeeAssignmentsQuery, List<AssignmentDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IExecutionContext _executionContext;
 
-    public GetEmployeeAssignmentsQueryHandler(IPersonnelQueryContext context)
+    public GetEmployeeAssignmentsQueryHandler(
+        IPersonnelQueryContext context,
+        IExecutionContext executionContext)
     {
         _context = context;
+        _executionContext = executionContext;
     }
 
     public async Task<List<AssignmentDto>> Handle(
@@ -25,6 +30,17 @@ public sealed class GetEmployeeAssignmentsQueryHandler
         var query = _context.EmployeeAssignments
             .AsNoTracking()
             .Where(a => a.EmployeeId == request.EmployeeId);
+
+        // Employee accounts can only see assignments that belong to their own company
+        var accountType = _executionContext.GetClaimValue("AccountType");
+        if (accountType == "Employee")
+        {
+            var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
+            if (!Guid.TryParse(companyIdClaim, out var employeeCompanyId))
+                return new List<AssignmentDto>();
+
+            query = query.Where(a => a.CompanyId == employeeCompanyId);
+        }
 
         if (request.Status.HasValue)
         {
