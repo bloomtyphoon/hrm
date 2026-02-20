@@ -5,6 +5,13 @@ using HRM.Modules.Organization.Domain.Repositories;
 
 namespace HRM.Modules.Organization.Application.Queries.GetPositionsByCompany;
 
+/// <summary>
+/// Handler for GetPositionsByCompanyQuery.
+///
+/// Access rules:
+/// - System: can query positions of any company.
+/// - Employee: can only query positions of their own assigned company (from JWT CompanyId claim).
+/// </summary>
 internal sealed class GetPositionsByCompanyQueryHandler
     : IQueryHandler<GetPositionsByCompanyQuery, IReadOnlyList<PositionDto>>
 {
@@ -23,17 +30,9 @@ internal sealed class GetPositionsByCompanyQueryHandler
         GetPositionsByCompanyQuery request,
         CancellationToken cancellationToken)
     {
-        // Employee accounts can only query positions of their own company
-        var accountType = _executionContext.GetClaimValue("AccountType");
-        if (accountType == "Employee")
-        {
-            var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
-            if (!Guid.TryParse(companyIdClaim, out var employeeCompanyId))
-                return Array.Empty<PositionDto>();
-
-            if (request.CompanyId != employeeCompanyId)
-                return Array.Empty<PositionDto>();
-        }
+        // Security boundary: Employee can only access their own company's positions
+        if (!CanAccessCompany(request.CompanyId))
+            return Array.Empty<PositionDto>();
 
         var positions = await _positionRepository.GetByCompanyIdAsync(request.CompanyId, cancellationToken);
 
@@ -51,5 +50,24 @@ internal sealed class GetPositionsByCompanyQueryHandler
             CreatedAtUtc: p.CreatedAtUtc,
             ModifiedAtUtc: p.ModifiedAtUtc
         )).ToList();
+    }
+
+    private bool IsEmployeeAccount() =>
+        _executionContext.GetClaimValue("AccountType") == "Employee";
+
+    private Guid? GetEmployeeCompanyId()
+    {
+        var claim = _executionContext.GetClaimValue("CompanyId");
+        return Guid.TryParse(claim, out var id) ? id : null;
+    }
+
+    /// <summary>
+    /// System accounts can access any company.
+    /// Employee accounts can only access their assigned company.
+    /// </summary>
+    private bool CanAccessCompany(Guid companyId)
+    {
+        if (!IsEmployeeAccount()) return true;
+        return GetEmployeeCompanyId() == companyId;
     }
 }

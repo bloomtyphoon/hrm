@@ -3,13 +3,18 @@ using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Application.Queries.GetEmployees;
+using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Personnel.Application.Queries.GetDirectReports;
 
 /// <summary>
 /// Handler for GetDirectReportsQuery.
-/// Returns paginated list of direct reports for a given manager.
+///
+/// Access rules:
+/// - System: sees all direct reports of the given manager.
+/// - Employee: sees ONLY direct reports within their own company (from JWT CompanyId claim).
+///   No valid claim → no results (query.Where(_ => false)).
 /// </summary>
 public sealed class GetDirectReportsQueryHandler
     : IQueryHandler<GetDirectReportsQuery, PagedResult<EmployeeSummaryDto>>
@@ -33,22 +38,9 @@ public sealed class GetDirectReportsQueryHandler
             .AsNoTracking()
             .Where(e => e.ManagerId == request.ManagerId);
 
-        // Employee accounts can only see direct reports within their own company
-        var accountType = _executionContext.GetClaimValue("AccountType");
-        if (accountType == "Employee")
-        {
-            var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
-            if (!Guid.TryParse(companyIdClaim, out var employeeCompanyId))
-                return new PagedResult<EmployeeSummaryDto>
-                {
-                    Items = new List<EmployeeSummaryDto>(),
-                    TotalCount = 0,
-                    PageNumber = request.PageNumber,
-                    PageSize = request.PageSize
-                };
-
-            query = query.Where(e => e.PrimaryCompanyId == employeeCompanyId);
-        }
+        // Company scope — Employee accounts restricted to their own company
+        if (IsEmployeeAccount())
+            query = ApplyEmployeeCompanyScope(query);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -84,4 +76,20 @@ public sealed class GetDirectReportsQueryHandler
             PageSize = request.PageSize
         };
     }
+
+    /// <summary>
+    /// Employee account: ONLY sees direct reports within their own company.
+    /// No valid CompanyId claim → no results (query.Where(_ => false)).
+    /// </summary>
+    private IQueryable<Employee> ApplyEmployeeCompanyScope(IQueryable<Employee> query)
+    {
+        var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
+        if (!Guid.TryParse(companyIdClaim, out var companyId))
+            return query.Where(_ => false);
+
+        return query.Where(e => e.PrimaryCompanyId == companyId);
+    }
+
+    private bool IsEmployeeAccount() =>
+        _executionContext.GetClaimValue("AccountType") == "Employee";
 }

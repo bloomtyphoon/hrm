@@ -1,13 +1,18 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
+using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Personnel.Application.Queries.GetEmployeeById;
 
 /// <summary>
 /// Handler for GetEmployeeByIdQuery.
-/// Returns full employee detail or null if not found.
+///
+/// Access rules:
+/// - System: can access any employee by ID.
+/// - Employee: can only access employees from their own company (from JWT CompanyId claim).
+///   No valid claim → returns null (no results).
 /// </summary>
 public sealed class GetEmployeeByIdQueryHandler
     : IQueryHandler<GetEmployeeByIdQuery, EmployeeDetailDto?>
@@ -31,16 +36,9 @@ public sealed class GetEmployeeByIdQueryHandler
             .AsNoTracking()
             .Where(e => e.Id == request.EmployeeId);
 
-        // Employee accounts can only access employees from their own company
-        var accountType = _executionContext.GetClaimValue("AccountType");
-        if (accountType == "Employee")
-        {
-            var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
-            if (!Guid.TryParse(companyIdClaim, out var employeeCompanyId))
-                return null;
-
-            query = query.Where(e => e.PrimaryCompanyId == employeeCompanyId);
-        }
+        // Company scope — Employee accounts restricted to their own company
+        if (IsEmployeeAccount())
+            query = ApplyEmployeeCompanyScope(query);
 
         return await query
             .Select(e => new EmployeeDetailDto
@@ -65,4 +63,20 @@ public sealed class GetEmployeeByIdQueryHandler
             })
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Employee account: ONLY sees employees in their own company.
+    /// No valid CompanyId claim → no results (query.Where(_ => false)).
+    /// </summary>
+    private IQueryable<Employee> ApplyEmployeeCompanyScope(IQueryable<Employee> query)
+    {
+        var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
+        if (!Guid.TryParse(companyIdClaim, out var companyId))
+            return query.Where(_ => false);
+
+        return query.Where(e => e.PrimaryCompanyId == companyId);
+    }
+
+    private bool IsEmployeeAccount() =>
+        _executionContext.GetClaimValue("AccountType") == "Employee";
 }
