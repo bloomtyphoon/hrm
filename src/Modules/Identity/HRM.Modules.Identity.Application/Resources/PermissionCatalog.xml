@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionCatalog Module="Identity" Version="2.0" xmlns="http://hrm.system/permissions">
+  <!--
+    Identity Module Permission Catalog
+    Defines all permissions for identity management (accounts, roles)
+
+    This file is embedded as a resource and loaded via IPermissionCatalogSourceFactory
+
+    Scope Hierarchy (matches DataScopeLevel enum):
+    - None (0): No access - explicit deny
+    - Self (1): Only own data
+    - EmployeeSet (2): Manager's subordinates (hierarchical scope)
+    - Position (3): Same position group
+    - Department (4): Same department
+    - Company (5): Whole company access
+    - Global (6): System-wide access (super admin)
+
+    Two categories:
+    1. Dimension-based: Company, Department, Position (static org structure)
+    2. Set-based: Self, EmployeeSet (dynamic, resolved at runtime by Organization module)
+  -->
+
+  <!-- Scope Definitions (reusable) - matches DataScopeLevel enum -->
+  <ScopeDefinitions>
+    <Scope Name="None" Level="0" DisplayName="Không có quyền" />
+    <Scope Name="Self" Level="1" DisplayName="Chỉ bản thân" />
+    <Scope Name="EmployeeSet" Level="2" DisplayName="Nhân viên cấp dưới" />
+    <Scope Name="Position" Level="3" DisplayName="Cùng vị trí" />
+    <Scope Name="Department" Level="4" DisplayName="Cùng phòng ban" />
+    <Scope Name="Company" Level="5" DisplayName="Toàn công ty" />
+    <Scope Name="Global" Level="6" DisplayName="Toàn hệ thống" />
+  </ScopeDefinitions>
+
+  <Permissions>
+
+    <Module name="Identity" displayName="Quản lý danh tính">
+
+      <!-- Account Entity - Unified authentication accounts -->
+      <Entity name="Account" displayName="Tài khoản">
+
+        <Action name="View" displayName="Xem tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="Delete" displayName="Xóa tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
+
+        <Action name="ResetPassword" displayName="Đặt lại mật khẩu" defaultScope="Self">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="AssignRole" displayName="Gán vai trò cho tài khoản" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+      <!-- Role Entity -->
+      <Entity name="Role" displayName="Vai trò">
+
+        <Action name="View" displayName="Xem vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Delete" displayName="Xóa vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="AssignPermission" displayName="Gán quyền cho vai trò" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+      <!-- SystemProfile Entity -->
+      <Entity name="SystemProfile" displayName="Hồ sơ hệ thống">
+
+        <Action name="View" displayName="Xem hồ sơ hệ thống" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo hồ sơ hệ thống" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật hồ sơ hệ thống" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="ManageSuperAdmin" displayName="Quản lý quyền Super Admin" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+      <!-- EmployeeProfile Entity -->
+      <Entity name="EmployeeProfile" displayName="Hồ sơ nhân viên">
+
+        <Action name="View" displayName="Xem hồ sơ nhân viên" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo hồ sơ nhân viên" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật hồ sơ nhân viên" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Department" displayName="Cùng phòng ban" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+    </Module>
+
+  </Permissions>
+
+</PermissionCatalog>

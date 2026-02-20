@@ -1,0 +1,102 @@
+@model CreateRoleRequest
+
+@{
+    ViewData["Title"] = "Create Role";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Roles</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Create</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Role</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <input type="hidden" asp-for="CompanyId" />
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" placeholder="Enter role name" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Enter role description (optional)"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="RoleType" class="form-label"></label>
+                        <select asp-for="RoleType" class="form-select">
+                            <option value="Employee">Employee - Scope-restricted access</option>
+                            <option value="System">System - Global access</option>
+                        </select>
+                        <span asp-validation-for="RoleType" class="text-danger"></span>
+                        <div class="form-text">
+                            <strong>System roles</strong> have global access across all data.
+                            <strong>Employee roles</strong> are restricted by scope (department, position, etc.).
+                        </div>
+                    </div>
+
+                    @if (Model.CompanyId.HasValue)
+                    {
+                        <div class="mb-3">
+                            <div class="alert alert-info py-2 mb-0">
+                                <i class="bi bi-building me-1"></i>
+                                This role will be scoped to the currently selected company.
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <div class="alert alert-warning py-2 mb-0">
+                                <i class="bi bi-globe me-1"></i>
+                                No company selected. This role will be created as a <strong>global</strong> role.
+                            </div>
+                        </div>
+                    }
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Create Role
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-info-circle me-2"></i>Role Types</h6>
+                <dl class="mb-0">
+                    <dt>System Roles</dt>
+                    <dd class="mb-3">For administrators and operators who need access to all data regardless of organizational boundaries. Examples: System Administrator, HR Manager.</dd>
+
+                    <dt>Employee Roles</dt>
+                    <dd>For regular employees whose access is limited by their position in the organization. Access is scoped by department, position, or other organizational units.</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

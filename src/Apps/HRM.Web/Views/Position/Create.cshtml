@@ -1,0 +1,81 @@
+@model CreatePositionViewModel
+
+@{
+    ViewData["Title"] = "Create Position";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Create New Position</h2>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <form asp-action="Create" method="post" class="needs-validation" novalidate>
+            <input type="hidden" asp-for="Form.CompanyId" />
+
+            <div class="mb-3">
+                <label asp-for="Form.Code" class="form-label"></label>
+                <input asp-for="Form.Code" class="form-control" placeholder="Enter position code" />
+                <span asp-validation-for="Form.Code" class="text-danger"></span>
+                <div class="form-text">
+                    Position code must be 1-50 characters (letters, numbers, underscores, hyphens).
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Form.Title" class="form-label"></label>
+                <input asp-for="Form.Title" class="form-control" placeholder="Enter position title" />
+                <span asp-validation-for="Form.Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Form.Description" class="form-label"></label>
+                <textarea asp-for="Form.Description" class="form-control" rows="3" placeholder="Enter position description (optional)"></textarea>
+                <span asp-validation-for="Form.Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Form.DepartmentId" class="form-label"></label>
+                <select asp-for="Form.DepartmentId" class="form-select">
+                    <option value="">-- No Department --</option>
+                    @foreach (var dept in Model.AvailableDepartments)
+                    {
+                        <option value="@dept.Id">@(new string('\u2003', dept.Level))@dept.Name (@dept.Code)</option>
+                    }
+                </select>
+                <div class="form-text">Optional. Assign this position to a department.</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Form.PositionLevel" class="form-label"></label>
+                    <input asp-for="Form.PositionLevel" class="form-control" type="number" min="1" max="20" />
+                    <span asp-validation-for="Form.PositionLevel" class="text-danger"></span>
+                    <div class="form-text">1 = highest level, 20 = lowest.</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Form.MaxHeadcount" class="form-label"></label>
+                    <input asp-for="Form.MaxHeadcount" class="form-control" type="number" min="1" placeholder="Unlimited" />
+                    <span asp-validation-for="Form.MaxHeadcount" class="text-danger"></span>
+                    <div class="form-text">Leave empty for unlimited.</div>
+                </div>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input asp-for="Form.IsManagement" class="form-check-input" />
+                <label asp-for="Form.IsManagement" class="form-check-label">This is a management position</label>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-person-badge me-1"></i>Create Position
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

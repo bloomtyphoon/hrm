@@ -1,11 +1,49 @@
 <Solution>
-  <Folder Name="Database">
-    <Folder Name="Organization">
-      <File Path="src\Database\Organization\001_CreateCompaniesTable.sql" />
-      <File Path="src\Database\Organization\002_CreateDepartmentsTable.sql" />
-    </Folder>
-    <Folder Name="Personnel">
-      <File Path="src\Database\Personnel\001_CreateEmployeesTable.sql" />
-    </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Apps/">
+    <Project Path="src/Apps/HRM.Api/HRM.Api.csproj" Id="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" />
+    <Project Path="src/Apps/HRM.Web/HRM.Web.csproj" Id="f2a3b4c5-d6e7-4f8a-9b0c-1d2e3f4a5b6c" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/HRM.BuildingBlocks.Application/HRM.BuildingBlocks.Application.csproj" Id="a05d7620-d229-414c-becb-d78913f27d66" />
+    <Project Path="src/BuildingBlocks/HRM.BuildingBlocks.Domain/HRM.BuildingBlocks.Domain.csproj" Id="8cd342a9-f28d-4bd4-a410-6b375e14455a" />
+    <Project Path="src/BuildingBlocks/HRM.BuildingBlocks.Infrastructure/HRM.BuildingBlocks.Infrastructure.csproj" Id="c3e4f5a6-b7c8-4d9e-af10-1b2c3d4e5f67" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/HRM.Modules.Identity.Domain/HRM.Modules.Identity.Domain.csproj" Id="f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c" />
+    <Project Path="src/Modules/Identity/HRM.Modules.Identity.IntegrationEvents/HRM.Modules.Identity.IntegrationEvents.csproj" Id="e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d" />
+    <Project Path="src/Modules/Identity/HRM.Modules.Identity.Application/HRM.Modules.Identity.Application.csproj" Id="d3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e" />
+    <Project Path="src/Modules/Identity/HRM.Modules.Identity.Infrastructure/HRM.Modules.Identity.Infrastructure.csproj" Id="c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f" />
+    <Project Path="src/Modules/Identity/HRM.Modules.Identity.Api/HRM.Modules.Identity.Api.csproj" Id="b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9e" />
+  </Folder>
+  <Folder Name="/src/Modules/Organization/">
+    <Project Path="src/Modules/Organization/HRM.Modules.Organization.Domain/HRM.Modules.Organization.Domain.csproj" Id="a1b2c3d4-0001-4000-8000-000000000001" />
+    <Project Path="src/Modules/Organization/HRM.Modules.Organization.IntegrationEvents/HRM.Modules.Organization.IntegrationEvents.csproj" Id="a1b2c3d4-0002-4000-8000-000000000002" />
+    <Project Path="src/Modules/Organization/HRM.Modules.Organization.Application/HRM.Modules.Organization.Application.csproj" Id="a1b2c3d4-0003-4000-8000-000000000003" />
+    <Project Path="src/Modules/Organization/HRM.Modules.Organization.Infrastructure/HRM.Modules.Organization.Infrastructure.csproj" Id="a1b2c3d4-0004-4000-8000-000000000004" />
+    <Project Path="src/Modules/Organization/HRM.Modules.Organization.Api/HRM.Modules.Organization.Api.csproj" Id="a1b2c3d4-0005-4000-8000-000000000005" />
+  </Folder>
+  <Folder Name="/src/Modules/Personnel/">
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Domain/HRM.Modules.Personnel.Domain.csproj" Id="b1b2c3d4-0001-4000-8000-000000000001" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.IntegrationEvents/HRM.Modules.Personnel.IntegrationEvents.csproj" Id="b1b2c3d4-0002-4000-8000-000000000002" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Application/HRM.Modules.Personnel.Application.csproj" Id="b1b2c3d4-0003-4000-8000-000000000003" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Infrastructure/HRM.Modules.Personnel.Infrastructure.csproj" Id="b1b2c3d4-0004-4000-8000-000000000004" />
+    <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Api/HRM.Modules.Personnel.Api.csproj" Id="b1b2c3d4-0005-4000-8000-000000000005" />
+  </Folder>
+  <Folder Name="/src/Database/" />
+  <Folder Name="/src/Database/Identity/">
+    <File Path="src/Database/Identity/001_CreateAccountsTable.sql" />
+    <File Path="src/Database/Identity/002_CreateRefreshTokensTable.sql" />
+    <File Path="src/Database/Identity/003_CreateRolesAndPermissionsTable.sql" />
+    <File Path="src/Database/Identity/004_CreateAccountRolesTable.sql" />
+    <File Path="src/Database/Identity/005_SeedAdminRoleAndPermissions.sql" />
+    <File Path="src/Database/Identity/006_CreateOutboxMessagesTable.sql" />
+    <File Path="src/Database/Identity/007_CreateSystemProfilesTable.sql" />
+    <File Path="src/Database/Identity/008_CreateEmployeeProfilesTable.sql" />
+    <File Path="src/Database/Identity/README.md" />
   </Folder>
 </Solution>

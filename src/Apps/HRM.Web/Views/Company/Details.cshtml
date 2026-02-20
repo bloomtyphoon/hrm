@@ -1,0 +1,116 @@
+@model CompanyResponse
+
+@{
+    ViewData["Title"] = $"Company - {Model.Name}";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@Model.Name</h2>
+            @{
+                var badgeClass = Model.Status switch
+                {
+                    "Active" => "bg-success",
+                    "Inactive" => "bg-secondary",
+                    "Pending" => "bg-warning text-dark",
+                    _ => "bg-light text-dark"
+                };
+            }
+            <span class="badge @badgeClass fs-6">@Model.Status</span>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-building me-1"></i>Company Details
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Company ID</dt>
+                    <dd class="col-sm-9"><code>@Model.Id</code></dd>
+
+                    <dt class="col-sm-3">Code</dt>
+                    <dd class="col-sm-9"><code>@Model.Code</code></dd>
+
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9">@Model.Name</dd>
+
+                    <dt class="col-sm-3">Tax ID</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.TaxId))
+                        {
+                            @Model.TaxId
+                        }
+                        else
+                        {
+                            <em>Not specified</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Status</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge @badgeClass">@Model.Status</span>
+                    </dd>
+
+                    <dt class="col-sm-3">Created</dt>
+                    <dd class="col-sm-9">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                    <dt class="col-sm-3">Last Modified</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.ModifiedAtUtc.HasValue)
+                        {
+                            @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            <text> UTC</text>
+                        }
+                        else
+                        {
+                            <em>Never modified</em>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to List
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            @if (Model.Status != "Active")
+            {
+                <form asp-action="Activate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>Activate
+                    </button>
+                </form>
+            }
+            @if (Model.Status == "Active")
+            {
+                <form asp-action="Deactivate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-pause-circle me-1"></i>Deactivate
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

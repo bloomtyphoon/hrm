@@ -1,0 +1,191 @@
+@model RoleDetailViewModel
+
+@{
+    ViewData["Title"] = $"Permissions: {Model.Role.Name}";
+    var existingPermissions = Model.Role.Permissions
+        .Select(p => p.PermissionKey)
+        .ToHashSet();
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Roles</a></li>
+        <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Role.Id">@Model.Role.Name</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Permissions</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Manage Permissions</h2>
+        <p class="text-muted mb-0">Role: <strong>@Model.Role.Name</strong> (@Model.Role.RoleType)</p>
+    </div>
+    <a asp-action="Details" asp-route-id="@Model.Role.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Role
+    </a>
+</div>
+
+@if (Model.PermissionCatalog == null || Model.PermissionCatalog.Modules.Count == 0)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Permission catalog is not available. Please try again later.
+    </div>
+}
+else
+{
+    <form asp-action="Permissions" asp-route-id="@Model.Role.Id" method="post" id="permissionsForm">
+        @Html.AntiForgeryToken()
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Select Permissions</h6>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll()">Select All</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">Deselect All</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="catalogAccordion">
+                    @{
+                        int permissionIndex = 0;
+                    }
+                    @foreach (var module in Model.PermissionCatalog.Modules)
+                    {
+                        var moduleId = $"catalog-{module.Name}";
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading-@moduleId">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@moduleId">
+                                    <strong>@(module.DisplayName ?? module.Name)</strong>
+                                    @if (!string.IsNullOrEmpty(module.Description))
+                                    {
+                                        <small class="text-muted ms-2">- @module.Description</small>
+                                    }
+                                </button>
+                            </h2>
+                            <div id="collapse-@moduleId" class="accordion-collapse collapse" data-bs-parent="#catalogAccordion">
+                                <div class="accordion-body">
+                                    @foreach (var entity in module.Entities)
+                                    {
+                                        <div class="mb-4">
+                                            <h6 class="border-bottom pb-2 mb-3">
+                                                @(entity.DisplayName ?? entity.Name)
+                                                @if (!string.IsNullOrEmpty(entity.Description))
+                                                {
+                                                    <small class="text-muted fw-normal ms-2">- @entity.Description</small>
+                                                }
+                                            </h6>
+                                            <div class="row">
+                                                @foreach (var action in entity.Actions)
+                                                {
+                                                    var permissionKey = $"{module.Name}.{entity.Name}.{action.Name}";
+                                                    var isChecked = existingPermissions.Contains(permissionKey);
+
+                                                    <div class="col-md-4 mb-2">
+                                                        <div class="form-check">
+                                                            <input type="checkbox"
+                                                                   class="form-check-input permission-checkbox"
+                                                                   id="perm-@permissionIndex"
+                                                                   name="Permissions[@permissionIndex].Module"
+                                                                   value="@module.Name"
+                                                                   data-entity="@entity.Name"
+                                                                   data-action="@action.Name"
+                                                                   @(isChecked ? "checked" : "") />
+                                                            <input type="hidden" name="Permissions[@permissionIndex].Entity" value="@entity.Name" disabled />
+                                                            <input type="hidden" name="Permissions[@permissionIndex].Action" value="@action.Name" disabled />
+                                                            <label class="form-check-label" for="perm-@permissionIndex">
+                                                                <strong>@(action.DisplayName ?? action.Name)</strong>
+                                                                @if (!string.IsNullOrEmpty(action.Description))
+                                                                {
+                                                                    <br /><small class="text-muted">@action.Description</small>
+                                                                }
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    permissionIndex++;
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>Save Permissions
+            </button>
+            <a asp-action="Details" asp-route-id="@Model.Role.Id" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Cancel
+            </a>
+        </div>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        // Handle form submission - only include checked permissions
+        document.getElementById('permissionsForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var form = this;
+            var checkboxes = form.querySelectorAll('.permission-checkbox:checked');
+            var permissions = [];
+
+            checkboxes.forEach(function (cb, index) {
+                permissions.push({
+                    module: cb.value,
+                    entity: cb.dataset.entity,
+                    action: cb.dataset.action
+                });
+            });
+
+            // Create a new form with the proper structure
+            var newForm = document.createElement('form');
+            newForm.method = 'POST';
+            newForm.action = form.action;
+
+            // Add anti-forgery token
+            var token = form.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                newForm.appendChild(token.cloneNode());
+            }
+
+            // Add permissions as proper indexed form fields
+            permissions.forEach(function (perm, index) {
+                var moduleInput = document.createElement('input');
+                moduleInput.type = 'hidden';
+                moduleInput.name = 'Permissions[' + index + '].Module';
+                moduleInput.value = perm.module;
+                newForm.appendChild(moduleInput);
+
+                var entityInput = document.createElement('input');
+                entityInput.type = 'hidden';
+                entityInput.name = 'Permissions[' + index + '].Entity';
+                entityInput.value = perm.entity;
+                newForm.appendChild(entityInput);
+
+                var actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'Permissions[' + index + '].Action';
+                actionInput.value = perm.action;
+                newForm.appendChild(actionInput);
+            });
+
+            document.body.appendChild(newForm);
+            newForm.submit();
+        });
+
+        function selectAll() {
+            document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAll() {
+            document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+        }
+    </script>
+}

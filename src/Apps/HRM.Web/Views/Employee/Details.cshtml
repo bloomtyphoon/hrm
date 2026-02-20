@@ -1,0 +1,160 @@
+@model EmployeeDetailResponse
+
+@{
+    ViewData["Title"] = $"Employee - {Model.FullName}";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@Model.FullName</h2>
+            @{
+                var badgeClass = Model.Status switch
+                {
+                    "Active" => "bg-success",
+                    "OnLeave" => "bg-warning text-dark",
+                    "Terminated" => "bg-danger",
+                    "PendingOnboarding" => "bg-info",
+                    _ => "bg-light text-dark"
+                };
+            }
+            <span class="badge @badgeClass fs-6">@Model.Status</span>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-person me-1"></i>Employee Details
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Employee ID</dt>
+                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
+
+                    <dt class="col-sm-4">Employee Code</dt>
+                    <dd class="col-sm-8"><code>@Model.EmployeeCode</code></dd>
+
+                    <dt class="col-sm-4">Full Name</dt>
+                    <dd class="col-sm-8">@Model.FullName</dd>
+
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8"><a href="mailto:@Model.Email">@Model.Email</a></dd>
+
+                    <dt class="col-sm-4">Phone</dt>
+                    <dd class="col-sm-8">@(Model.Phone ?? "N/A")</dd>
+
+                    <dt class="col-sm-4">Date of Birth</dt>
+                    <dd class="col-sm-8">@(Model.DateOfBirth?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+
+                    <dt class="col-sm-4">Hire Date</dt>
+                    <dd class="col-sm-8">@Model.HireDate.ToString("yyyy-MM-dd")</dd>
+
+                    @if (Model.TerminationDate.HasValue)
+                    {
+                        <dt class="col-sm-4">Termination Date</dt>
+                        <dd class="col-sm-8"><span class="text-danger">@Model.TerminationDate.Value.ToString("yyyy-MM-dd")</span></dd>
+                    }
+
+                    <dt class="col-sm-4">Manager</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.ManagerId.HasValue)
+                        {
+                            <a asp-action="Details" asp-route-id="@Model.ManagerId">@Model.ManagerId</a>
+                        }
+                        else
+                        {
+                            <em>Not assigned</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Primary Company</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.PrimaryCompanyId.HasValue)
+                        {
+                            <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.PrimaryCompanyId">@Model.PrimaryCompanyId</a>
+                        }
+                        else
+                        {
+                            <em>Not assigned</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Primary Department</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.PrimaryDepartmentId.HasValue)
+                        {
+                            <a asp-controller="Department" asp-action="Details" asp-route-id="@Model.PrimaryDepartmentId">@Model.PrimaryDepartmentId</a>
+                        }
+                        else
+                        {
+                            <em>Not assigned</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Primary Position</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.PrimaryPositionId.HasValue)
+                        {
+                            <a asp-controller="Position" asp-action="Details" asp-route-id="@Model.PrimaryPositionId">@Model.PrimaryPositionId</a>
+                        }
+                        else
+                        {
+                            <em>Not assigned</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8"><span class="badge @badgeClass">@Model.Status</span></dd>
+
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                    <dt class="col-sm-4">Last Modified</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.ModifiedAtUtc.HasValue)
+                        {
+                            @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            <text> UTC</text>
+                        }
+                        else
+                        {
+                            <em>Never modified</em>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2 flex-wrap">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to List
+            </a>
+            @if (Model.Status != "Terminated")
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+                <form asp-action="Terminate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to terminate this employee? This will end all active assignments.')">
+                        <i class="bi bi-person-x me-1"></i>Terminate
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
