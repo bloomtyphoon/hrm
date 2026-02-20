@@ -1,6 +1,8 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Application.Queries.GetEmployees;
 using HRM.Modules.Personnel.Domain.Entities;
@@ -11,22 +13,25 @@ namespace HRM.Modules.Personnel.Application.Queries.GetDirectReports;
 /// <summary>
 /// Handler for GetDirectReportsQuery.
 ///
-/// Access rules:
-/// - System: sees all direct reports of the given manager.
-/// - Employee: sees ONLY direct reports within their own company (from JWT CompanyId claim).
-///   No valid claim → no results (query.Where(_ => false)).
+/// Access rules (resolved via IDataScopeService):
+/// - Global (System): sees all direct reports of the given manager.
+/// - Company scope: sees only direct reports within assigned companies (multi-company support).
+/// - None: no results.
 /// </summary>
 public sealed class GetDirectReportsQueryHandler
     : IQueryHandler<GetDirectReportsQuery, PagedResult<EmployeeSummaryDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public GetDirectReportsQueryHandler(
         IPersonnelQueryContext context,
+        IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _context = context;
+        _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
 
@@ -34,13 +39,14 @@ public sealed class GetDirectReportsQueryHandler
         GetDirectReportsQuery request,
         CancellationToken cancellationToken)
     {
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, "Personnel.Employee.View", cancellationToken);
+
         var query = _context.Employees
             .AsNoTracking()
             .Where(e => e.ManagerId == request.ManagerId);
 
-        // Company scope — Employee accounts restricted to their own company
-        if (IsEmployeeAccount())
-            query = ApplyEmployeeCompanyScope(query);
+        query = ApplyScopeRule(query, rule);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -77,19 +83,24 @@ public sealed class GetDirectReportsQueryHandler
         };
     }
 
-    /// <summary>
-    /// Employee account: ONLY sees direct reports within their own company.
-    /// No valid CompanyId claim → no results (query.Where(_ => false)).
-    /// </summary>
-    private IQueryable<Employee> ApplyEmployeeCompanyScope(IQueryable<Employee> query)
+    private static IQueryable<Employee> ApplyScopeRule(IQueryable<Employee> query, DataScopeRule rule)
     {
-        var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
-        if (!Guid.TryParse(companyIdClaim, out var companyId))
-            return query.Where(_ => false);
-
-        return query.Where(e => e.PrimaryCompanyId == companyId);
+        return rule.Level switch
+        {
+            DataScopeLevel.Global => query,
+            DataScopeLevel.None => query.Where(_ => false),
+            DataScopeLevel.Self => query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
+            DataScopeLevel.EmployeeSet => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
+            DataScopeLevel.Company => BuildCompanyFilter(query, rule.DimensionIds),
+            _ => query.Where(_ => false)
+        };
     }
 
-    private bool IsEmployeeAccount() =>
-        _executionContext.GetClaimValue("AccountType") == "Employee";
+    private static IQueryable<Employee> BuildCompanyFilter(
+        IQueryable<Employee> query,
+        IReadOnlyCollection<Guid> companyIds)
+    {
+        var ids = companyIds.ToList();
+        return query.Where(e => e.PrimaryCompanyId != null && ids.Contains(e.PrimaryCompanyId.Value));
+    }
 }

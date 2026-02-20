@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Personnel;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
@@ -44,6 +45,9 @@ public static class DependencyInjection
         // Repositories
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IEmployeeAssignmentQuery, EmployeeAssignmentQuery>();
+
+        // Cross-module query (consumed by Organization and other modules)
+        services.AddScoped<IPersonnelQuery, PersonnelQueryService>();
 
         return services;
     }

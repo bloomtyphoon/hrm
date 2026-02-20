@@ -1,10 +1,12 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Organization;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.Modules.Organization.Domain.Repositories;
 using HRM.Modules.Organization.Infrastructure.Persistence;
 using HRM.Modules.Organization.Infrastructure.Persistence.Repositories;
+using HRM.Modules.Organization.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using HRM.BuildingBlocks.Application.Abstractions.Organization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HRM.Modules.Organization.Infrastructure;
@@ -40,6 +42,9 @@ public static class DependencyInjection
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IPositionRepository, PositionRepository>();
+
+        // Data scope service (uses IScopeGrantProvider + IPersonnelQuery)
+        services.AddScoped<IDataScopeService, OrganizationDataScopeService>();
 
         // Cross-module query interface (to be implemented)
         // services.AddScoped<IOrganizationQuery, OrganizationQuery>();

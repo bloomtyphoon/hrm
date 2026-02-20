@@ -1,5 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Organization.Application.DTOs;
 using HRM.Modules.Organization.Domain.Entities;
 using HRM.Modules.Organization.Domain.Repositories;
@@ -9,52 +11,41 @@ namespace HRM.Modules.Organization.Application.Queries.GetCompanies;
 /// <summary>
 /// Handler for GetCompaniesQuery.
 ///
-/// Access rules:
-/// - System: sees all companies. ActiveOnly filter is respected.
-/// - Employee: sees ONLY their assigned company (from JWT CompanyId claim).
-///
-/// Filtering layers:
-/// 1. Account type branch — System vs Employee diverge into separate code paths
-/// 2. System path: optional ActiveOnly filter via repository
-/// 3. Employee path: single company resolved from JWT claim
+/// Access rules (resolved via IDataScopeService):
+/// - Global (System): sees all companies. ActiveOnly filter is respected.
+/// - Company scope: sees all assigned companies (multi-company support).
+/// - None: empty result.
 /// </summary>
 internal sealed class GetCompaniesQueryHandler : IQueryHandler<GetCompaniesQuery, IReadOnlyList<CompanyDto>>
 {
     private readonly ICompanyRepository _companyRepository;
+    private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public GetCompaniesQueryHandler(
         ICompanyRepository companyRepository,
+        IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _companyRepository = companyRepository;
+        _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
 
     public async Task<IReadOnlyList<CompanyDto>> Handle(GetCompaniesQuery request, CancellationToken cancellationToken)
     {
-        return IsEmployeeAccount()
-            ? await GetEmployeeVisibleCompaniesAsync(cancellationToken)
-            : await GetSystemCompaniesAsync(request, cancellationToken);
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, "Organization.Company.View", cancellationToken);
+
+        return rule.Level switch
+        {
+            DataScopeLevel.Global => await GetAllCompaniesAsync(request, cancellationToken),
+            DataScopeLevel.Company => await GetAssignedCompaniesAsync(rule.DimensionIds, cancellationToken),
+            _ => Array.Empty<CompanyDto>()
+        };
     }
 
-    /// <summary>
-    /// Employee account: sees only their assigned company from JWT CompanyId claim.
-    /// </summary>
-    private async Task<IReadOnlyList<CompanyDto>> GetEmployeeVisibleCompaniesAsync(CancellationToken cancellationToken)
-    {
-        var companyId = GetEmployeeCompanyId();
-        if (!companyId.HasValue)
-            return Array.Empty<CompanyDto>();
-
-        var company = await _companyRepository.GetByIdAsync(companyId.Value, cancellationToken);
-        return company is null ? Array.Empty<CompanyDto>() : [MapToDto(company)];
-    }
-
-    /// <summary>
-    /// System account: sees all companies, with optional ActiveOnly filter.
-    /// </summary>
-    private async Task<IReadOnlyList<CompanyDto>> GetSystemCompaniesAsync(
+    private async Task<IReadOnlyList<CompanyDto>> GetAllCompaniesAsync(
         GetCompaniesQuery request,
         CancellationToken cancellationToken)
     {
@@ -65,13 +56,18 @@ internal sealed class GetCompaniesQueryHandler : IQueryHandler<GetCompaniesQuery
         return companies.Select(MapToDto).ToList();
     }
 
-    private bool IsEmployeeAccount() =>
-        _executionContext.GetClaimValue("AccountType") == "Employee";
-
-    private Guid? GetEmployeeCompanyId()
+    private async Task<IReadOnlyList<CompanyDto>> GetAssignedCompaniesAsync(
+        IReadOnlyCollection<Guid> companyIds,
+        CancellationToken cancellationToken)
     {
-        var claim = _executionContext.GetClaimValue("CompanyId");
-        return Guid.TryParse(claim, out var id) ? id : null;
+        var results = new List<CompanyDto>();
+        foreach (var companyId in companyIds)
+        {
+            var company = await _companyRepository.GetByIdAsync(companyId, cancellationToken);
+            if (company is not null)
+                results.Add(MapToDto(company));
+        }
+        return results;
     }
 
     private static CompanyDto MapToDto(Company company) => new(

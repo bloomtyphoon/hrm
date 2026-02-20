@@ -1,5 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -9,22 +11,25 @@ namespace HRM.Modules.Personnel.Application.Queries.GetEmployeeAssignments;
 /// <summary>
 /// Handler for GetEmployeeAssignmentsQuery.
 ///
-/// Access rules:
-/// - System: sees all assignments for the given employee.
-/// - Employee: sees ONLY assignments belonging to their own company (from JWT CompanyId claim).
-///   No valid claim → no results (query.Where(_ => false)).
+/// Access rules (resolved via IDataScopeService):
+/// - Global (System): sees all assignments for the given employee.
+/// - Company scope: sees only assignments in the employee's accessible companies (multi-company support).
+/// - None: no results.
 /// </summary>
 public sealed class GetEmployeeAssignmentsQueryHandler
     : IQueryHandler<GetEmployeeAssignmentsQuery, List<AssignmentDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public GetEmployeeAssignmentsQueryHandler(
         IPersonnelQueryContext context,
+        IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _context = context;
+        _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
 
@@ -32,13 +37,14 @@ public sealed class GetEmployeeAssignmentsQueryHandler
         GetEmployeeAssignmentsQuery request,
         CancellationToken cancellationToken)
     {
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, "Personnel.Employee.View", cancellationToken);
+
         var query = _context.EmployeeAssignments
             .AsNoTracking()
             .Where(a => a.EmployeeId == request.EmployeeId);
 
-        // Company scope — Employee accounts restricted to their own company's assignments
-        if (IsEmployeeAccount())
-            query = ApplyEmployeeCompanyScope(query);
+        query = ApplyScopeRule(query, rule);
 
         if (request.Status.HasValue)
         {
@@ -63,19 +69,26 @@ public sealed class GetEmployeeAssignmentsQueryHandler
             .ToListAsync(cancellationToken);
     }
 
-    /// <summary>
-    /// Employee account: ONLY sees assignments belonging to their own company.
-    /// No valid CompanyId claim → no results (query.Where(_ => false)).
-    /// </summary>
-    private IQueryable<EmployeeAssignment> ApplyEmployeeCompanyScope(IQueryable<EmployeeAssignment> query)
+    private static IQueryable<EmployeeAssignment> ApplyScopeRule(
+        IQueryable<EmployeeAssignment> query,
+        DataScopeRule rule)
     {
-        var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
-        if (!Guid.TryParse(companyIdClaim, out var companyId))
-            return query.Where(_ => false);
-
-        return query.Where(a => a.CompanyId == companyId);
+        return rule.Level switch
+        {
+            DataScopeLevel.Global => query,
+            DataScopeLevel.None => query.Where(_ => false),
+            DataScopeLevel.Company => BuildCompanyFilter(query, rule.DimensionIds),
+            // Self/EmployeeSet: assignment visibility matches employee ownership (EmployeeId filter above)
+            DataScopeLevel.Self or DataScopeLevel.EmployeeSet => query,
+            _ => query.Where(_ => false)
+        };
     }
 
-    private bool IsEmployeeAccount() =>
-        _executionContext.GetClaimValue("AccountType") == "Employee";
+    private static IQueryable<EmployeeAssignment> BuildCompanyFilter(
+        IQueryable<EmployeeAssignment> query,
+        IReadOnlyCollection<Guid> companyIds)
+    {
+        var ids = companyIds.ToList();
+        return query.Where(a => ids.Contains(a.CompanyId));
+    }
 }

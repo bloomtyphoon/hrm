@@ -1,5 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Organization.Application.DTOs;
 using HRM.Modules.Organization.Domain.Repositories;
 
@@ -8,21 +10,25 @@ namespace HRM.Modules.Organization.Application.Queries.GetPositionsByCompany;
 /// <summary>
 /// Handler for GetPositionsByCompanyQuery.
 ///
-/// Access rules:
-/// - System: can query positions of any company.
-/// - Employee: can only query positions of their own assigned company (from JWT CompanyId claim).
+/// Access rules (resolved via IDataScopeService):
+/// - Global (System): can query positions of any company.
+/// - Company scope: can query positions of assigned companies (multi-company support).
+/// - None: empty result.
 /// </summary>
 internal sealed class GetPositionsByCompanyQueryHandler
     : IQueryHandler<GetPositionsByCompanyQuery, IReadOnlyList<PositionDto>>
 {
     private readonly IPositionRepository _positionRepository;
+    private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public GetPositionsByCompanyQueryHandler(
         IPositionRepository positionRepository,
+        IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _positionRepository = positionRepository;
+        _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
 
@@ -30,8 +36,10 @@ internal sealed class GetPositionsByCompanyQueryHandler
         GetPositionsByCompanyQuery request,
         CancellationToken cancellationToken)
     {
-        // Security boundary: Employee can only access their own company's positions
-        if (!CanAccessCompany(request.CompanyId))
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, "Organization.Company.View", cancellationToken);
+
+        if (!CanAccessCompany(request.CompanyId, rule))
             return Array.Empty<PositionDto>();
 
         var positions = await _positionRepository.GetByCompanyIdAsync(request.CompanyId, cancellationToken);
@@ -52,22 +60,10 @@ internal sealed class GetPositionsByCompanyQueryHandler
         )).ToList();
     }
 
-    private bool IsEmployeeAccount() =>
-        _executionContext.GetClaimValue("AccountType") == "Employee";
-
-    private Guid? GetEmployeeCompanyId()
+    private static bool CanAccessCompany(Guid companyId, DataScopeRule rule) => rule.Level switch
     {
-        var claim = _executionContext.GetClaimValue("CompanyId");
-        return Guid.TryParse(claim, out var id) ? id : null;
-    }
-
-    /// <summary>
-    /// System accounts can access any company.
-    /// Employee accounts can only access their assigned company.
-    /// </summary>
-    private bool CanAccessCompany(Guid companyId)
-    {
-        if (!IsEmployeeAccount()) return true;
-        return GetEmployeeCompanyId() == companyId;
-    }
+        DataScopeLevel.Global => true,
+        DataScopeLevel.Company => rule.DimensionIds.Contains(companyId),
+        _ => false
+    };
 }

@@ -1,6 +1,8 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,26 +12,30 @@ namespace HRM.Modules.Personnel.Application.Queries.GetEmployees;
 /// <summary>
 /// Handler for GetEmployeesQuery.
 ///
-/// Access rules:
-/// - System: sees all employees. Optional CompanyId filter from request is respected.
-/// - Employee: sees ONLY employees in their own company (from JWT CompanyId claim).
-///   Request CompanyId is ignored — company scope is always enforced.
+/// Access rules (resolved via IDataScopeService):
+/// - Global (System): sees all employees. Optional CompanyId filter from request is respected.
+/// - Company scope: sees employees in all assigned companies (multi-company support).
+/// - Self / EmployeeSet: sees own or subordinate employee records.
+/// - None: no results.
 ///
 /// Filtering layers:
-/// 1. Company scope — security boundary (different rules per account type)
+/// 1. Scope rule — security boundary via DataScopeRule
 /// 2. Search/Status/Department/Manager — user-driven refinement
 /// </summary>
 public sealed class GetEmployeesQueryHandler
     : IQueryHandler<GetEmployeesQuery, PagedResult<EmployeeSummaryDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public GetEmployeesQueryHandler(
         IPersonnelQueryContext context,
+        IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _context = context;
+        _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
 
@@ -39,10 +45,15 @@ public sealed class GetEmployeesQueryHandler
     {
         var query = _context.Employees.AsNoTracking();
 
-        // Layer 1: Company scope — different rules per account type
-        query = IsEmployeeAccount()
-            ? ApplyEmployeeCompanyScope(query)
-            : ApplySystemCompanyScope(query, request.CompanyId);
+        // Layer 1: Scope rule — security boundary
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, "Personnel.Employee.View", cancellationToken);
+
+        query = ApplyScopeRule(query, rule);
+
+        // System accounts (Global): optionally filter by requested CompanyId
+        if (rule.Level == DataScopeLevel.Global && request.CompanyId.HasValue)
+            query = query.Where(e => e.PrimaryCompanyId == request.CompanyId.Value);
 
         // Layer 2: Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -108,33 +119,24 @@ public sealed class GetEmployeesQueryHandler
         };
     }
 
-    /// <summary>
-    /// System account: sees all employees.
-    /// Optional CompanyId from request filters to a specific company.
-    /// </summary>
-    private static IQueryable<Employee> ApplySystemCompanyScope(
+    private static IQueryable<Employee> ApplyScopeRule(IQueryable<Employee> query, DataScopeRule rule)
+    {
+        return rule.Level switch
+        {
+            DataScopeLevel.Global => query,
+            DataScopeLevel.None => query.Where(_ => false),
+            DataScopeLevel.Self => query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
+            DataScopeLevel.EmployeeSet => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
+            DataScopeLevel.Company => BuildCompanyFilter(query, rule.DimensionIds),
+            _ => query.Where(_ => false)
+        };
+    }
+
+    private static IQueryable<Employee> BuildCompanyFilter(
         IQueryable<Employee> query,
-        Guid? requestCompanyId)
+        IReadOnlyCollection<Guid> companyIds)
     {
-        return requestCompanyId.HasValue
-            ? query.Where(e => e.PrimaryCompanyId == requestCompanyId.Value)
-            : query;
+        var ids = companyIds.ToList();
+        return query.Where(e => e.PrimaryCompanyId != null && ids.Contains(e.PrimaryCompanyId.Value));
     }
-
-    /// <summary>
-    /// Employee account: ONLY sees employees in their own company.
-    /// CompanyId is resolved from JWT claim — request filter is ignored.
-    /// No valid claim → no results (query.Where(_ => false)).
-    /// </summary>
-    private IQueryable<Employee> ApplyEmployeeCompanyScope(IQueryable<Employee> query)
-    {
-        var companyIdClaim = _executionContext.GetClaimValue("CompanyId");
-        if (!Guid.TryParse(companyIdClaim, out var companyId))
-            return query.Where(_ => false);
-
-        return query.Where(e => e.PrimaryCompanyId == companyId);
-    }
-
-    private bool IsEmployeeAccount() =>
-        _executionContext.GetClaimValue("AccountType") == "Employee";
 }
