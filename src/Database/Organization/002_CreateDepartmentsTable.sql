@@ -1,0 +1,12 @@
+CREATE TABLE Departments (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    CompanyId INT NOT NULL,
+    Name NVARCHAR(255) NOT NULL,
+    Code NVARCHAR(50) NOT NULL,
+    ParentId INT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    IsDeleted BIT NOT NULL DEFAULT 0,
+    CONSTRAINT FK_Departments_Companies FOREIGN KEY (CompanyId) REFERENCES Companies(Id),
+    CONSTRAINT FK_Departments_Parent FOREIGN KEY (ParentId) REFERENCES Departments(Id)
+);

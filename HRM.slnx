@@ -1,1 +1,11 @@
-<Solution />
+<Solution>
+  <Folder Name="Database">
+    <Folder Name="Organization">
+      <File Path="src\Database\Organization\001_CreateCompaniesTable.sql" />
+      <File Path="src\Database\Organization\002_CreateDepartmentsTable.sql" />
+    </Folder>
+    <Folder Name="Personnel">
+      <File Path="src\Database\Personnel\001_CreateEmployeesTable.sql" />
+    </Folder>
+  </Folder>
+</Solution>
