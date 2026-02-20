@@ -5,10 +5,6 @@ using HRM.Web.Services.Abstractions;
 
 namespace HRM.Web.Services.Personnel;
 
-/// <summary>
-/// HTTP client for Personnel module API endpoints.
-/// Handles employee management operations.
-/// </summary>
 public sealed class PersonnelApiClient : IPersonnelApiClient
 {
     private readonly HttpClient _httpClient;
@@ -27,7 +23,6 @@ public sealed class PersonnelApiClient : IPersonnelApiClient
         _logger = logger;
     }
 
-    /// <inheritdoc />
     public async Task<ApiResponse<PagedResult<EmployeeSummaryResponse>>> GetEmployeesAsync(
         string? searchTerm = null,
         string? status = null,
@@ -47,13 +42,10 @@ public sealed class PersonnelApiClient : IPersonnelApiClient
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
                 queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
-
             if (!string.IsNullOrWhiteSpace(status))
                 queryParams.Add($"status={Uri.EscapeDataString(status)}");
-
             if (companyId.HasValue)
                 queryParams.Add($"companyId={companyId.Value}");
-
             if (departmentId.HasValue)
                 queryParams.Add($"departmentId={departmentId.Value}");
 
@@ -72,56 +64,118 @@ public sealed class PersonnelApiClient : IPersonnelApiClient
 
             return await HandleErrorResponseAsync<PagedResult<EmployeeSummaryResponse>>(response, "Failed to retrieve employees", cancellationToken);
         }
-        catch (HttpRequestException ex)
-        {
-            return HandleNetworkError<PagedResult<EmployeeSummaryResponse>>(ex);
-        }
-        catch (Exception ex)
-        {
-            return HandleUnexpectedError<PagedResult<EmployeeSummaryResponse>>(ex);
-        }
+        catch (HttpRequestException ex) { return HandleNetworkError<PagedResult<EmployeeSummaryResponse>>(ex); }
+        catch (Exception ex) { return HandleUnexpectedError<PagedResult<EmployeeSummaryResponse>>(ex); }
     }
 
-    /// <inheritdoc />
-    public async Task<ApiResponse<EmployeeSummaryResponse>> GetEmployeeByIdAsync(
-        Guid id,
+    public async Task<ApiResponse<EmployeeDetailResponse>> GetEmployeeByIdAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        return await GetAsync<EmployeeDetailResponse>($"/api/personnel/employees/{id}", "Failed to retrieve employee", cancellationToken);
+    }
+
+    public async Task<ApiResponse<EmployeeDetailResponse>> CreateEmployeeAsync(
+        string employeeCode, string firstName, string lastName, string email,
+        DateOnly hireDate, string? phone, DateOnly? dateOfBirth,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var response = await _httpClient.GetAsync($"/api/personnel/employees/{id}", cancellationToken);
-
-            if (response.IsSuccessStatusCode)
+        return await PostAsync<EmployeeDetailResponse>("/api/personnel/employees",
+            new
             {
-                var data = await response.Content.ReadFromJsonAsync<EmployeeSummaryResponse>(JsonOptions, cancellationToken);
-                return new ApiResponse<EmployeeSummaryResponse>
-                {
-                    IsSuccess = true,
-                    Data = data
-                };
-            }
+                EmployeeCode = employeeCode,
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                HireDate = hireDate,
+                Phone = phone,
+                DateOfBirth = dateOfBirth
+            },
+            "Failed to create employee", cancellationToken);
+    }
 
-            return await HandleErrorResponseAsync<EmployeeSummaryResponse>(response, "Failed to retrieve employee", cancellationToken);
-        }
-        catch (HttpRequestException ex)
-        {
-            return HandleNetworkError<EmployeeSummaryResponse>(ex);
-        }
-        catch (Exception ex)
-        {
-            return HandleUnexpectedError<EmployeeSummaryResponse>(ex);
-        }
+    public async Task<ApiResponse<object>> UpdateEmployeeAsync(
+        Guid id, string firstName, string lastName, string email,
+        string? phone, DateOnly? dateOfBirth,
+        CancellationToken cancellationToken = default)
+    {
+        return await PutAsync<object>($"/api/personnel/employees/{id}",
+            new
+            {
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                Phone = phone,
+                DateOfBirth = dateOfBirth
+            },
+            "Failed to update employee", cancellationToken);
+    }
+
+    public async Task<ApiResponse<object>> TerminateEmployeeAsync(
+        Guid id, DateOnly terminationDate,
+        CancellationToken cancellationToken = default)
+    {
+        return await PutAsync<object>($"/api/personnel/employees/{id}/terminate",
+            new { TerminationDate = terminationDate },
+            "Failed to terminate employee", cancellationToken);
     }
 
     #region Private Helpers
 
+    private async Task<ApiResponse<T>> GetAsync<T>(string url, string errorMessage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
+                return new ApiResponse<T> { IsSuccess = true, Data = data };
+            }
+            return await HandleErrorResponseAsync<T>(response, errorMessage, cancellationToken);
+        }
+        catch (HttpRequestException ex) { return HandleNetworkError<T>(ex); }
+        catch (Exception ex) { return HandleUnexpectedError<T>(ex); }
+    }
+
+    private async Task<ApiResponse<T>> PostAsync<T>(string url, object body, string errorMessage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(url, body, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
+                return new ApiResponse<T> { IsSuccess = true, Data = data };
+            }
+            return await HandleErrorResponseAsync<T>(response, errorMessage, cancellationToken);
+        }
+        catch (HttpRequestException ex) { return HandleNetworkError<T>(ex); }
+        catch (Exception ex) { return HandleUnexpectedError<T>(ex); }
+    }
+
+    private async Task<ApiResponse<T>> PutAsync<T>(string url, object body, string errorMessage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync(url, body, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                    return new ApiResponse<T> { IsSuccess = true };
+
+                var data = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
+                return new ApiResponse<T> { IsSuccess = true, Data = data };
+            }
+            return await HandleErrorResponseAsync<T>(response, errorMessage, cancellationToken);
+        }
+        catch (HttpRequestException ex) { return HandleNetworkError<T>(ex); }
+        catch (Exception ex) { return HandleUnexpectedError<T>(ex); }
+    }
+
     private async Task<ApiResponse<T>> HandleErrorResponseAsync<T>(
-        HttpResponseMessage response,
-        string defaultMessage,
-        CancellationToken cancellationToken)
+        HttpResponseMessage response, string defaultMessage, CancellationToken cancellationToken)
     {
         var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-
         try
         {
             var apiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, JsonOptions);

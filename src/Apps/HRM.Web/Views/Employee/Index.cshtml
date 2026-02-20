@@ -6,6 +6,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Employees</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-person-plus me-1"></i>Create Employee
+    </a>
 </div>
 
 <!-- Search and Filter -->
@@ -63,6 +66,7 @@
                             <th>Hire Date</th>
                             <th>Status</th>
                             <th>Created</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,6 +93,17 @@
                                     <span title="@employee.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
                                         @employee.CreatedAtUtc.ToString("yyyy-MM-dd")
                                     </span>
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@employee.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    @if (employee.Status != "Terminated")
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@employee.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    }
                                 </td>
                             </tr>
                         }

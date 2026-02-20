@@ -5,10 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HRM.Web.Controllers;
 
-/// <summary>
-/// Controller for employee management.
-/// Uses CompanyContext to filter employees by the selected company.
-/// </summary>
 [Authorize]
 public class EmployeeController : Controller
 {
@@ -38,7 +34,6 @@ public class EmployeeController : Controller
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        // Pass company filter from context; null means all companies (for system accounts)
         var companyId = _companyContext.IsAllCompanies ? null : _companyContext.SelectedCompanyId;
 
         var response = await _personnelClient.GetEmployeesAsync(
@@ -66,5 +61,154 @@ public class EmployeeController : Controller
         }
 
         return View(viewModel);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _personnelClient.GetEmployeeByIdAsync(id, cancellationToken);
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            return View(response.Data);
+        }
+
+        TempData["ErrorMessage"] = response.ErrorMessage ?? "Employee not found";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public IActionResult Create()
+    {
+        return View(new CreateEmployeeFormModel());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(
+        CreateEmployeeFormModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var response = await _personnelClient.CreateEmployeeAsync(
+            model.EmployeeCode,
+            model.FirstName,
+            model.LastName,
+            model.Email,
+            model.HireDate,
+            model.Phone,
+            model.DateOfBirth,
+            cancellationToken);
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            TempData["SuccessMessage"] = $"Employee '{response.Data.FullName}' created successfully!";
+            return RedirectToAction(nameof(Details), new { id = response.Data.Id });
+        }
+
+        if (response.ValidationErrors != null)
+        {
+            foreach (var (field, errors) in response.ValidationErrors)
+            {
+                foreach (var error in errors)
+                {
+                    ModelState.AddModelError(field, error);
+                }
+            }
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to create employee");
+        }
+
+        return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _personnelClient.GetEmployeeByIdAsync(id, cancellationToken);
+
+        if (!response.IsSuccess || response.Data is null)
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Employee not found";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var emp = response.Data;
+        var model = new EditEmployeeFormModel
+        {
+            Id = emp.Id,
+            EmployeeCode = emp.EmployeeCode,
+            FirstName = emp.FirstName,
+            LastName = emp.LastName,
+            Email = emp.Email,
+            Phone = emp.Phone,
+            DateOfBirth = emp.DateOfBirth,
+            Status = emp.Status
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        EditEmployeeFormModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var response = await _personnelClient.UpdateEmployeeAsync(
+            model.Id,
+            model.FirstName,
+            model.LastName,
+            model.Email,
+            model.Phone,
+            model.DateOfBirth,
+            cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Employee updated successfully!";
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        if (response.ValidationErrors != null)
+        {
+            foreach (var (field, errors) in response.ValidationErrors)
+            {
+                foreach (var error in errors)
+                {
+                    ModelState.AddModelError(field, error);
+                }
+            }
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to update employee");
+        }
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Terminate(Guid id, CancellationToken cancellationToken)
+    {
+        var terminationDate = DateOnly.FromDateTime(DateTime.Today);
+        var response = await _personnelClient.TerminateEmployeeAsync(id, terminationDate, cancellationToken);
+
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Employee terminated successfully." : (response.ErrorMessage ?? "Failed to terminate employee");
+
+        return RedirectToAction(nameof(Details), new { id });
     }
 }
