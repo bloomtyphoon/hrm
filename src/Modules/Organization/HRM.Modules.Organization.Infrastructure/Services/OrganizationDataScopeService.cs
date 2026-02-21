@@ -42,7 +42,7 @@ internal sealed class OrganizationDataScopeService : IDataScopeService
     /// <inheritdoc />
     public async Task<DataScopeRule> GetScopeRuleAsync(
         Guid userId,
-        string permission,
+        PermissionDescriptor permission,
         CancellationToken cancellationToken = default)
     {
         var grant = await _grantProvider.GetGrantAsync(userId, permission, cancellationToken);

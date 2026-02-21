@@ -3,6 +3,7 @@ using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
+using HRM.Modules.Personnel.Application.Security;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,7 +39,7 @@ public sealed class GetEmployeeAssignmentsQueryHandler
         CancellationToken cancellationToken)
     {
         var rule = await _dataScopeService.GetScopeRuleAsync(
-            _executionContext.UserId, "Personnel.Employee.View", cancellationToken);
+            _executionContext.UserId, PersonnelPermissions.Employee.View, cancellationToken);
 
         var query = _context.EmployeeAssignments
             .AsNoTracking()

@@ -3,6 +3,7 @@ using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Organization.Application.DTOs;
+using HRM.Modules.Organization.Application.Security;
 using HRM.Modules.Organization.Domain.Repositories;
 
 namespace HRM.Modules.Organization.Application.Queries.GetCompanyById;
@@ -34,7 +35,7 @@ internal sealed class GetCompanyByIdQueryHandler : IQueryHandler<GetCompanyByIdQ
     public async Task<CompanyDto?> Handle(GetCompanyByIdQuery request, CancellationToken cancellationToken)
     {
         var rule = await _dataScopeService.GetScopeRuleAsync(
-            _executionContext.UserId, "Organization.Company.View", cancellationToken);
+            _executionContext.UserId, OrganizationPermissions.Company.View, cancellationToken);
 
         if (!CanAccessCompany(request.CompanyId, rule))
             return null;

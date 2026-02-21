@@ -3,6 +3,7 @@ using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Organization.Application.DTOs;
+using HRM.Modules.Organization.Application.Security;
 using HRM.Modules.Organization.Domain.Entities;
 using HRM.Modules.Organization.Domain.Repositories;
 
@@ -35,7 +36,7 @@ internal sealed class GetCompaniesQueryHandler : IQueryHandler<GetCompaniesQuery
     public async Task<IReadOnlyList<CompanyDto>> Handle(GetCompaniesQuery request, CancellationToken cancellationToken)
     {
         var rule = await _dataScopeService.GetScopeRuleAsync(
-            _executionContext.UserId, "Organization.Company.View", cancellationToken);
+            _executionContext.UserId, OrganizationPermissions.Company.View, cancellationToken);
 
         return rule.Level switch
         {

@@ -61,7 +61,7 @@ public sealed class DataScopeService : IDataScopeService
     /// <inheritdoc />
     public async Task<DataScopeRule> GetScopeRuleAsync(
         Guid userId,
-        string permission,
+        PermissionDescriptor permission,
         CancellationToken cancellationToken = default)
     {
         // Step 1: Get scope grant from Identity (determines scope LEVEL)
