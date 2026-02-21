@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Repositories;
 using HRM.Modules.Identity.Infrastructure.Configuration;
 using Microsoft.Extensions.Caching.Memory;
@@ -43,6 +44,13 @@ public sealed class PermissionService : IPermissionService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.PermissionCacheDurationMinutes);
     }
+
+    /// <inheritdoc />
+    public Task<bool> HasPermissionAsync(
+        string userId,
+        PermissionDescriptor permission,
+        CancellationToken cancellationToken = default)
+        => HasPermissionAsync(userId, permission.Module, permission.Entity, permission.Action, cancellationToken);
 
     /// <inheritdoc />
     public async Task<bool> HasPermissionAsync(

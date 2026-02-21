@@ -1,3 +1,5 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
+
 namespace HRM.BuildingBlocks.Application.Abstractions.Authorization;
 
 /// <summary>
@@ -14,14 +16,26 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Authorization;
 ///
 /// Usage:
 /// <code>
+/// // Strongly-typed (preferred — no magic strings)
+/// var hasPermission = await permissionService.HasPermissionAsync(
+///     userId, PersonnelPermissions.Employee.View);
+///
+/// // String-based (used by RoutePermissionMiddleware from RouteSecurityMap.xml)
 /// var hasPermission = await permissionService.HasPermissionAsync(
 ///     userId, "Personnel.Employee.View");
-///
-/// var allPermissions = await permissionService.GetUserPermissionsAsync(userId);
 /// </code>
 /// </summary>
 public interface IPermissionService
 {
+    /// <summary>
+    /// Check if user has permission using a strongly-typed descriptor.
+    /// Preferred overload — delegates to HasPermissionAsync(module, entity, action).
+    /// </summary>
+    Task<bool> HasPermissionAsync(
+        string userId,
+        PermissionDescriptor permission,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Check if user has specific permission (module.entity.action)
     /// </summary>
@@ -33,7 +47,8 @@ public interface IPermissionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if user has permission by key (e.g., "Identity.Account.View")
+    /// Check if user has permission by key (e.g., "Identity.Account.View").
+    /// Used by RoutePermissionMiddleware when loading permissions from RouteSecurityMap.xml.
     /// </summary>
     Task<bool> HasPermissionAsync(
         string userId,

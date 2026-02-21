@@ -5,15 +5,17 @@ namespace HRM.Modules.Personnel.Application.Security;
 /// <summary>
 /// Strongly-typed permission descriptors for Personnel module.
 ///
-/// Must stay in sync with:
-///   - Resources/PermissionCatalog.xml (permission metadata and scopes)
-///   - (Infrastructure) Security/RouteSecurityMap.xml (route-to-permission mappings)
+/// Each descriptor encodes Module + Entity + Action as a typed object,
+/// eliminating magic strings from application code.
 ///
-/// Usage:
-/// <code>
-/// var rule = await _dataScopeService.GetScopeRuleAsync(
-///     userId, PersonnelPermissions.Employee.View, ct);
-/// </code>
+/// These descriptors:
+/// - Are used by query/command handlers when calling IDataScopeService
+/// - Are used by IPermissionService.HasPermissionAsync (typed overload)
+/// - Produce .Name strings that match PermissionCatalog.xml and RouteSecurityMap.xml
+///
+/// The RoutePermissionMiddleware also parses RouteSecurityMap.xml permission strings
+/// into PermissionDescriptor at runtime — so the middleware and handlers always
+/// operate on the same typed model.
 /// </summary>
 public static class PersonnelPermissions
 {
