@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using DataScopeContext = HRM.Modules.Identity.Application.Abstractions.Authorization.DataScopeContext;
 
 namespace HRM.Modules.Identity.Infrastructure.Security;
 
