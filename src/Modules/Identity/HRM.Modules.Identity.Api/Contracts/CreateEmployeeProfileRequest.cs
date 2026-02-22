@@ -10,5 +10,6 @@ public sealed record CreateEmployeeProfileRequest(
     DataScopeLevel DefaultScopeLevel = DataScopeLevel.Self,
     Guid? PrimaryCompanyId = null,
     Guid? PrimaryDepartmentId = null,
-    Guid? PrimaryPositionId = null
+    Guid? PrimaryPositionId = null,
+    IReadOnlyList<Guid>? CompanyIds = null
 );

@@ -7,7 +7,7 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// This is a denormalized copy of company assignments from Personnel module.
 /// Synced via:
 /// - Admin API when creating/updating EmployeeProfile
-/// - Integration events from Personnel module when assignments change (future)
+/// - Integration events from Personnel module when assignments change
 ///
 /// Purpose: Allow Identity module to resolve company-based visibility
 /// without cross-module queries to personnel.EmployeeAssignments.

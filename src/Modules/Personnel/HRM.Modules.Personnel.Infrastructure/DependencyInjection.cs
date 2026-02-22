@@ -45,6 +45,12 @@ public static class DependencyInjection
         services.AddScoped<IHierarchyScopeResolver, HierarchyScopeResolver>();
         services.AddScoped<DataScopePolicyService>();
 
+        // MediatR handlers in Infrastructure (domain event handlers)
+        services.AddMediatR(config =>
+        {
+            config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+        });
+
         // Repositories
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IEmployeeAssignmentQuery, EmployeeAssignmentQuery>();

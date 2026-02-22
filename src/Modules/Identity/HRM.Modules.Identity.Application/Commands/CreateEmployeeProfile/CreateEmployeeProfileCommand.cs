@@ -12,7 +12,8 @@ public sealed record CreateEmployeeProfileCommand(
     DataScopeLevel DefaultScopeLevel = DataScopeLevel.Self,
     Guid? PrimaryCompanyId = null,
     Guid? PrimaryDepartmentId = null,
-    Guid? PrimaryPositionId = null
+    Guid? PrimaryPositionId = null,
+    IReadOnlyList<Guid>? CompanyIds = null
 ) : IModuleCommand<Guid>
 {
     public string ModuleName => "Identity";

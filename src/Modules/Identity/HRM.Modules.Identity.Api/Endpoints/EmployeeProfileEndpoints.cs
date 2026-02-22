@@ -74,7 +74,8 @@ public static class EmployeeProfileEndpoints
             DefaultScopeLevel: request.DefaultScopeLevel,
             PrimaryCompanyId: request.PrimaryCompanyId,
             PrimaryDepartmentId: request.PrimaryDepartmentId,
-            PrimaryPositionId: request.PrimaryPositionId);
+            PrimaryPositionId: request.PrimaryPositionId,
+            CompanyIds: request.CompanyIds);
 
         var result = await sender.Send(command, cancellationToken);
 

@@ -29,6 +29,8 @@
     <ProjectReference Include="..\HRM.Modules.Identity.Application\HRM.Modules.Identity.Application.csproj" />
     <ProjectReference Include="..\HRM.Modules.Identity.IntegrationEvents\HRM.Modules.Identity.IntegrationEvents.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
+    <!-- Cross-module: consume Personnel integration events -->
+    <ProjectReference Include="..\..\Personnel\HRM.Modules.Personnel.IntegrationEvents\HRM.Modules.Personnel.IntegrationEvents.csproj" />
   </ItemGroup>
 
   <!-- Embedded Resources -->

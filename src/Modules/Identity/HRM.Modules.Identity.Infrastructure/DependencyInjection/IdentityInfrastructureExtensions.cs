@@ -121,6 +121,12 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IIdentityQueryContext>(
             sp => sp.GetRequiredService<IdentityDbContext>());
 
+        // MediatR handlers in Infrastructure (domain event handlers, integration event handlers)
+        services.AddMediatR(config =>
+        {
+            config.RegisterServicesFromAssembly(typeof(IdentityInfrastructureExtensions).Assembly);
+        });
+
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
         services.AddScoped<IAccountRepository, AccountRepository>();

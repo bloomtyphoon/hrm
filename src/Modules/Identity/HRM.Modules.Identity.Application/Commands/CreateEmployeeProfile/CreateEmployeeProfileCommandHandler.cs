@@ -56,7 +56,8 @@ internal sealed class CreateEmployeeProfileCommandHandler : ICommandHandler<Crea
             defaultScopeLevel: request.DefaultScopeLevel,
             primaryCompanyId: request.PrimaryCompanyId,
             primaryDepartmentId: request.PrimaryDepartmentId,
-            primaryPositionId: request.PrimaryPositionId);
+            primaryPositionId: request.PrimaryPositionId,
+            companyIds: request.CompanyIds);
 
         _employeeProfileRepository.Add(profile);
 
