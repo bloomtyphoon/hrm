@@ -14,6 +14,7 @@ using HRM.Modules.Identity.Application.Configuration;
 using HRM.Modules.Identity.Domain.Repositories;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Infrastructure.Authentication;
+using HRM.Modules.Identity.Infrastructure.Authorization;
 using HRM.Modules.Identity.Infrastructure.BackgroundServices;
 using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.Infrastructure.Persistence.Repositories;
@@ -186,11 +187,15 @@ public static class IdentityInfrastructureExtensions
         // Scoped: Uses scoped repositories for database access
         services.AddScoped<IPermissionService, PermissionService>();
 
-        // IDataScopeRuleProvider: Single source of truth for data scope rules
+        // IDataScopeRuleProvider: Single source of truth for data scope rules in Identity
         services.AddScoped<IDataScopeRuleProvider, DataScopeRuleProvider>();
 
-        // IAccountVisibilityFilter: Filters account visibility by company for Employee accounts
-        services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();
+        // IScopeGrantProvider: Resolves user scope level for a permission
+        // Consumed by Personnel and Organization modules to determine data access scope
+        services.AddScoped<IScopeGrantProvider, ScopeGrantProvider>();
+
+        // IDataScopeService: Translates scope grant into a DataScopeRule for EF query filtering
+        services.AddScoped<IDataScopeService, IdentityDataScopeService>();
 
         // 7. Register Route Security Map Source
         // Register Identity module's RouteSecurityMap.xml to be loaded at startup

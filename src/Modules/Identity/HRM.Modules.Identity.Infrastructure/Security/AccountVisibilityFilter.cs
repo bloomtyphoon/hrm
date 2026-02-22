@@ -1,32 +1,39 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
 using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
+using HRM.Modules.Identity.Application.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace HRM.Modules.Identity.Infrastructure.Security;
 
 /// <summary>
-/// Implementation of IAccountVisibilityFilter.
-/// Uses only Identity schema data — no cross-module queries.
+/// Implementation of IAccountVisibilityFilter, backed by IDataScopeService.
 ///
-/// Visibility Rules:
-/// - System accounts: see all accounts (no filter)
-/// - Employee accounts: see accounts whose EmployeeProfile shares
-///   at least one company via EmployeeProfileCompanies table
+/// Used by command handlers and single-resource query handlers to check whether
+/// the current user can access a specific account.
+///
+/// For list queries, prefer IDataScopeService directly (EF subquery — no HashSet in memory).
+/// This implementation loads a HashSet, which is acceptable for single-account checks
+/// where the result is used for one .Contains() call on a bounded set.
 /// </summary>
 public sealed class AccountVisibilityFilter : IAccountVisibilityFilter
 {
     private readonly ICurrentUserService _currentUser;
+    private readonly IDataScopeService _dataScopeService;
     private readonly IIdentityQueryContext _context;
     private readonly ILogger<AccountVisibilityFilter> _logger;
 
     public AccountVisibilityFilter(
         ICurrentUserService currentUser,
+        IDataScopeService dataScopeService,
         IIdentityQueryContext context,
         ILogger<AccountVisibilityFilter> logger)
     {
         _currentUser = currentUser;
+        _dataScopeService = dataScopeService;
         _context = context;
         _logger = logger;
     }
@@ -34,48 +41,61 @@ public sealed class AccountVisibilityFilter : IAccountVisibilityFilter
     public async Task<HashSet<Guid>?> GetVisibleAccountIdsAsync(
         CancellationToken cancellationToken = default)
     {
-        // System accounts see everything
-        if (_currentUser.IsSystemAccount())
+        var userId = _currentUser.UserId;
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            userId, IdentityPermissions.Account.View, cancellationToken);
+
+        switch (rule.Level)
         {
-            _logger.LogDebug(
-                "System account {UserId} has unrestricted account visibility",
-                _currentUser.UserId);
-            return null;
+            case DataScopeLevel.Global:
+                _logger.LogDebug(
+                    "System account {UserId} has unrestricted account visibility", userId);
+                return null; // No filter — sees all accounts
+
+            case DataScopeLevel.None:
+                _logger.LogDebug(
+                    "Account {UserId} has no account visibility (None scope)", userId);
+                return []; // Explicit deny
+
+            case DataScopeLevel.Self:
+                return [userId]; // Own account only
+
+            case DataScopeLevel.Company:
+            {
+                var companyIds = rule.DimensionIds;
+                var accountIds = await _context.EmployeeProfiles
+                    .AsNoTracking()
+                    .Where(ep => ep.CompanyAccess.Any(ca => companyIds.Contains(ca.CompanyId)))
+                    .Select(ep => ep.AccountId)
+                    .ToListAsync(cancellationToken);
+
+                var result = accountIds.ToHashSet();
+                result.Add(userId); // Always include own account
+
+                _logger.LogDebug(
+                    "Account {UserId} ({CompanyCount} companies) can see {Count} accounts",
+                    userId, companyIds.Count, result.Count);
+
+                return result;
+            }
+
+            case DataScopeLevel.Department:
+            {
+                var departmentIds = rule.DimensionIds;
+                var accountIds = await _context.EmployeeProfiles
+                    .AsNoTracking()
+                    .Where(ep => ep.PrimaryDepartmentId.HasValue
+                                 && departmentIds.Contains(ep.PrimaryDepartmentId.Value))
+                    .Select(ep => ep.AccountId)
+                    .ToListAsync(cancellationToken);
+
+                var result = accountIds.ToHashSet();
+                result.Add(userId);
+                return result;
+            }
+
+            default:
+                return [userId]; // Fallback: own account only
         }
-
-        // Get current user's company IDs from EmployeeProfileCompanies
-        var userCompanyIds = await _context.EmployeeProfiles
-            .AsNoTracking()
-            .Where(ep => ep.AccountId == _currentUser.UserId)
-            .SelectMany(ep => ep.CompanyAccess)
-            .Select(ca => ca.CompanyId)
-            .ToListAsync(cancellationToken);
-
-        // No company access → can only see own account
-        if (userCompanyIds.Count == 0)
-        {
-            _logger.LogWarning(
-                "Employee account {UserId} has no company access, returning self-only visibility",
-                _currentUser.UserId);
-            return [_currentUser.UserId];
-        }
-
-        // Find all accounts whose EmployeeProfile shares at least one company
-        var visibleAccountIds = await _context.EmployeeProfiles
-            .AsNoTracking()
-            .Where(ep => ep.CompanyAccess.Any(ca => userCompanyIds.Contains(ca.CompanyId)))
-            .Select(ep => ep.AccountId)
-            .ToListAsync(cancellationToken);
-
-        var result = visibleAccountIds.ToHashSet();
-
-        // Always include own account
-        result.Add(_currentUser.UserId);
-
-        _logger.LogDebug(
-            "Employee account {UserId} ({CompanyCount} companies) can see {Count} accounts",
-            _currentUser.UserId, userCompanyIds.Count, result.Count);
-
-        return result;
     }
 }
