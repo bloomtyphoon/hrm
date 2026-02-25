@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,21 +8,22 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class AccountTwoFactorEnabledDomainEventHandler
     : INotificationHandler<AccountTwoFactorEnabledDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public AccountTwoFactorEnabledDomainEventHandler(IEventBus eventBus)
+    public AccountTwoFactorEnabledDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(AccountTwoFactorEnabledDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(AccountTwoFactorEnabledDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new AccountTwoFactorEnabledIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 AccountId: notification.AccountId,
-                Username: notification.Username),
-            cancellationToken);
+                Username: notification.Username));
+
+        return Task.CompletedTask;
     }
 }

@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,21 +8,22 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class SuperAdminRevokedDomainEventHandler
     : INotificationHandler<SuperAdminRevokedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public SuperAdminRevokedDomainEventHandler(IEventBus eventBus)
+    public SuperAdminRevokedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(SuperAdminRevokedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(SuperAdminRevokedDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new SuperAdminRevokedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 ProfileId: notification.ProfileId,
-                AccountId: notification.AccountId),
-            cancellationToken);
+                AccountId: notification.AccountId));
+
+        return Task.CompletedTask;
     }
 }

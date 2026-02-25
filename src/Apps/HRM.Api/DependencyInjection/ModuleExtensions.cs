@@ -62,7 +62,6 @@ public static class ModuleExtensions
 
         // 2. BuildingBlocks Infrastructure Layer
         // Register technical services (AFTER MediatR, BEFORE modules)
-        // - Event Bus (InMemoryEventBus)
         // - CurrentUserService (for ICurrentUserService)
         // - RolesClaimsTransformation (JWT role normalization)
         // - AuditInterceptor (Scoped - depends on ICurrentUserService)

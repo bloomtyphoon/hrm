@@ -1,8 +1,10 @@
 using System.Linq.Expressions;
+using System.Text.Json;
 using HRM.BuildingBlocks.Domain.Abstractions.Events;
 using HRM.BuildingBlocks.Domain.Abstractions.SoftDelete;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.BuildingBlocks.Domain.Entities;
+using HRM.BuildingBlocks.Infrastructure.Inbox;
 using HRM.BuildingBlocks.Infrastructure.Outbox;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -63,10 +65,16 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     public abstract string ModuleName { get; }
 
     /// <summary>
-    /// OutboxMessages table for this module
-    /// Each module has its own outbox table for isolation
+    /// OutboxMessages table for this module.
+    /// Each module has its own outbox table for isolation.
     /// </summary>
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    /// <summary>
+    /// InboxMessages table for this module.
+    /// Tracks processed integration events for idempotency (Inbox pattern).
+    /// </summary>
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     /// <summary>
     /// Protected constructor for derived module DbContexts
@@ -77,6 +85,47 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
         : base(options)
     {
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+    }
+
+    /// <summary>
+    /// Add an integration event to the outbox for reliable asynchronous publishing.
+    /// The event is serialized to JSON and stored as an OutboxMessage.
+    /// It will be saved atomically with domain changes during SaveChanges/CommitAsync.
+    /// The OutboxProcessor background service will pick it up and publish to event bus.
+    /// </summary>
+    public void AddIntegrationEvent(IIntegrationEvent integrationEvent)
+    {
+        ArgumentNullException.ThrowIfNull(integrationEvent);
+
+        var message = OutboxMessage.Create(
+            type: integrationEvent.GetType().AssemblyQualifiedName!,
+            content: JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType()),
+            occurredOnUtc: integrationEvent.OccurredOnUtc);
+
+        OutboxMessages.Add(message);
+    }
+
+    /// <summary>
+    /// Check if an integration event has already been processed by a specific handler.
+    /// Used by the Inbox pattern for idempotent event processing.
+    /// </summary>
+    public async Task<bool> IsEventProcessedAsync(
+        Guid eventId,
+        string handlerName,
+        CancellationToken cancellationToken = default)
+    {
+        return await InboxMessages.AnyAsync(
+            m => m.EventId == eventId && m.HandlerName == handlerName,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Mark an integration event as processed by a specific handler.
+    /// Should be called after successful processing, within the same transaction.
+    /// </summary>
+    public void MarkEventAsProcessed(Guid eventId, string eventType, string handlerName)
+    {
+        InboxMessages.Add(InboxMessage.Create(eventId, eventType, handlerName));
     }
 
     /// <summary>
@@ -185,6 +234,35 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
             // Index for ordering by occurrence time
             entity.HasIndex(e => e.OccurredOnUtc)
                 .HasDatabaseName("IX_OutboxMessages_OccurredOnUtc");
+        });
+
+        // Configure InboxMessage entity
+        modelBuilder.Entity<InboxMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.EventId)
+                .IsRequired();
+
+            entity.Property(e => e.EventType)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(e => e.HandlerName)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(e => e.ProcessedOnUtc)
+                .IsRequired();
+
+            // Unique index for idempotency check: same event + same handler = already processed
+            entity.HasIndex(e => new { e.EventId, e.HandlerName })
+                .IsUnique()
+                .HasDatabaseName("IX_InboxMessages_EventId_HandlerName");
+
+            // Index for cleanup queries
+            entity.HasIndex(e => e.ProcessedOnUtc)
+                .HasDatabaseName("IX_InboxMessages_ProcessedOnUtc");
         });
 
         // Configure global query filters for soft delete

@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,22 +8,23 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class EmployeeProfileUpdatedDomainEventHandler
     : INotificationHandler<EmployeeProfileUpdatedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public EmployeeProfileUpdatedDomainEventHandler(IEventBus eventBus)
+    public EmployeeProfileUpdatedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(EmployeeProfileUpdatedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(EmployeeProfileUpdatedDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new EmployeeProfileUpdatedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 ProfileId: notification.ProfileId,
                 AccountId: notification.AccountId,
-                EmployeeId: notification.EmployeeId),
-            cancellationToken);
+                EmployeeId: notification.EmployeeId));
+
+        return Task.CompletedTask;
     }
 }

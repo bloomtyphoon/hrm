@@ -138,7 +138,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
     {
         ValidateInputs(employeeCode, firstName, lastName, email);
 
-        return new Employee
+        var employee = new Employee
         {
             Id = Guid.NewGuid(),
             EmployeeCode = employeeCode.Trim().ToUpperInvariant(),
@@ -151,6 +151,16 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
             ManagerId = managerId,
             Status = EmploymentStatus.Active
         };
+
+        employee.AddDomainEvent(new EmployeeCreatedDomainEvent(
+            EmployeeId: employee.Id,
+            EmployeeCode: employee.EmployeeCode,
+            FirstName: employee.FirstName,
+            LastName: employee.LastName,
+            Email: employee.Email,
+            Phone: employee.Phone));
+
+        return employee;
     }
 
     /// <summary>

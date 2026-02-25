@@ -2,10 +2,12 @@ using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Personnel;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
+using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
 using HRM.BuildingBlocks.Infrastructure.Security;
 using HRM.Modules.Personnel.Application;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
+using HRM.Modules.Personnel.Infrastructure.BackgroundServices;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
 using HRM.Modules.Personnel.Infrastructure.Services;
@@ -57,6 +59,10 @@ public static class DependencyInjection
 
         // Cross-module query (consumed by Organization and other modules)
         services.AddScoped<IPersonnelQuery, PersonnelQueryService>();
+
+        // Outbox Processor (background service for reliable integration event publishing)
+        services.AddHostedService<PersonnelOutboxProcessor>();
+        services.Configure<OutboxSettings>(configuration.GetSection(OutboxSettings.SectionName));
 
         // Permission catalog source (loaded by IPermissionCatalogService at startup)
         services.AddSingleton<IPermissionCatalogSource>(sp =>

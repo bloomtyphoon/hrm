@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -12,14 +12,14 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class AccountCreatedDomainEventHandler
     : INotificationHandler<AccountCreatedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public AccountCreatedDomainEventHandler(IEventBus eventBus)
+    public AccountCreatedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(AccountCreatedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(AccountCreatedDomainEvent notification, CancellationToken cancellationToken)
     {
         var integrationEvent = new AccountRegisteredIntegrationEvent(
             Id: Guid.NewGuid(),
@@ -30,6 +30,8 @@ internal sealed class AccountCreatedDomainEventHandler
             FullName: string.Empty
         );
 
-        await _eventBus.PublishAsync(integrationEvent, cancellationToken);
+        _dbContext.AddIntegrationEvent(integrationEvent);
+
+        return Task.CompletedTask;
     }
 }

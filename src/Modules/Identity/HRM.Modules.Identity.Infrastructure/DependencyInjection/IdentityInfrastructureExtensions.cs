@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
@@ -16,10 +17,12 @@ using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Infrastructure.Authentication;
 using HRM.Modules.Identity.Infrastructure.Authorization;
 using HRM.Modules.Identity.Infrastructure.BackgroundServices;
+using HRM.Modules.Identity.Infrastructure.IntegrationEventHandlers;
 using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.Infrastructure.Persistence.Repositories;
 using HRM.Modules.Identity.Infrastructure.Security;
 using HRM.Modules.Identity.Infrastructure.Services;
+using HRM.Modules.Personnel.IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,11 +124,17 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IIdentityQueryContext>(
             sp => sp.GetRequiredService<IdentityDbContext>());
 
-        // MediatR handlers in Infrastructure (domain event handlers, integration event handlers)
+        // MediatR handlers in Infrastructure (domain event handlers only)
         services.AddMediatR(config =>
         {
             config.RegisterServicesFromAssembly(typeof(IdentityInfrastructureExtensions).Assembly);
         });
+
+        // Integration event handlers (resolved by OutboxProcessor from DI, not MediatR)
+        services.AddScoped<IIntegrationEventHandler<EmployeeCreatedIntegrationEvent>,
+            EmployeeCreatedIntegrationEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<EmployeeAssignmentsChangedIntegrationEvent>,
+            EmployeeAssignmentsChangedIntegrationEventHandler>();
 
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
