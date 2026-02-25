@@ -1,7 +1,7 @@
-@model CompanyResponse
+@model DepartmentResponse
 
 @{
-    ViewData["Title"] = $"Company - {Model.Name}";
+    ViewData["Title"] = $"Department - {Model.Name}";
 }
 
 <div class="row">
@@ -13,7 +13,7 @@
                 {
                     "Active" => "bg-success",
                     "Inactive" => "bg-secondary",
-                    "Pending" => "bg-warning text-dark",
+                    "Restructuring" => "bg-warning text-dark",
                     _ => "bg-light text-dark"
                 };
             }
@@ -37,41 +37,54 @@
 
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-building me-1"></i>Company Details
+                <i class="bi bi-diagram-3 me-1"></i>Department Details
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-3">Company ID</dt>
-                    <dd class="col-sm-9"><code>@Model.Id</code></dd>
+                    <dt class="col-sm-4">Department ID</dt>
+                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
 
-                    <dt class="col-sm-3">Code</dt>
-                    <dd class="col-sm-9"><code>@Model.Code</code></dd>
+                    <dt class="col-sm-4">Code</dt>
+                    <dd class="col-sm-8"><code>@Model.Code</code></dd>
 
-                    <dt class="col-sm-3">Name</dt>
-                    <dd class="col-sm-9">@Model.Name</dd>
+                    <dt class="col-sm-4">Name</dt>
+                    <dd class="col-sm-8">@Model.Name</dd>
 
-                    <dt class="col-sm-3">Tax ID</dt>
-                    <dd class="col-sm-9">
-                        @if (!string.IsNullOrEmpty(Model.TaxId))
+                    <dt class="col-sm-4">Level</dt>
+                    <dd class="col-sm-8"><span class="badge bg-light text-dark">@Model.Level</span></dd>
+
+                    <dt class="col-sm-4">Parent Department</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.ParentDepartmentId.HasValue)
                         {
-                            @Model.TaxId
+                            <a asp-action="Details" asp-route-id="@Model.ParentDepartmentId">@Model.ParentDepartmentId</a>
                         }
                         else
                         {
-                            <em>Not specified</em>
+                            <em>None (Top-level)</em>
                         }
                     </dd>
 
-                    <dt class="col-sm-3">Status</dt>
-                    <dd class="col-sm-9">
-                        <span class="badge @badgeClass">@Model.Status</span>
+                    <dt class="col-sm-4">Manager ID</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.ManagerId.HasValue)
+                        {
+                            <code>@Model.ManagerId</code>
+                        }
+                        else
+                        {
+                            <em>Not assigned</em>
+                        }
                     </dd>
 
-                    <dt class="col-sm-3">Created</dt>
-                    <dd class="col-sm-9">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8"><span class="badge @badgeClass">@Model.Status</span></dd>
 
-                    <dt class="col-sm-3">Last Modified</dt>
-                    <dd class="col-sm-9">
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                    <dt class="col-sm-4">Last Modified</dt>
+                    <dd class="col-sm-8">
                         @if (Model.ModifiedAtUtc.HasValue)
                         {
                             @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")

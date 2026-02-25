@@ -2,6 +2,7 @@ using HRM.Web.Services;
 using HRM.Web.Services.Abstractions;
 using HRM.Web.Services.Identity;
 using HRM.Web.Services.Organization;
+using HRM.Web.Services.Personnel;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,8 +53,16 @@ builder.Services.AddHttpClient<IIdentityApiClient, IdentityApiClient>(client =>
 })
 .AddHttpMessageHandler<AuthTokenHandler>();
 
-// Organization module client (companies)
+// Organization module client (companies, departments, positions)
 builder.Services.AddHttpClient<IOrganizationApiClient, OrganizationApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+})
+.AddHttpMessageHandler<AuthTokenHandler>();
+
+// Personnel module client (employees)
+builder.Services.AddHttpClient<IPersonnelApiClient, PersonnelApiClient>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");

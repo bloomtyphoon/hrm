@@ -5,10 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HRM.Web.Controllers;
 
-/// <summary>
-/// Controller for company management.
-/// Handles company creation, listing, and viewing.
-/// </summary>
 [Authorize]
 public class CompanyController : Controller
 {
@@ -23,10 +19,6 @@ public class CompanyController : Controller
         _logger = logger;
     }
 
-    /// <summary>
-    /// GET: /Company or /Company/Index
-    /// Display list of companies.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(
         string? searchTerm = null,
@@ -45,7 +37,6 @@ public class CompanyController : Controller
         {
             var companies = response.Data;
 
-            // Apply client-side filtering if needed
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 companies = companies
@@ -74,43 +65,31 @@ public class CompanyController : Controller
         return View(viewModel);
     }
 
-    /// <summary>
-    /// GET: /Company/Create
-    /// Display the company creation form.
-    /// </summary>
     [HttpGet]
     public IActionResult Create()
     {
         return View(new CreateCompanyRequest());
     }
 
-    /// <summary>
-    /// POST: /Company/Create
-    /// Process company creation form submission.
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         CreateCompanyRequest model,
         CancellationToken cancellationToken)
     {
-        // Server-side validation
         if (!ModelState.IsValid)
         {
             return View(model);
         }
 
-        // Call API to create company
         var response = await _organizationClient.CreateCompanyAsync(model, cancellationToken);
 
         if (response.IsSuccess && response.Data != null)
         {
-            // Success - redirect to details page
             TempData["SuccessMessage"] = $"Company '{response.Data.Name}' created successfully!";
             return RedirectToAction(nameof(Details), new { id = response.Data.Id });
         }
 
-        // Handle validation errors from API
         if (response.ValidationErrors != null)
         {
             foreach (var (field, errors) in response.ValidationErrors)
@@ -123,17 +102,12 @@ public class CompanyController : Controller
         }
         else
         {
-            // General error message
             ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to create company");
         }
 
         return View(model);
     }
 
-    /// <summary>
-    /// GET: /Company/Details/{id}
-    /// Display company details.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {
@@ -146,5 +120,87 @@ public class CompanyController : Controller
 
         TempData["ErrorMessage"] = response.ErrorMessage ?? "Company not found";
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.GetCompanyByIdAsync(id, cancellationToken);
+
+        if (!response.IsSuccess || response.Data is null)
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Company not found";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var company = response.Data;
+        var model = new EditCompanyFormModel
+        {
+            Id = company.Id,
+            Code = company.Code,
+            Name = company.Name,
+            TaxId = company.TaxId,
+            Status = company.Status
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        EditCompanyFormModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var response = await _organizationClient.UpdateCompanyAsync(
+            model.Id, model.Name, model.TaxId, cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Company updated successfully!";
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        if (response.ValidationErrors != null)
+        {
+            foreach (var (field, errors) in response.ValidationErrors)
+            {
+                foreach (var error in errors)
+                {
+                    ModelState.AddModelError(field, error);
+                }
+            }
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to update company");
+        }
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.ActivateCompanyAsync(id, cancellationToken);
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Company activated successfully!" : (response.ErrorMessage ?? "Failed to activate company");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.DeactivateCompanyAsync(id, cancellationToken);
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Company deactivated successfully!" : (response.ErrorMessage ?? "Failed to deactivate company");
+        return RedirectToAction(nameof(Details), new { id });
     }
 }

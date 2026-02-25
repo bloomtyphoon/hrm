@@ -6,7 +6,8 @@ namespace HRM.Web.Services.Abstractions;
 ///
 /// For single-module access, prefer injecting the specific module client:
 /// - IIdentityApiClient for auth/account operations
-/// - IOrganizationApiClient for company operations
+/// - IOrganizationApiClient for company/department/position operations
+/// - IPersonnelApiClient for employee operations
 /// </summary>
 public interface IApiClient
 {
@@ -16,7 +17,12 @@ public interface IApiClient
     IIdentityApiClient Identity { get; }
 
     /// <summary>
-    /// Organization module client for company management.
+    /// Organization module client for company, department, and position management.
     /// </summary>
     IOrganizationApiClient Organization { get; }
+
+    /// <summary>
+    /// Personnel module client for employee management.
+    /// </summary>
+    IPersonnelApiClient Personnel { get; }
 }
