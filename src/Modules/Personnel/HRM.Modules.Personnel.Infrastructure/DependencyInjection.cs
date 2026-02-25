@@ -1,7 +1,13 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Personnel;
+using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
+using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
+using HRM.BuildingBlocks.Infrastructure.Security;
+using HRM.Modules.Personnel.Application;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
+using HRM.Modules.Personnel.Infrastructure.BackgroundServices;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
 using HRM.Modules.Personnel.Infrastructure.Services;
@@ -24,7 +30,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // DbContext
-        var connectionString = configuration.GetConnectionString("HrmDb");
+        var connectionString = configuration.GetConnectionString("HrmDatabase");
         services.AddDbContext<PersonnelDbContext>((sp, options) =>
         {
             options.UseSqlServer(connectionString);
@@ -41,9 +47,41 @@ public static class DependencyInjection
         services.AddScoped<IHierarchyScopeResolver, HierarchyScopeResolver>();
         services.AddScoped<DataScopePolicyService>();
 
+        // MediatR handlers in Infrastructure (domain event handlers)
+        services.AddMediatR(config =>
+        {
+            config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+        });
+
         // Repositories
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IEmployeeAssignmentQuery, EmployeeAssignmentQuery>();
+
+        // Cross-module query (consumed by Organization and other modules)
+        services.AddScoped<IPersonnelQuery, PersonnelQueryService>();
+
+        // Outbox Processor (background service for reliable integration event publishing)
+        services.AddHostedService<PersonnelOutboxProcessor>();
+        services.Configure<OutboxSettings>(configuration.GetSection(OutboxSettings.SectionName));
+
+        // Permission catalog source (loaded by IPermissionCatalogService at startup)
+        services.AddSingleton<IPermissionCatalogSource>(sp =>
+        {
+            var factory = sp.GetRequiredService<IPermissionCatalogSourceFactory>();
+            return factory.FromEmbeddedResource(
+                typeof(PersonnelApplicationAssemblyMarker).Assembly,
+                "HRM.Modules.Personnel.Application.Resources.PermissionCatalog.xml");
+        });
+
+        // Route security map source (loaded by RouteSecurityLoaderService at startup)
+        services.Configure<RouteSecurityOptions>(options =>
+        {
+            options.Sources.Add(new RouteSecurityMapSourceConfig
+            {
+                Assembly = typeof(DependencyInjection).Assembly,
+                ResourceName = "HRM.Modules.Personnel.Infrastructure.Security.RouteSecurityMap.xml"
+            });
+        });
 
         return services;
     }

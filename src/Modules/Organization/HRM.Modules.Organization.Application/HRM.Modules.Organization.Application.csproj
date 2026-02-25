@@ -16,4 +16,8 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Application\HRM.BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\PermissionCatalog.xml" />
+  </ItemGroup>
+
 </Project>

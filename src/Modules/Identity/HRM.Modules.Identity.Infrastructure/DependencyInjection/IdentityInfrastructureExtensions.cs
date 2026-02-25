@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
@@ -14,11 +15,14 @@ using HRM.Modules.Identity.Application.Configuration;
 using HRM.Modules.Identity.Domain.Repositories;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Infrastructure.Authentication;
+using HRM.Modules.Identity.Infrastructure.Authorization;
 using HRM.Modules.Identity.Infrastructure.BackgroundServices;
+using HRM.Modules.Identity.Infrastructure.IntegrationEventHandlers;
 using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.Infrastructure.Persistence.Repositories;
 using HRM.Modules.Identity.Infrastructure.Security;
 using HRM.Modules.Identity.Infrastructure.Services;
+using HRM.Modules.Personnel.IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -120,6 +124,18 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IIdentityQueryContext>(
             sp => sp.GetRequiredService<IdentityDbContext>());
 
+        // MediatR handlers in Infrastructure (domain event handlers only)
+        services.AddMediatR(config =>
+        {
+            config.RegisterServicesFromAssembly(typeof(IdentityInfrastructureExtensions).Assembly);
+        });
+
+        // Integration event handlers (resolved by OutboxProcessor from DI, not MediatR)
+        services.AddScoped<IIntegrationEventHandler<EmployeeCreatedIntegrationEvent>,
+            EmployeeCreatedIntegrationEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<EmployeeAssignmentsChangedIntegrationEvent>,
+            EmployeeAssignmentsChangedIntegrationEventHandler>();
+
         // 2. Register Repositories
         // Scoped: One instance per HTTP request
         services.AddScoped<IAccountRepository, AccountRepository>();
@@ -186,10 +202,17 @@ public static class IdentityInfrastructureExtensions
         // Scoped: Uses scoped repositories for database access
         services.AddScoped<IPermissionService, PermissionService>();
 
-        // IDataScopeRuleProvider: Single source of truth for data scope rules
+        // IDataScopeRuleProvider: Single source of truth for data scope rules in Identity
         services.AddScoped<IDataScopeRuleProvider, DataScopeRuleProvider>();
 
-        // IAccountVisibilityFilter: Filters account visibility by company for Employee accounts
+        // IScopeGrantProvider: Resolves user scope level for a permission
+        // Consumed by Personnel and Organization modules to determine data access scope
+        services.AddScoped<IScopeGrantProvider, ScopeGrantProvider>();
+
+        // IDataScopeService: Translates scope grant into a DataScopeRule for EF query filtering
+        services.AddScoped<IDataScopeService, IdentityDataScopeService>();
+
+        // IAccountVisibilityFilter: Single-account access checks based on data scope
         services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();
 
         // 7. Register Route Security Map Source

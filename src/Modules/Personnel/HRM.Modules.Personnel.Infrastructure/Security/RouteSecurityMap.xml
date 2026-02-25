@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RouteSecurityMap Module="Personnel" Version="1.0" xmlns="http://hrm.system/route-security">
+  <!--
+    Personnel Module Route Security Map
+    Maps API routes to required permissions.
+  -->
+
+  <!-- Public Routes - No authentication required -->
+  <PublicRoutes>
+  </PublicRoutes>
+
+  <!-- Protected Routes - Require authentication and specific permissions -->
+  <ProtectedRoutes>
+
+    <!-- ==================== Employee Management ==================== -->
+
+    <!-- List employees (paginated, filterable) -->
+    <Route
+        Method="GET"
+        Path="/api/personnel/employees"
+        Permission="Personnel.Employee.View" />
+
+    <!-- Get employee by ID -->
+    <Route
+        Method="GET"
+        Path="/api/personnel/employees/{id}"
+        Permission="Personnel.Employee.View" />
+
+    <!-- Create new employee -->
+    <Route
+        Method="POST"
+        Path="/api/personnel/employees"
+        Permission="Personnel.Employee.Create" />
+
+    <!-- Update employee personal info -->
+    <Route
+        Method="PUT"
+        Path="/api/personnel/employees/{id}"
+        Permission="Personnel.Employee.Update" />
+
+    <!-- Terminate employee -->
+    <Route
+        Method="PUT"
+        Path="/api/personnel/employees/{id}/terminate"
+        Permission="Personnel.Employee.Terminate" />
+
+    <!-- Assign manager to employee -->
+    <Route
+        Method="PUT"
+        Path="/api/personnel/employees/{id}/manager"
+        Permission="Personnel.Employee.Update" />
+
+    <!-- Remove manager from employee -->
+    <Route
+        Method="DELETE"
+        Path="/api/personnel/employees/{id}/manager"
+        Permission="Personnel.Employee.Update" />
+
+    <!-- Get direct reports of a manager -->
+    <Route
+        Method="GET"
+        Path="/api/personnel/employees/{managerId}/direct-reports"
+        Permission="Personnel.Employee.View" />
+
+    <!-- ==================== Assignment Management ==================== -->
+
+    <!-- Get employee assignments -->
+    <Route
+        Method="GET"
+        Path="/api/personnel/employees/{employeeId}/assignments"
+        Permission="Personnel.Assignment.View" />
+
+    <!-- Create employee assignment -->
+    <Route
+        Method="POST"
+        Path="/api/personnel/employees/{employeeId}/assignments"
+        Permission="Personnel.Assignment.Create" />
+
+    <!-- End employee assignment -->
+    <Route
+        Method="PUT"
+        Path="/api/personnel/employees/{employeeId}/assignments/{assignmentId}/end"
+        Permission="Personnel.Assignment.Update" />
+
+    <!-- Set assignment as primary -->
+    <Route
+        Method="PUT"
+        Path="/api/personnel/employees/{employeeId}/assignments/{assignmentId}/primary"
+        Permission="Personnel.Assignment.Update" />
+
+  </ProtectedRoutes>
+
+</RouteSecurityMap>

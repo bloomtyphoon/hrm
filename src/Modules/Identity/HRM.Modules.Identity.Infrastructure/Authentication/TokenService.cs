@@ -118,7 +118,7 @@ public sealed class TokenService : ITokenService
     /// - exp: Expiration timestamp
     /// - iss/aud: From config
     /// </summary>
-    public AccessTokenResult GenerateAccessToken(Account account)
+    public AccessTokenResult GenerateAccessToken(Account account, EmployeeProfile? employeeProfile = null)
     {
         ArgumentNullException.ThrowIfNull(account);
 
@@ -139,6 +139,15 @@ public sealed class TokenService : ITokenService
             // Account type
             new("AccountType", account.AccountType.ToString())
         };
+
+        // Employee-specific claims
+        if (employeeProfile != null)
+        {
+            claims.Add(new Claim("EmployeeId", employeeProfile.EmployeeId.ToString()));
+
+            if (employeeProfile.PrimaryCompanyId.HasValue)
+                claims.Add(new Claim("CompanyId", employeeProfile.PrimaryCompanyId.Value.ToString()));
+        }
 
         // Create signing credentials
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));

@@ -28,11 +28,11 @@ public interface IDataScopeService
     /// Returns a DataScopeRule that can be applied to queries.
     /// </summary>
     /// <param name="userId">Current user ID</param>
-    /// <param name="permission">Permission key (e.g., "Personnel.Employee.View")</param>
+    /// <param name="permission">Strongly-typed permission descriptor</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>DataScopeRule containing allowed IDs and scope type</returns>
     Task<DataScopeRule> GetScopeRuleAsync(
         Guid userId,
-        string permission,
+        PermissionDescriptor permission,
         CancellationToken cancellationToken = default);
 }

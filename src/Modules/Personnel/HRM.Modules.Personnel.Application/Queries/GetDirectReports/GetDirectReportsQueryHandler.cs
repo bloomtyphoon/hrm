@@ -1,32 +1,53 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Application.Queries.GetEmployees;
+using HRM.Modules.Personnel.Application.Security;
+using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Personnel.Application.Queries.GetDirectReports;
 
 /// <summary>
 /// Handler for GetDirectReportsQuery.
-/// Returns paginated list of direct reports for a given manager.
+///
+/// Access rules (resolved via IDataScopeService):
+/// - Global (System): sees all direct reports of the given manager.
+/// - Company scope: sees only direct reports within assigned companies (multi-company support).
+/// - None: no results.
 /// </summary>
 public sealed class GetDirectReportsQueryHandler
     : IQueryHandler<GetDirectReportsQuery, PagedResult<EmployeeSummaryDto>>
 {
     private readonly IPersonnelQueryContext _context;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly IExecutionContext _executionContext;
 
-    public GetDirectReportsQueryHandler(IPersonnelQueryContext context)
+    public GetDirectReportsQueryHandler(
+        IPersonnelQueryContext context,
+        IDataScopeService dataScopeService,
+        IExecutionContext executionContext)
     {
         _context = context;
+        _dataScopeService = dataScopeService;
+        _executionContext = executionContext;
     }
 
     public async Task<PagedResult<EmployeeSummaryDto>> Handle(
         GetDirectReportsQuery request,
         CancellationToken cancellationToken)
     {
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, PersonnelPermissions.Employee.View, cancellationToken);
+
         var query = _context.Employees
             .AsNoTracking()
             .Where(e => e.ManagerId == request.ManagerId);
+
+        query = ApplyScopeRule(query, rule);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -61,5 +82,26 @@ public sealed class GetDirectReportsQueryHandler
             PageNumber = request.PageNumber,
             PageSize = request.PageSize
         };
+    }
+
+    private static IQueryable<Employee> ApplyScopeRule(IQueryable<Employee> query, DataScopeRule rule)
+    {
+        return rule.Level switch
+        {
+            DataScopeLevel.Global => query,
+            DataScopeLevel.None => query.Where(_ => false),
+            DataScopeLevel.Self => query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
+            DataScopeLevel.EmployeeSet => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
+            DataScopeLevel.Company => BuildCompanyFilter(query, rule.DimensionIds),
+            _ => query.Where(_ => false)
+        };
+    }
+
+    private static IQueryable<Employee> BuildCompanyFilter(
+        IQueryable<Employee> query,
+        IReadOnlyCollection<Guid> companyIds)
+    {
+        var ids = companyIds.ToList();
+        return query.Where(e => e.PrimaryCompanyId != null && ids.Contains(e.PrimaryCompanyId.Value));
     }
 }

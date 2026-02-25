@@ -1,8 +1,10 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Application.Pagination;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
-using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
+using HRM.Modules.Identity.Application.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Identity.Application.Queries.GetAccounts;
@@ -16,7 +18,7 @@ namespace HRM.Modules.Identity.Application.Queries.GetAccounts;
 ///   Default to PrimaryCompanyId when no CompanyId specified.
 ///
 /// Filtering layers:
-/// 1. Visibility filter — security boundary (via AccountVisibilityFilter)
+/// 1. Data scope rule — security boundary (via IDataScopeService)
 /// 2. Company filter — scoped by account type rules above
 /// 3. Search/Status — user-driven refinement
 /// </summary>
@@ -25,33 +27,32 @@ public sealed class GetAccountsQueryHandler
 {
     private readonly IIdentityQueryContext _context;
     private readonly ICurrentUserService _currentUser;
-    private readonly IAccountVisibilityFilter _visibilityFilter;
+    private readonly IDataScopeService _dataScopeService;
 
     public GetAccountsQueryHandler(
         IIdentityQueryContext context,
         ICurrentUserService currentUser,
-        IAccountVisibilityFilter visibilityFilter)
+        IDataScopeService dataScopeService)
     {
         _context = context;
         _currentUser = currentUser;
-        _visibilityFilter = visibilityFilter;
+        _dataScopeService = dataScopeService;
     }
 
     public async Task<PagedResult<AccountSummaryDto>> Handle(
         GetAccountsQuery request,
         CancellationToken cancellationToken)
     {
+        var userId = _currentUser.UserId;
         var query = _context.Accounts.AsNoTracking();
 
-        // Layer 1: Visibility filter (security boundary)
-        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
-        if (visibleAccountIds != null)
-        {
-            query = query.Where(a => visibleAccountIds.Contains(a.Id));
-        }
+        // Layer 1: Data scope security boundary
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            userId, IdentityPermissions.Account.View, cancellationToken);
+        query = ApplyDataScopeRule(query, rule, userId);
 
         // Layer 2: Company filter — different rules per account type
-        query = _currentUser.IsSystemAccount()
+        query = rule.Level == DataScopeLevel.Global
             ? ApplySystemCompanyFilter(query, request)
             : await ApplyEmployeeCompanyFilterAsync(query, request.CompanyId, cancellationToken);
 
@@ -96,6 +97,56 @@ public sealed class GetAccountsQueryHandler
             PageNumber = request.PageNumber,
             PageSize = request.PageSize
         };
+    }
+
+    /// <summary>
+    /// Translates a DataScopeRule into an EF WHERE clause for the accounts query.
+    /// Replaces the former IAccountVisibilityFilter HashSet approach with a composable subquery.
+    /// </summary>
+    private IQueryable<Domain.Entities.Account> ApplyDataScopeRule(
+        IQueryable<Domain.Entities.Account> query,
+        DataScopeRule rule,
+        Guid userId)
+    {
+        return rule.Level switch
+        {
+            DataScopeLevel.Global => query, // System account — no restriction
+            DataScopeLevel.None   => query.Where(_ => false), // Explicit deny
+            DataScopeLevel.Self   => query.Where(a => a.Id == userId), // Own account only
+            DataScopeLevel.Company or DataScopeLevel.Department or DataScopeLevel.Position =>
+                ApplyDimensionScopeRule(query, rule),
+            _ => query.Where(_ => false)
+        };
+    }
+
+    /// <summary>
+    /// For Company/Department/Position scopes, filter accounts via EmployeeProfile subquery
+    /// (EF translates to WHERE EXISTS / WHERE IN — no HashSet materialized in memory).
+    /// </summary>
+    private IQueryable<Domain.Entities.Account> ApplyDimensionScopeRule(
+        IQueryable<Domain.Entities.Account> query,
+        DataScopeRule rule)
+    {
+        var allowedAccountIds = rule.Level switch
+        {
+            DataScopeLevel.Company => _context.EmployeeProfiles
+                .AsNoTracking()
+                .Where(ep => ep.CompanyAccess.Any(ca => rule.DimensionIds.Contains(ca.CompanyId)))
+                .Select(ep => ep.AccountId),
+            DataScopeLevel.Department => _context.EmployeeProfiles
+                .AsNoTracking()
+                .Where(ep => ep.PrimaryDepartmentId.HasValue
+                             && rule.DimensionIds.Contains(ep.PrimaryDepartmentId.Value))
+                .Select(ep => ep.AccountId),
+            DataScopeLevel.Position => _context.EmployeeProfiles
+                .AsNoTracking()
+                .Where(ep => ep.PrimaryPositionId.HasValue
+                             && rule.DimensionIds.Contains(ep.PrimaryPositionId.Value))
+                .Select(ep => ep.AccountId),
+            _ => _context.EmployeeProfiles.AsNoTracking().Where(_ => false).Select(ep => ep.AccountId)
+        };
+
+        return query.Where(a => allowedAccountIds.Contains(a.Id));
     }
 
     /// <summary>

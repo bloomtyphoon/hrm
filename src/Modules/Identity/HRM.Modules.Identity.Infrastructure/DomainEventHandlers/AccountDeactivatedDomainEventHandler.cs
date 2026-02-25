@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,21 +8,22 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class AccountDeactivatedDomainEventHandler
     : INotificationHandler<AccountDeactivatedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public AccountDeactivatedDomainEventHandler(IEventBus eventBus)
+    public AccountDeactivatedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(AccountDeactivatedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(AccountDeactivatedDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new AccountDeactivatedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 AccountId: notification.AccountId,
-                Username: notification.Username),
-            cancellationToken);
+                Username: notification.Username));
+
+        return Task.CompletedTask;
     }
 }

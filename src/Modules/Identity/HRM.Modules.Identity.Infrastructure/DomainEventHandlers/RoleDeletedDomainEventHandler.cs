@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,21 +8,22 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class RoleDeletedDomainEventHandler
     : INotificationHandler<RoleDeletedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public RoleDeletedDomainEventHandler(IEventBus eventBus)
+    public RoleDeletedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(RoleDeletedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(RoleDeletedDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new RoleDeletedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 RoleId: notification.RoleId,
-                RoleName: notification.RoleName),
-            cancellationToken);
+                RoleName: notification.RoleName));
+
+        return Task.CompletedTask;
     }
 }

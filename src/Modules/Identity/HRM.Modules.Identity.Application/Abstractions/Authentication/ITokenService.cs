@@ -275,8 +275,9 @@ public interface ITokenService
     /// </code>
     /// </summary>
     /// <param name="account">Account entity to generate token for</param>
+    /// <param name="employeeProfile">Optional employee profile — adds EmployeeId and CompanyId claims for Employee accounts</param>
     /// <returns>Access token with expiration time</returns>
-    AccessTokenResult GenerateAccessToken(Account account);
+    AccessTokenResult GenerateAccessToken(Account account, EmployeeProfile? employeeProfile = null);
 
     /// <summary>
     /// Generates a cryptographically secure random refresh token.

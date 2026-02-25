@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
+using HRM.Modules.Personnel.Domain.Events;
 
 namespace HRM.Modules.Personnel.Domain.Entities;
 
@@ -137,7 +138,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
     {
         ValidateInputs(employeeCode, firstName, lastName, email);
 
-        return new Employee
+        var employee = new Employee
         {
             Id = Guid.NewGuid(),
             EmployeeCode = employeeCode.Trim().ToUpperInvariant(),
@@ -150,6 +151,16 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
             ManagerId = managerId,
             Status = EmploymentStatus.Active
         };
+
+        employee.AddDomainEvent(new EmployeeCreatedDomainEvent(
+            EmployeeId: employee.Id,
+            EmployeeCode: employee.EmployeeCode,
+            FirstName: employee.FirstName,
+            LastName: employee.LastName,
+            Email: employee.Email,
+            Phone: employee.Phone));
+
+        return employee;
     }
 
     /// <summary>
@@ -227,6 +238,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
         }
 
         MarkAsModified();
+        RaiseAssignmentsChangedEvent();
         return assignment;
     }
 
@@ -255,6 +267,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
         }
 
         MarkAsModified();
+        RaiseAssignmentsChangedEvent();
     }
 
     /// <summary>
@@ -302,6 +315,17 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
 
     private bool HasPrimaryAssignment() => _assignments.Any(a => a.IsPrimary && a.IsActive);
 
+    private void RaiseAssignmentsChangedEvent()
+    {
+        var activeCompanyIds = _assignments
+            .Where(a => a.IsActive)
+            .Select(a => a.CompanyId)
+            .Distinct()
+            .ToList();
+
+        AddDomainEvent(new EmployeeAssignmentsChangedDomainEvent(Id, activeCompanyIds));
+    }
+
     #endregion
 
     #region Status Management
@@ -341,6 +365,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
 
         ClearPrimaryAssignment();
         MarkAsModified();
+        RaiseAssignmentsChangedEvent();
     }
 
     #endregion

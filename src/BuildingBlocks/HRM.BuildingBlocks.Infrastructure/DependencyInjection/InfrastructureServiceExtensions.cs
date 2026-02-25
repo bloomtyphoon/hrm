@@ -1,10 +1,8 @@
 using System.Text;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.BuildingBlocks.Application.Abstractions.Infrastructure;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.Authentication;
-using HRM.BuildingBlocks.Infrastructure.EventBus;
 using HRM.BuildingBlocks.Infrastructure.Http;
 using HRM.BuildingBlocks.Infrastructure.Persistence.Interceptors;
 using HRM.BuildingBlocks.Infrastructure.Security;
@@ -41,7 +39,6 @@ namespace HRM.BuildingBlocks.Infrastructure.DependencyInjection;
 /// </code>
 ///
 /// What Gets Registered:
-/// - IEventBus → InMemoryEventBus (singleton)
 /// - IClientInfoService → ClientInfoService (scoped)
 /// - IClaimsTransformation → RolesClaimsTransformation (scoped)
 /// - AuditInterceptor (scoped - depends on IExecutionContext)
@@ -65,7 +62,6 @@ public static class InfrastructureServiceExtensions
     /// Register all BuildingBlocks infrastructure services
     ///
     /// Services Registered:
-    /// - Event Bus (InMemoryEventBus)
     /// - Authentication services (CurrentUserService, ClientInfoService)
     /// - EF Core interceptors (AuditInterceptor)
     /// - HttpContextAccessor
@@ -83,9 +79,6 @@ public static class InfrastructureServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Event Bus (In-Memory for modular monolith)
-        services.AddSingleton<IEventBus, InMemoryEventBus>();
-
         // HTTP Context Accessor (required for CurrentUserService)
         services.AddHttpContextAccessor();
 

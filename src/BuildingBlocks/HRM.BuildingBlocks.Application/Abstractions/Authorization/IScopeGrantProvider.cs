@@ -28,7 +28,7 @@ public interface IScopeGrantProvider
     /// </summary>
     Task<ScopeGrant> GetGrantAsync(
         Guid userId,
-        string permission,
+        PermissionDescriptor permission,
         CancellationToken cancellationToken = default);
 }
 

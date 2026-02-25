@@ -36,19 +36,22 @@ public sealed class LoginCommandHandler
     private readonly ITokenService _tokenService;
     private readonly JwtOptions _jwtOptions;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IEmployeeProfileRepository _employeeProfileRepository;
 
     public LoginCommandHandler(
         IAccountRepository accountRepository,
         IPasswordHasher passwordHasher,
         ITokenService tokenService,
         IOptions<JwtOptions> jwtOptions,
-        IRefreshTokenRepository refreshTokenRepository)
+        IRefreshTokenRepository refreshTokenRepository,
+        IEmployeeProfileRepository employeeProfileRepository)
     {
         _accountRepository = accountRepository;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
         _jwtOptions = jwtOptions.Value;
         _refreshTokenRepository = refreshTokenRepository;
+        _employeeProfileRepository = employeeProfileRepository;
     }
 
     public async Task<Result<LoginResponse>> Handle(
@@ -111,10 +114,15 @@ public sealed class LoginCommandHandler
         account.RecordLogin();
         _accountRepository.Update(account);
 
-        // 7. Generate access token (JWT)
-        var accessTokenResult = _tokenService.GenerateAccessToken(account);
+        // 7. Load employee profile to include EmployeeId and CompanyId in JWT
+        EmployeeProfile? employeeProfile = null;
+        if (account.AccountType == AccountType.Employee)
+            employeeProfile = await _employeeProfileRepository.GetByAccountIdAsync(account.Id, cancellationToken);
 
-        // 8. Generate refresh token with Remember Me support
+        // 8. Generate access token (JWT) with employee claims if applicable
+        var accessTokenResult = _tokenService.GenerateAccessToken(account, employeeProfile);
+
+        // 9. Generate refresh token with Remember Me support
         var refreshExpiryDays = request.RememberMe
             ? _jwtOptions.RememberMeExpiryDays
             : _jwtOptions.RefreshTokenExpiryDays;
@@ -122,7 +130,7 @@ public sealed class LoginCommandHandler
         var refreshTokenExpiry = DateTime.UtcNow.AddDays(refreshExpiryDays);
         var refreshToken = _tokenService.GenerateRefreshToken(refreshTokenExpiry);
 
-        // 9. Store refresh token
+        // 10. Store refresh token
         var refreshTokenEntity = Domain.Entities.RefreshToken.Create(
             account.AccountType,
             account.Id,
@@ -135,7 +143,7 @@ public sealed class LoginCommandHandler
         _refreshTokenRepository.Add(refreshTokenEntity);
         // UnitOfWorkBehavior will commit
 
-        // 10. Build and return response
+        // 11. Build and return response
         var response = new LoginResponse
         {
             AccessToken = accessTokenResult.Token,

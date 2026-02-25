@@ -66,7 +66,7 @@ public sealed class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var userTypeClaim = User?.FindFirst("UserType")?.Value;
+            var userTypeClaim = User?.FindFirst("AccountType")?.Value;
 
             if (string.IsNullOrEmpty(userTypeClaim))
             {
@@ -105,6 +105,16 @@ public sealed class CurrentUserService : ICurrentUserService
             }
 
             return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public Guid? CompanyId
+    {
+        get
+        {
+            var claim = User?.FindFirst("CompanyId")?.Value;
+            return Guid.TryParse(claim, out var id) ? id : null;
         }
     }
 

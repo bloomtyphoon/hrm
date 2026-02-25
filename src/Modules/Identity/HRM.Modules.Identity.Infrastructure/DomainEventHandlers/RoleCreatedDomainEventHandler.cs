@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,23 +8,24 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class RoleCreatedDomainEventHandler
     : INotificationHandler<RoleCreatedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public RoleCreatedDomainEventHandler(IEventBus eventBus)
+    public RoleCreatedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(RoleCreatedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(RoleCreatedDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new RoleCreatedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 RoleId: notification.RoleId,
                 RoleName: notification.RoleName,
                 Description: notification.Description,
-                PermissionCount: notification.PermissionCount),
-            cancellationToken);
+                PermissionCount: notification.PermissionCount));
+
+        return Task.CompletedTask;
     }
 }

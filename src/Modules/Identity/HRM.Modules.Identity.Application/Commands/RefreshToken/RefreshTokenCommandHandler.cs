@@ -28,17 +28,20 @@ public sealed class RefreshTokenCommandHandler
     private readonly IAccountRepository _accountRepository;
     private readonly ITokenService _tokenService;
     private readonly JwtOptions _jwtOptions;
+    private readonly IEmployeeProfileRepository _employeeProfileRepository;
 
     public RefreshTokenCommandHandler(
         IRefreshTokenRepository refreshTokenRepository,
         IAccountRepository accountRepository,
         ITokenService tokenService,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        IEmployeeProfileRepository employeeProfileRepository)
     {
         _refreshTokenRepository = refreshTokenRepository;
         _accountRepository = accountRepository;
         _tokenService = tokenService;
         _jwtOptions = jwtOptions.Value;
+        _employeeProfileRepository = employeeProfileRepository;
     }
 
     public async Task<Result<LoginResponse>> Handle(
@@ -100,8 +103,13 @@ public sealed class RefreshTokenCommandHandler
                 AuthenticationErrors.AccountLockedOut(account.LockedUntilUtc));
         }
 
-        // 6. Generate new access token
-        var accessTokenResult = _tokenService.GenerateAccessToken(account);
+        // 6. Load employee profile to include EmployeeId and CompanyId in JWT
+        EmployeeProfile? employeeProfile = null;
+        if (account.AccountType == AccountType.Employee)
+            employeeProfile = await _employeeProfileRepository.GetByAccountIdAsync(account.Id, cancellationToken);
+
+        // 6b. Generate new access token with employee claims if applicable
+        var accessTokenResult = _tokenService.GenerateAccessToken(account, employeeProfile);
 
         // 7. Generate new refresh token (inherit same expiry duration)
         var originalExpiryDuration = existingToken.ExpiresAt - existingToken.CreatedAtUtc;

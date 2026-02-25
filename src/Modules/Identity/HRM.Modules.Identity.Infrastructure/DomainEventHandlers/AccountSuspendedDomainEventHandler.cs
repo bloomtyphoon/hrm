@@ -1,5 +1,5 @@
-using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.Modules.Identity.Domain.Events;
+using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.IntegrationEvents;
 using MediatR;
 
@@ -8,21 +8,22 @@ namespace HRM.Modules.Identity.Infrastructure.DomainEventHandlers;
 internal sealed class AccountSuspendedDomainEventHandler
     : INotificationHandler<AccountSuspendedDomainEvent>
 {
-    private readonly IEventBus _eventBus;
+    private readonly IdentityDbContext _dbContext;
 
-    public AccountSuspendedDomainEventHandler(IEventBus eventBus)
+    public AccountSuspendedDomainEventHandler(IdentityDbContext dbContext)
     {
-        _eventBus = eventBus;
+        _dbContext = dbContext;
     }
 
-    public async Task Handle(AccountSuspendedDomainEvent notification, CancellationToken cancellationToken)
+    public Task Handle(AccountSuspendedDomainEvent notification, CancellationToken cancellationToken)
     {
-        await _eventBus.PublishAsync(
+        _dbContext.AddIntegrationEvent(
             new AccountSuspendedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 AccountId: notification.AccountId,
-                Username: notification.Username),
-            cancellationToken);
+                Username: notification.Username));
+
+        return Task.CompletedTask;
     }
 }

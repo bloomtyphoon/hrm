@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
+  </ItemGroup>
+
 </Project>

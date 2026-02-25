@@ -21,6 +21,12 @@ public interface ICurrentUserService : IExecutionContext
     Guid? EmployeeId { get; }
 
     /// <summary>
+    /// Gets the current user's primary company ID (only for Employee accounts).
+    /// Null for System accounts or employees without a primary company assignment.
+    /// </summary>
+    Guid? CompanyId { get; }
+
+    /// <summary>
     /// Checks if the current user is a System account.
     /// </summary>
     bool IsSystemAccount();
