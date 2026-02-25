@@ -40,6 +40,7 @@ public sealed class IdentityApiClient : IIdentityApiClient
                 request.Email,
                 request.Password,
                 request.FullName,
+                request.AccountType,
                 request.PhoneNumber
             };
 

@@ -24,6 +24,9 @@ public sealed class RegisterAccountRequest
     [RegularExpression(@"^\+?[0-9]{10,15}$", ErrorMessage = "Phone number must be 10-15 digits with optional + prefix")]
     public string? PhoneNumber { get; set; }
 
+    [Required(ErrorMessage = "Account type is required")]
+    public string AccountType { get; set; } = "System";
+
     [Required(ErrorMessage = "Password is required")]
     [StringLength(100, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters")]
     [DataType(DataType.Password)]

@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
+using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Application.Commands.RegisterAccount;
 
@@ -11,6 +12,7 @@ public sealed record RegisterAccountCommand(
     string Email,
     string Password,
     string FullName,
+    AccountType AccountType,
     string? PhoneNumber = null
 ) : IModuleCommand<Guid>
 {

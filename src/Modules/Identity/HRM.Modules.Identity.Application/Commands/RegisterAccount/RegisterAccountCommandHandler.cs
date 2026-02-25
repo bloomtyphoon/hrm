@@ -2,6 +2,7 @@ using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
 using HRM.Modules.Identity.Domain.Entities;
+using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
 
@@ -41,14 +42,23 @@ internal sealed class RegisterAccountCommandHandler : ICommandHandler<RegisterAc
         // 3. Hash password with BCrypt
         var passwordHash = _passwordHasher.HashPassword(request.Password);
 
-        // 4. Create Account aggregate (System account by default for this command)
-        var account = Account.CreateSystemAccount(
-            username: request.Username,
-            email: request.Email,
-            passwordHash: passwordHash,
-            fullName: request.FullName,
-            phoneNumber: request.PhoneNumber
-        );
+        // 4. Create Account aggregate using the correct factory based on AccountType
+        var account = request.AccountType switch
+        {
+            AccountType.System => Account.CreateSystemAccount(
+                username: request.Username,
+                email: request.Email,
+                passwordHash: passwordHash,
+                fullName: request.FullName,
+                phoneNumber: request.PhoneNumber),
+            AccountType.Employee => Account.CreateEmployeeAccount(
+                username: request.Username,
+                email: request.Email,
+                passwordHash: passwordHash,
+                fullName: request.FullName,
+                phoneNumber: request.PhoneNumber),
+            _ => throw new ArgumentOutOfRangeException(nameof(request.AccountType), request.AccountType, "Unsupported account type.")
+        };
 
         // 5. Add to repository
         _accountRepository.Add(account);
