@@ -212,6 +212,9 @@ public static class IdentityInfrastructureExtensions
         // IDataScopeService: Translates scope grant into a DataScopeRule for EF query filtering
         services.AddScoped<IDataScopeService, IdentityDataScopeService>();
 
+        // IAccountVisibilityFilter: Single-account access checks based on data scope
+        services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();
+
         // 7. Register Route Security Map Source
         // Register Identity module's RouteSecurityMap.xml to be loaded at startup
         // Actual loading happens in RouteSecurityLoaderService (IHostedService)
