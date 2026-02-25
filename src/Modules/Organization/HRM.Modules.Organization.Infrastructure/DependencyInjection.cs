@@ -32,7 +32,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // DbContext
-        var connectionString = configuration.GetConnectionString("HrmDb");
+        var connectionString = configuration.GetConnectionString("HrmDatabase");
         services.AddDbContext<OrganizationDbContext>((sp, options) =>
         {
             options.UseSqlServer(connectionString);
