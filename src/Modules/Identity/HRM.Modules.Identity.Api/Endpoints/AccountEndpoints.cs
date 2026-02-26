@@ -191,6 +191,7 @@ public static class AccountEndpoints
             Email: request.Email,
             Password: request.Password,
             FullName: request.FullName,
+            AccountType: request.AccountType,
             PhoneNumber: request.PhoneNumber
         );
 

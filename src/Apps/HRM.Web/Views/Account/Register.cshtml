@@ -39,6 +39,16 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="AccountType" class="form-label"></label>
+                <select asp-for="AccountType" class="form-select">
+                    <option value="System">System</option>
+                    <option value="Employee">Employee</option>
+                </select>
+                <span asp-validation-for="AccountType" class="text-danger"></span>
+                <div class="form-text">Select the account type: System (admin/operator) or Employee (HR staff).</div>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="Password" class="form-label"></label>
                 <input asp-for="Password" class="form-control" type="password" placeholder="Enter password" />
                 <span asp-validation-for="Password" class="text-danger"></span>
