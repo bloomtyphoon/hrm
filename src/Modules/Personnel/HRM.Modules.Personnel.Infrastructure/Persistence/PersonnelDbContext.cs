@@ -83,12 +83,12 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Employee -> Assignments (one-to-many)
-            entity.HasMany<EmployeeAssignment>("_assignments")
+            entity.HasMany(e => e.Assignments)
                 .WithOne(a => a.Employee)
                 .HasForeignKey(a => a.EmployeeId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.Navigation("_assignments")
+            entity.Navigation(e => e.Assignments)
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 

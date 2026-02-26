@@ -270,14 +270,11 @@ public sealed class RouteSecurityService : IRouteSecurityService
     /// </summary>
     private static string ConvertPathToRegex(string path)
     {
-        // Escape regex special characters except {param}
-        var escaped = Regex.Escape(path);
-
-        // Replace {param} with regex group that matches any non-slash characters
-        var pattern = Regex.Replace(escaped, @"\\{[^}]+\\}", "[^/]+");
-
-        // Add anchors
-        return $"^{pattern}$";
+        // Split on {param} placeholders, escape each literal segment, then rejoin with [^/]+
+        // This avoids relying on Regex.Escape brace-escaping behavior which differs across .NET versions
+        var parts = Regex.Split(path, @"\{[^}]+\}");
+        var regexPattern = string.Join("[^/]+", parts.Select(Regex.Escape));
+        return $"^{regexPattern}$";
     }
 
     /// <summary>
