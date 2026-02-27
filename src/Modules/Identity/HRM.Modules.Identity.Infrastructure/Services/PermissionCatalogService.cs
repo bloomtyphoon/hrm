@@ -1,10 +1,10 @@
 using System.Xml.Linq;
+using HRM.BuildingBlocks.Application.Abstractions.Caching;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
 using HRM.Modules.Identity.Infrastructure.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace HRM.Modules.Identity.Infrastructure.Services;
@@ -26,14 +26,14 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// </summary>
 public sealed class PermissionCatalogService : IPermissionCatalogService
 {
-    private const string CatalogCacheKey = "PermissionCatalog";
+    private const string CatalogCacheKey = "identity:catalog:permissions";
     private readonly IEnumerable<IPermissionCatalogSource> _sources;
-    private readonly IMemoryCache _cache;
+    private readonly ICache _cache;
     private readonly TimeSpan _cacheDuration;
 
     public PermissionCatalogService(
         IEnumerable<IPermissionCatalogSource> sources,
-        IMemoryCache cache,
+        ICache cache,
         IOptions<IdentityCacheSettings> cacheSettings)
     {
         _sources = sources ?? throw new ArgumentNullException(nameof(sources));
@@ -42,52 +42,49 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
     }
 
     /// <summary>
-    /// Load all available permissions from all catalog sources
-    /// Uses in-memory cache to avoid repeated parsing
+    /// Load all available permissions from all catalog sources.
+    /// Uses ICache to avoid repeated parsing across requests.
+    /// The catalog is global (not tenant-specific) — it's the schema definition only.
     /// </summary>
     public async Task<List<PermissionModule>> LoadCatalogAsync()
     {
-        // Check cache first
-        if (_cache.TryGetValue<List<PermissionModule>>(CatalogCacheKey, out var cachedModules) && cachedModules != null)
-        {
-            return cachedModules;
-        }
-
-        // Load from all sources
-        var allModules = new List<PermissionModule>();
-
-        foreach (var source in _sources)
-        {
-            try
+        return await _cache.GetOrCreateAsync(
+            CatalogCacheKey,
+            async () =>
             {
-                var xmlContent = await source.LoadContentAsync();
-                var modules = ParseCatalog(xmlContent);
-                allModules.AddRange(modules);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to load permission catalog from source '{source.ModuleName}': {ex.Message}",
-                    ex);
-            }
-        }
+                var allModules = new List<PermissionModule>();
 
-        // Validate no duplicate module names
-        var duplicateModules = allModules
-            .GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToList();
+                foreach (var source in _sources)
+                {
+                    try
+                    {
+                        var xmlContent = await source.LoadContentAsync();
+                        var modules = ParseCatalog(xmlContent);
+                        allModules.AddRange(modules);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException(
+                            $"Failed to load permission catalog from source '{source.ModuleName}': {ex.Message}",
+                            ex);
+                    }
+                }
 
-        if (duplicateModules.Count > 0)
-        {
-            throw new InvalidOperationException(
-                $"Duplicate module names found in permission catalogs: {string.Join(", ", duplicateModules)}");
-        }
+                var duplicateModules = allModules
+                    .GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
 
-        _cache.Set(CatalogCacheKey, allModules, _cacheDuration);
+                if (duplicateModules.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate module names found in permission catalogs: {string.Join(", ", duplicateModules)}");
+                }
 
-        return allModules;
+                return allModules;
+            },
+            _cacheDuration);
     }
 
     /// <summary>

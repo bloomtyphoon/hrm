@@ -31,6 +31,9 @@
     <!-- Memory Cache -->
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
 
+    <!-- Distributed Cache / Redis -->
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.0" />
+
     <!-- HTTP Context Accessor -->
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
 

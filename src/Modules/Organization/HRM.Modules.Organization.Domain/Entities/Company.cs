@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
 
@@ -13,8 +14,13 @@ namespace HRM.Modules.Organization.Domain.Entities;
 /// - [ScopeDimension(Company)] = self-reference for company-level filtering
 /// - OwnerId = null (companies are system-owned, not employee-owned)
 /// </summary>
-public class Company : AuditableEntity, IAggregateRoot, IScopedEntity
+public class Company : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantEntity
 {
+    /// <summary>
+    /// Tenant this company belongs to.
+    /// </summary>
+    public Guid TenantId { get; private set; }
+
     /// <summary>
     /// Company code (unique identifier for external systems).
     /// </summary>
@@ -52,10 +58,13 @@ public class Company : AuditableEntity, IAggregateRoot, IScopedEntity
     private Company() { }
 
     /// <summary>
-    /// Create a new company.
+    /// Create a new company belonging to a tenant.
     /// </summary>
-    public static Company Create(string code, string name, string? taxId = null)
+    public static Company Create(Guid tenantId, string code, string name, string? taxId = null)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
+
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Company code is required", nameof(code));
 
@@ -65,6 +74,7 @@ public class Company : AuditableEntity, IAggregateRoot, IScopedEntity
         return new Company
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             Code = code.Trim().ToUpperInvariant(),
             Name = name.Trim(),
             TaxId = taxId?.Trim(),

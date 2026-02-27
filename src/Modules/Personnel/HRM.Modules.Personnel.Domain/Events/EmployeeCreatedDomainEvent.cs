@@ -8,6 +8,7 @@ namespace HRM.Modules.Personnel.Domain.Events;
 /// for cross-module communication (e.g., Identity module creates Account + EmployeeProfile).
 /// </summary>
 public sealed record EmployeeCreatedDomainEvent(
+    Guid TenantId,
     Guid EmployeeId,
     string EmployeeCode,
     string FirstName,

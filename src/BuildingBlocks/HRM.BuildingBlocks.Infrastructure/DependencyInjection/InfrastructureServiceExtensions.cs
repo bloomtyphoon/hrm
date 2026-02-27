@@ -1,8 +1,10 @@
 using System.Text;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Caching;
 using HRM.BuildingBlocks.Application.Abstractions.Infrastructure;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.Authentication;
+using HRM.BuildingBlocks.Infrastructure.Caching;
 using HRM.BuildingBlocks.Infrastructure.Http;
 using HRM.BuildingBlocks.Infrastructure.Persistence.Interceptors;
 using HRM.BuildingBlocks.Infrastructure.Security;
@@ -13,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 
 namespace HRM.BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -82,8 +85,36 @@ public static class InfrastructureServiceExtensions
         // HTTP Context Accessor (required for CurrentUserService)
         services.AddHttpContextAccessor();
 
-        // NOTE: ICurrentUserService and IExecutionContext are registered in Identity module
-        // (CurrentUserService implements both interfaces)
+        // NOTE: ICurrentUserService, IExecutionContext, and ITenantContext are registered
+        // in the Identity module (CurrentUserService implements all three interfaces)
+
+        // Cache Infrastructure — configurable backend (Memory or Redis)
+        var cacheSettings = configuration
+            .GetSection(CacheSettings.SectionName)
+            .Get<CacheSettings>() ?? new CacheSettings();
+
+        services.Configure<CacheSettings>(configuration.GetSection(CacheSettings.SectionName));
+
+        if (cacheSettings.Provider.Equals("Redis", StringComparison.OrdinalIgnoreCase))
+        {
+            // Register IConnectionMultiplexer for prefix-based key invalidation (RemoveByPrefixAsync)
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+                ConnectionMultiplexer.Connect(cacheSettings.Redis.ConnectionString));
+
+            // Register IDistributedCache backed by Redis
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = cacheSettings.Redis.ConnectionString;
+                options.InstanceName = cacheSettings.Redis.InstanceName;
+            });
+
+            services.AddSingleton<ICache, DistributedCacheAdapter>();
+        }
+        else
+        {
+            services.AddMemoryCache();
+            services.AddSingleton<ICache, MemoryCacheAdapter>();
+        }
 
         // HTTP Context Services
         // NOTE: IClientInfoService provides access to HTTP request context (IP, UserAgent, etc.)

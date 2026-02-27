@@ -26,6 +26,7 @@ internal sealed class EmployeeCreatedDomainEventHandler
             new EmployeeCreatedIntegrationEvent(
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
+                TenantId: notification.TenantId,
                 EmployeeId: notification.EmployeeId,
                 EmployeeCode: notification.EmployeeCode,
                 FirstName: notification.FirstName,

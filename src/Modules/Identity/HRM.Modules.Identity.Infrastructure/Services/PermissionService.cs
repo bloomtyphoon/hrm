@@ -1,8 +1,9 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Caching;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Repositories;
 using HRM.Modules.Identity.Infrastructure.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -20,27 +21,28 @@ namespace HRM.Modules.Identity.Infrastructure.Services;
 /// Account -> AccountRoles -> Roles -> RolePermissions -> Permission key
 ///
 /// Caching:
-/// - User permissions cached for 5 minutes
-/// - Super admin status cached for 5 minutes
+/// - User permissions cached for 5 minutes per tenant
+/// - Super admin status cached for 5 minutes per tenant
+/// - Cache key format: identity:{tenantId}:permissions:{userId}
 /// </summary>
 public sealed class PermissionService : IPermissionService
 {
     private readonly IAccountPermissionRepository _permissionRepository;
-    private readonly IMemoryCache _cache;
+    private readonly ICache _cache;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<PermissionService> _logger;
     private readonly TimeSpan _cacheDuration;
 
-    private const string PermissionCacheKeyPrefix = "UserPermissions_";
-    private const string SuperAdminCacheKeyPrefix = "IsSuperAdmin_";
-
     public PermissionService(
         IAccountPermissionRepository permissionRepository,
-        IMemoryCache cache,
+        ICache cache,
+        ITenantContext tenantContext,
         ILogger<PermissionService> logger,
         IOptions<IdentityCacheSettings> cacheSettings)
     {
         _permissionRepository = permissionRepository ?? throw new ArgumentNullException(nameof(permissionRepository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.PermissionCacheDurationMinutes);
     }
@@ -112,25 +114,19 @@ public sealed class PermissionService : IPermissionService
             return [];
         }
 
-        var cacheKey = $"{PermissionCacheKeyPrefix}{userId}";
+        var cacheKey = BuildPermissionCacheKey(userId);
 
-        if (_cache.TryGetValue<HashSet<string>>(cacheKey, out var cachedPermissions) && cachedPermissions != null)
-        {
-            _logger.LogDebug("Cache hit for user {UserId} permissions", userId);
-            return cachedPermissions;
-        }
-
-        _logger.LogDebug("Cache miss for user {UserId} permissions, loading from database", userId);
-        var permissions = await _permissionRepository.GetPermissionsAsync(accountId, cancellationToken);
-
-        _cache.Set(cacheKey, permissions, _cacheDuration);
-
-        _logger.LogDebug(
-            "Loaded {Count} permissions for user {UserId}",
-            permissions.Count,
-            userId);
-
-        return permissions;
+        return await _cache.GetOrCreateAsync(
+            cacheKey,
+            async () =>
+            {
+                _logger.LogDebug("Cache miss for user {UserId} permissions, loading from database", userId);
+                var permissions = await _permissionRepository.GetPermissionsAsync(accountId, cancellationToken);
+                _logger.LogDebug("Loaded {Count} permissions for user {UserId}", permissions.Count, userId);
+                return permissions;
+            },
+            _cacheDuration,
+            cancellationToken);
     }
 
     /// <inheritdoc />
@@ -143,21 +139,21 @@ public sealed class PermissionService : IPermissionService
             return false;
         }
 
-        var cacheKey = $"{SuperAdminCacheKeyPrefix}{userId}";
+        var cacheKey = BuildSuperAdminCacheKey(userId);
 
-        if (_cache.TryGetValue<bool>(cacheKey, out var cachedResult))
-        {
-            return cachedResult;
-        }
-
-        var isSuperAdmin = await _permissionRepository.IsSuperAdminAsync(accountId, cancellationToken);
-
-        _cache.Set(cacheKey, isSuperAdmin, _cacheDuration);
-
-        if (isSuperAdmin)
-        {
-            _logger.LogDebug("User {UserId} is super admin", userId);
-        }
+        var isSuperAdmin = await _cache.GetOrCreateAsync(
+            cacheKey,
+            async () =>
+            {
+                var result = await _permissionRepository.IsSuperAdminAsync(accountId, cancellationToken);
+                if (result)
+                {
+                    _logger.LogDebug("User {UserId} is super admin", userId);
+                }
+                return result;
+            },
+            _cacheDuration,
+            cancellationToken);
 
         return isSuperAdmin;
     }
@@ -166,11 +162,23 @@ public sealed class PermissionService : IPermissionService
     /// Invalidate permission cache for a user.
     /// Call this when user's roles or permissions change.
     /// </summary>
-    public void InvalidateCache(string userId)
+    public async Task InvalidateCacheAsync(string userId, CancellationToken cancellationToken = default)
     {
-        _cache.Remove($"{PermissionCacheKeyPrefix}{userId}");
-        _cache.Remove($"{SuperAdminCacheKeyPrefix}{userId}");
+        await _cache.RemoveAsync(BuildPermissionCacheKey(userId), cancellationToken);
+        await _cache.RemoveAsync(BuildSuperAdminCacheKey(userId), cancellationToken);
 
         _logger.LogInformation("Permission cache invalidated for user {UserId}", userId);
+    }
+
+    private string BuildPermissionCacheKey(string userId)
+    {
+        var tenantId = _tenantContext.TenantId?.ToString() ?? "none";
+        return $"identity:{tenantId}:permissions:{userId}";
+    }
+
+    private string BuildSuperAdminCacheKey(string userId)
+    {
+        var tenantId = _tenantContext.TenantId?.ToString() ?? "none";
+        return $"identity:{tenantId}:superadmin:{userId}";
     }
 }

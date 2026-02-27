@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Audit;
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Entities;
 using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Events;
@@ -23,8 +24,15 @@ namespace HRM.Modules.Identity.Domain.Entities;
 ///
 /// Unified authentication entity for all account types (System, Employee).
 /// </summary>
-public class Account : AuditableEntity, ISecurityAuditable
+public class Account : AuditableEntity, ISecurityAuditable, ITenantEntity
 {
+    /// <summary>
+    /// Tenant this account belongs to.
+    /// System accounts have TenantId = WellKnownTenants.SystemTenantId.
+    /// Employee accounts have TenantId = their company's tenant.
+    /// </summary>
+    public Guid TenantId { get; private set; }
+
     /// <summary>
     /// Unique username for login
     /// </summary>
@@ -129,7 +137,8 @@ public class Account : AuditableEntity, ISecurityAuditable
     private Account() { }
 
     /// <summary>
-    /// Create a new System account
+    /// Create a new System account.
+    /// System accounts always belong to WellKnownTenants.SystemTenantId.
     /// </summary>
     public static Account CreateSystemAccount(
         string username,
@@ -141,6 +150,7 @@ public class Account : AuditableEntity, ISecurityAuditable
         var account = new Account
         {
             Id = Guid.NewGuid(),
+            TenantId = WellKnownTenants.SystemTenantId,
             Username = username,
             Email = email,
             PasswordHash = passwordHash,
@@ -157,18 +167,28 @@ public class Account : AuditableEntity, ISecurityAuditable
     }
 
     /// <summary>
-    /// Create a new Employee account
+    /// Create a new Employee account.
+    /// TenantId must be the employee's company tenant — never WellKnownTenants.SystemTenantId.
     /// </summary>
     public static Account CreateEmployeeAccount(
+        Guid tenantId,
         string username,
         string email,
         string passwordHash,
         string fullName,
         string? phoneNumber = null)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentException("TenantId is required for employee accounts.", nameof(tenantId));
+
+        if (tenantId == WellKnownTenants.SystemTenantId)
+            throw new ArgumentException(
+                "Employee accounts cannot belong to the system tenant.", nameof(tenantId));
+
         var account = new Account
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             Username = username,
             Email = email,
             PasswordHash = passwordHash,

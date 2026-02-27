@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
 
@@ -14,8 +15,13 @@ namespace HRM.Modules.Organization.Domain.Entities;
 /// - [ScopeDimension(Department)] = self-reference for department-level filtering
 /// - OwnerId = ManagerId (manager owns the department's data visibility)
 /// </summary>
-public class Department : AuditableEntity, IAggregateRoot, IScopedEntity
+public class Department : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantEntity
 {
+    /// <summary>
+    /// Tenant this department belongs to (denormalized from Company).
+    /// </summary>
+    public Guid TenantId { get; private set; }
+
     /// <summary>
     /// Department code (unique within company).
     /// </summary>
@@ -77,8 +83,10 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity
 
     /// <summary>
     /// Create a new root-level department.
+    /// TenantId is denormalized from the Company.
     /// </summary>
     public static Department CreateRoot(
+        Guid tenantId,
         Guid companyId,
         string code,
         string name,
@@ -89,6 +97,7 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity
         return new Department
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             CompanyId = companyId,
             Code = code.Trim().ToUpperInvariant(),
             Name = name.Trim(),
@@ -100,7 +109,7 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity
     }
 
     /// <summary>
-    /// Create a child department.
+    /// Create a child department (inherits TenantId and CompanyId from parent).
     /// </summary>
     public static Department CreateChild(
         Department parent,
@@ -114,6 +123,7 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity
         return new Department
         {
             Id = Guid.NewGuid(),
+            TenantId = parent.TenantId,
             CompanyId = parent.CompanyId,
             Code = code.Trim().ToUpperInvariant(),
             Name = name.Trim(),

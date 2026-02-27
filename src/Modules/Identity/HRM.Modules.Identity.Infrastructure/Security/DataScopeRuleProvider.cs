@@ -1,9 +1,9 @@
+using HRM.BuildingBlocks.Application.Abstractions.Caching;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DataScopeContext = HRM.Modules.Identity.Application.Abstractions.Authorization.DataScopeContext;
@@ -27,7 +27,7 @@ namespace HRM.Modules.Identity.Infrastructure.Security;
 public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 {
     private readonly IIdentityQueryContext _context;
-    private readonly IMemoryCache _cache;
+    private readonly ICache _cache;
     private readonly ILogger<DataScopeRuleProvider> _logger;
     private readonly TimeSpan _cacheDuration;
 
@@ -36,7 +36,7 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 
     public DataScopeRuleProvider(
         IIdentityQueryContext context,
-        IMemoryCache cache,
+        ICache cache,
         ILogger<DataScopeRuleProvider> logger,
         IOptions<IdentityCacheSettings> cacheSettings)
     {
@@ -231,9 +231,10 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
         Guid employeeId,
         CancellationToken cancellationToken)
     {
-        var cacheKey = $"EmployeeScopeData_{employeeId}";
+        var cacheKey = $"identity:scope:employee:{employeeId}";
 
-        if (_cache.TryGetValue<EmployeeScopeData>(cacheKey, out var cached) && cached != null)
+        var cached = await _cache.GetAsync<EmployeeScopeData>(cacheKey, cancellationToken);
+        if (cached != null)
         {
             return cached;
         }
@@ -251,7 +252,7 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 
         if (profile != null)
         {
-            _cache.Set(cacheKey, profile, _cacheDuration);
+            await _cache.SetAsync(cacheKey, profile, _cacheDuration, cancellationToken);
         }
 
         return profile;

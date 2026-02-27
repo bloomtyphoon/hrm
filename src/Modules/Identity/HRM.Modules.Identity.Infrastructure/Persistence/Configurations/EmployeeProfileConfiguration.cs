@@ -19,6 +19,14 @@ internal sealed class EmployeeProfileConfiguration : IEntityTypeConfiguration<Em
 
         builder.HasKey(ep => ep.Id);
 
+        // TenantId: required for tenant isolation
+        // Global query filter (tenant) applied by ModuleDbContext
+        builder.Property(ep => ep.TenantId)
+            .IsRequired();
+
+        builder.HasIndex(ep => ep.TenantId)
+            .HasDatabaseName("IX_EmployeeProfiles_TenantId");
+
         builder.Property(ep => ep.AccountId)
             .IsRequired();
 

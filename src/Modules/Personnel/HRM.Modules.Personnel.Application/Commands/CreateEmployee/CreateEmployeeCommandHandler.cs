@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Domain.Entities;
@@ -9,10 +10,14 @@ namespace HRM.Modules.Personnel.Application.Commands.CreateEmployee;
 internal sealed class CreateEmployeeCommandHandler : ICommandHandler<CreateEmployeeCommand, Guid>
 {
     private readonly IEmployeeRepository _employeeRepository;
+    private readonly ITenantContext _tenantContext;
 
-    public CreateEmployeeCommandHandler(IEmployeeRepository employeeRepository)
+    public CreateEmployeeCommandHandler(
+        IEmployeeRepository employeeRepository,
+        ITenantContext tenantContext)
     {
         _employeeRepository = employeeRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<Result<Guid>> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
@@ -42,7 +47,10 @@ internal sealed class CreateEmployeeCommandHandler : ICommandHandler<CreateEmplo
         }
 
         // 4. Create Employee aggregate
+        var tenantId = _tenantContext.TenantId
+            ?? throw new InvalidOperationException("TenantId is required to create an employee.");
         var employee = Employee.Create(
+            tenantId: tenantId,
             employeeCode: request.EmployeeCode,
             firstName: request.FirstName,
             lastName: request.LastName,
