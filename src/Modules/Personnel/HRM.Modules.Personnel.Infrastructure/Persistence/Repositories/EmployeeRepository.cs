@@ -1,3 +1,5 @@
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -7,10 +9,12 @@ namespace HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
 internal sealed class EmployeeRepository : IEmployeeRepository
 {
     private readonly PersonnelDbContext _context;
+    private readonly ITenantContext? _tenantContext;
 
-    public EmployeeRepository(PersonnelDbContext context)
+    public EmployeeRepository(PersonnelDbContext context, ITenantContext? tenantContext = null)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -53,20 +57,47 @@ internal sealed class EmployeeRepository : IEmployeeRepository
 
     public async Task<IReadOnlyList<Guid>> GetAllSubordinateIdsAsync(Guid managerId, CancellationToken cancellationToken = default)
     {
-        // Recursive CTE via raw SQL for performance
-        var sql = @"
-            WITH Subordinates AS (
-                SELECT Id FROM Personnel.Employees WHERE ManagerId = {0}
-                UNION ALL
-                SELECT e.Id FROM Personnel.Employees e
-                INNER JOIN Subordinates s ON e.ManagerId = s.Id
-            )
-            SELECT Id FROM Subordinates";
+        // Recursive CTE via raw SQL for performance.
+        // EF Core cannot wrap CTEs in a subquery (SQL Server limitation), so the global
+        // query filter is NOT applied automatically. TenantId must be filtered explicitly.
+        var tenantId = _tenantContext?.TenantId;
+        var isSystemOrBackground = tenantId is null || tenantId == WellKnownTenants.SystemTenantId;
 
-        var ids = await _context.Employees
-            .FromSqlRaw(sql, managerId)
-            .Select(e => e.Id)
-            .ToListAsync(cancellationToken);
+        List<Guid> ids;
+
+        if (isSystemOrBackground)
+        {
+            // Background services and system admin see all tenants (consistent with global filter).
+            var sql = @"
+                WITH Subordinates AS (
+                    SELECT Id FROM Personnel.Employees WHERE ManagerId = {0}
+                    UNION ALL
+                    SELECT e.Id FROM Personnel.Employees e
+                    INNER JOIN Subordinates s ON e.ManagerId = s.Id
+                )
+                SELECT Id FROM Subordinates";
+
+            ids = await _context.Database
+                .SqlQueryRaw<Guid>(sql, managerId)
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            // Customer tenant: restrict CTE traversal to the current tenant only.
+            var sql = @"
+                WITH Subordinates AS (
+                    SELECT Id FROM Personnel.Employees WHERE ManagerId = {0} AND TenantId = {1}
+                    UNION ALL
+                    SELECT e.Id FROM Personnel.Employees e
+                    INNER JOIN Subordinates s ON e.ManagerId = s.Id
+                    WHERE e.TenantId = {1}
+                )
+                SELECT Id FROM Subordinates";
+
+            ids = await _context.Database
+                .SqlQueryRaw<Guid>(sql, managerId, tenantId!)
+                .ToListAsync(cancellationToken);
+        }
 
         // Include the manager themselves
         ids.Insert(0, managerId);
