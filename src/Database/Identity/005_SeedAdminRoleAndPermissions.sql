@@ -22,9 +22,9 @@ BEGIN
     SET @AdminRoleId = NEWID()
 
     INSERT INTO [Identity].Roles
-    (Id, Name, Description, IsSystemRole, CreatedAtUtc, ModifiedAtUtc, CreatedById, ModifiedById, IsDeleted, DeletedAtUtc)
+    (Id, TenantId, Name, Description, IsSystemRole, CreatedAtUtc, ModifiedAtUtc, CreatedById, ModifiedById, IsDeleted, DeletedAtUtc)
     VALUES
-    (@AdminRoleId, @AdminRoleName, @AdminRoleDescription, 1, GETUTCDATE(), NULL, NULL, NULL, 0, NULL)
+    (@AdminRoleId, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF', @AdminRoleName, @AdminRoleDescription, 1, GETUTCDATE(), NULL, NULL, NULL, 0, NULL)
 
     PRINT 'System Administrator role created with ID: ' + CAST(@AdminRoleId AS NVARCHAR(50))
 END

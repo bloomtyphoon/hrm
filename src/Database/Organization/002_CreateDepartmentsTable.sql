@@ -17,6 +17,10 @@ BEGIN
         Code NVARCHAR(50) NOT NULL,
         Name NVARCHAR(200) NOT NULL,
 
+        -- Multi-tenancy (soft reference, no FK to Tenants for module independence)
+        -- System Tenant: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+        TenantId UNIQUEIDENTIFIER NOT NULL,
+
         -- Relationships
         CompanyId UNIQUEIDENTIFIER NOT NULL,
         ParentDepartmentId UNIQUEIDENTIFIER NULL,
@@ -87,6 +91,16 @@ BEGIN
     INCLUDE (Id, Code, Name, CompanyId)
 
     PRINT 'Index IX_Departments_ParentDepartmentId created'
+END
+GO
+
+-- Index 4: TenantId (for tenant-scoped queries)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Departments_TenantId' AND object_id = OBJECT_ID('[Organization].Departments'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Departments_TenantId
+    ON [Organization].Departments (TenantId)
+
+    PRINT 'Index IX_Departments_TenantId created'
 END
 GO
 

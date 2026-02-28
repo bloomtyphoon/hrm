@@ -25,6 +25,10 @@ BEGIN
         -- Primary Key
         Id UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
 
+        -- Multi-tenancy (soft reference, no FK to Tenants for module independence)
+        -- System Tenant: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+        TenantId UNIQUEIDENTIFIER NOT NULL,
+
         -- Company Information
         Code NVARCHAR(50) NOT NULL,
         Name NVARCHAR(200) NOT NULL,
@@ -76,6 +80,16 @@ BEGIN
     INCLUDE (Id, Code, Name)
 
     PRINT 'Index IX_Companies_Status created'
+END
+GO
+
+-- Index 3: TenantId (for tenant-scoped queries)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Companies_TenantId' AND object_id = OBJECT_ID('[Organization].Companies'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Companies_TenantId
+    ON [Organization].Companies (TenantId)
+
+    PRINT 'Index IX_Companies_TenantId created'
 END
 GO
 
