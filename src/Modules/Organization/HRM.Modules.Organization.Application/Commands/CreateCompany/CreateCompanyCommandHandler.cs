@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
 using HRM.Modules.Organization.Domain.Entities;
 using HRM.Modules.Organization.Domain.Errors;
@@ -32,10 +33,14 @@ namespace HRM.Modules.Organization.Application.Commands.CreateCompany;
 internal sealed class CreateCompanyCommandHandler : ICommandHandler<CreateCompanyCommand, Guid>
 {
     private readonly ICompanyRepository _companyRepository;
+    private readonly ITenantContext _tenantContext;
 
-    public CreateCompanyCommandHandler(ICompanyRepository companyRepository)
+    public CreateCompanyCommandHandler(
+        ICompanyRepository companyRepository,
+        ITenantContext tenantContext)
     {
         _companyRepository = companyRepository;
+        _tenantContext = tenantContext;
     }
 
     public async Task<Result<Guid>> Handle(CreateCompanyCommand request, CancellationToken cancellationToken)
@@ -50,7 +55,10 @@ internal sealed class CreateCompanyCommandHandler : ICommandHandler<CreateCompan
         // Factory method encapsulates creation logic
         // Sets status to Active
         // Normalizes code to uppercase
+        var tenantId = _tenantContext.TenantId
+            ?? throw new InvalidOperationException("TenantId is required to create a company.");
         var company = Company.Create(
+            tenantId: tenantId,
             code: request.Code,
             name: request.Name,
             taxId: request.TaxId

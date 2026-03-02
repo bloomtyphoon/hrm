@@ -27,6 +27,10 @@ BEGIN
         -- Primary Key
         Id UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
 
+        -- Multi-tenancy (soft reference, no FK to Organization.Tenants for module independence)
+        -- System Tenant: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+        TenantId UNIQUEIDENTIFIER NOT NULL,
+
         -- Employee Identity
         EmployeeCode NVARCHAR(50) NOT NULL,
         FirstName NVARCHAR(100) NOT NULL,
@@ -129,6 +133,16 @@ BEGIN
     INCLUDE (Id, EmployeeCode, FirstName, LastName, Email, HireDate)
 
     PRINT 'Index IX_Employees_Status created'
+END
+GO
+
+-- Index 6: TenantId (for tenant-scoped queries)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Employees_TenantId' AND object_id = OBJECT_ID('[Personnel].Employees'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Employees_TenantId
+    ON [Personnel].Employees (TenantId)
+
+    PRINT 'Index IX_Employees_TenantId created'
 END
 GO
 

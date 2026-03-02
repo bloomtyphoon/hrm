@@ -1,6 +1,9 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Events;
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.SoftDelete;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.BuildingBlocks.Domain.Entities;
@@ -55,6 +58,7 @@ namespace HRM.BuildingBlocks.Infrastructure.Persistence;
 public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
 {
     private readonly IPublisher _publisher;
+    private readonly ITenantContext? _tenantContext;
 
     /// <summary>
     /// Module name for identification
@@ -77,15 +81,27 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     /// <summary>
-    /// Protected constructor for derived module DbContexts
+    /// Protected constructor for derived module DbContexts.
     /// </summary>
     /// <param name="options">DbContext options (connection string, etc.)</param>
     /// <param name="publisher">MediatR publisher for domain events</param>
-    protected ModuleDbContext(DbContextOptions options, IPublisher publisher)
+    /// <param name="tenantContext">
+    /// Current tenant context. Null for background services (no HTTP context).
+    /// When null, tenant query filters are bypassed (background service access).
+    /// </param>
+    protected ModuleDbContext(DbContextOptions options, IPublisher publisher, ITenantContext? tenantContext = null)
         : base(options)
     {
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        _tenantContext = tenantContext;
     }
+
+    /// <summary>
+    /// Returns the current tenant ID from the request context.
+    /// Evaluated at query time (not at model build time) — safe for per-request scoping.
+    /// Returns null when there is no tenant context (background services).
+    /// </summary>
+    private Guid? GetCurrentTenantId() => _tenantContext?.TenantId;
 
     /// <summary>
     /// Add an integration event to the outbox for reliable asynchronous publishing.
@@ -269,6 +285,11 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
         // Automatically exclude soft-deleted entities from all queries
         // Can be disabled per query with: query.IgnoreQueryFilters()
         ConfigureSoftDeleteQueryFilter(modelBuilder);
+
+        // Configure global query filters for multi-tenancy
+        // Automatically filter entities by current tenant
+        // System tenant (WellKnownTenants.SystemTenantId) bypasses the filter
+        ConfigureTenantQueryFilter(modelBuilder);
     }
 
     /// <summary>
@@ -310,12 +331,77 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     /// </code>
     /// </summary>
     /// <param name="modelBuilder">Model builder</param>
-    private void ConfigureSoftDeleteQueryFilter(ModelBuilder modelBuilder)
+    /// <summary>
+    /// Configure global query filter for multi-tenancy.
+    /// Applied to all entities implementing ITenantEntity.
+    ///
+    /// Filter logic:
+    ///   GetCurrentTenantId() == null              → background service, no filter (bypass)
+    ///   GetCurrentTenantId() == SystemTenantId    → system admin, sees all data (bypass)
+    ///   GetCurrentTenantId() == entity.TenantId   → customer tenant, filtered access
+    ///
+    /// IMPORTANT: EF Core evaluates GetCurrentTenantId() at query execution time
+    /// (not at model build time), making it safe for per-request tenant scoping.
+    /// This works because the filter expression closes over 'this' (the DbContext instance),
+    /// and DbContext is registered as Scoped (new instance per request).
+    /// </summary>
+    private void ConfigureTenantQueryFilter(ModelBuilder modelBuilder)
     {
-        // Get all entity types that implement ISoftDeletable
+        var getMethod = typeof(ModuleDbContext)
+            .GetMethod(nameof(GetCurrentTenantId), BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var contextExpr = Expression.Constant(this);
+        var systemTenantIdExpr = Expression.Constant(
+            (Guid?)WellKnownTenants.SystemTenantId, typeof(Guid?));
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
+            if (!typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
+                continue;
+
+            var parameter = Expression.Parameter(entityType.ClrType, "e");
+            var tenantIdProp = Expression.Property(parameter, nameof(ITenantEntity.TenantId));
+            var tenantIdAsNullable = Expression.Convert(tenantIdProp, typeof(Guid?));
+
+            // GetCurrentTenantId() — evaluated per query
+            var currentTenantIdExpr = Expression.Call(contextExpr, getMethod);
+
+            // Condition 1: GetCurrentTenantId() == null (background service / anonymous)
+            var isNullContext = Expression.Equal(
+                currentTenantIdExpr,
+                Expression.Constant(null, typeof(Guid?)));
+
+            // Condition 2: GetCurrentTenantId() == SystemTenantId (system admin bypass)
+            var isSystemTenant = Expression.Equal(currentTenantIdExpr, systemTenantIdExpr);
+
+            // Condition 3: e.TenantId == GetCurrentTenantId() (customer tenant match)
+            var matchesTenant = Expression.Equal(tenantIdAsNullable, currentTenantIdExpr);
+
+            // Tenant filter: (null context) OR (system tenant) OR (tenant match)
+            Expression filterBody = Expression.OrElse(
+                isNullContext,
+                Expression.OrElse(isSystemTenant, matchesTenant));
+
+            // If the entity also implements ISoftDeletable, combine both filters.
+            // This replaces the soft-delete-only filter set by ConfigureSoftDeleteQueryFilter.
             if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+            {
+                var isDeletedProp = Expression.Property(parameter, nameof(ISoftDeletable.IsDeleted));
+                var notDeleted = Expression.Equal(isDeletedProp, Expression.Constant(false));
+                filterBody = Expression.AndAlso(notDeleted, filterBody);
+            }
+
+            entityType.SetQueryFilter(Expression.Lambda(filterBody, parameter));
+        }
+    }
+
+    private void ConfigureSoftDeleteQueryFilter(ModelBuilder modelBuilder)
+    {
+        // Get all entity types that implement ISoftDeletable (but NOT ITenantEntity —
+        // those are handled in ConfigureTenantQueryFilter with combined filter)
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType)
+                && !typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
             {
                 // Build expression: e => e.IsDeleted == false
                 var parameter = Expression.Parameter(entityType.ClrType, "e");

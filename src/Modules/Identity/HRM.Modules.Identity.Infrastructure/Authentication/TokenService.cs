@@ -140,6 +140,9 @@ public sealed class TokenService : ITokenService
             new("AccountType", account.AccountType.ToString())
         };
 
+        // TenantId claim (always present — identifies the tenant for this token)
+        claims.Add(new Claim("TenantId", account.TenantId.ToString()));
+
         // Employee-specific claims
         if (employeeProfile != null)
         {

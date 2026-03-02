@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.EventBus;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
@@ -149,10 +150,11 @@ public static class IdentityInfrastructureExtensions
         services.AddSingleton<IAccountPermissionRepository, AccountPermissionRepository>();
 
         // 3. Register Authentication Services
-        // CurrentUserService implements both ICurrentUserService (Identity) and IExecutionContext (shared)
+        // CurrentUserService implements ICurrentUserService (Identity), IExecutionContext (shared), and ITenantContext
         // Other modules depend on IExecutionContext (primitives only), Identity uses ICurrentUserService (typed)
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IExecutionContext>(sp => sp.GetRequiredService<ICurrentUserService>());
+        services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<ICurrentUserService>());
 
         // Singleton: Stateless services, safe to share across requests
         // NOTE: These are Identity module-specific, used only for login/registration
@@ -178,8 +180,7 @@ public static class IdentityInfrastructureExtensions
         services.AddHostedService<IdentityOutboxProcessor>();
 
         // 5. Register Permission Catalog Services
-        // MemoryCache: Required for caching parsed catalog
-        services.AddMemoryCache();
+        // ICache is registered by BuildingBlocks (Memory or Redis based on CacheSettings.Provider)
 
         // Factory: Creates IPermissionCatalogSource instances for modules
         // Service: Aggregates all sources and provides catalog access

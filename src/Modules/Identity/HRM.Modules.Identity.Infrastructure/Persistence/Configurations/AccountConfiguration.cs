@@ -92,6 +92,14 @@ internal sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             .IsUnique()
             .HasDatabaseName("IX_Accounts_Email");
 
+        // TenantId: required for tenant isolation
+        // Global query filter (tenant) applied by ModuleDbContext
+        builder.Property(a => a.TenantId)
+            .IsRequired();
+
+        builder.HasIndex(a => a.TenantId)
+            .HasDatabaseName("IX_Accounts_TenantId");
+
         // Non-unique indexes
         builder.HasIndex(a => a.Status)
             .HasDatabaseName("IX_Accounts_Status");

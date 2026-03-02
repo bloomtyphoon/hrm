@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.Modules.Identity.Domain.Enums;
 
 namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
@@ -6,8 +7,10 @@ namespace HRM.Modules.Identity.Application.Abstractions.Authentication;
 /// <summary>
 /// Identity module's typed user context service.
 /// Extends IExecutionContext with Identity-specific vocabulary.
+/// Also implements ITenantContext — registered in DI so other services
+/// can resolve ITenantContext from this service.
 /// </summary>
-public interface ICurrentUserService : IExecutionContext
+public interface ICurrentUserService : IExecutionContext, ITenantContext
 {
     /// <summary>
     /// Gets the current user's account type (System or Employee).

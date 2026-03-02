@@ -53,7 +53,7 @@ internal sealed class CreateDepartmentCommandHandler : ICommandHandler<CreateDep
         }
         else
         {
-            department = Department.CreateRoot(request.CompanyId, request.Code, request.Name, request.ManagerId);
+            department = Department.CreateRoot(company.TenantId, request.CompanyId, request.Code, request.Name, request.ManagerId);
         }
 
         // 4. Add to repository

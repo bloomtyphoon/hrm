@@ -57,7 +57,9 @@ internal sealed class CreateRoleCommandHandler : ICommandHandler<CreateRoleComma
         }
 
         // 3. Create Role aggregate
-        var role = Role.Create(request.Name, request.Description, request.IsSystemRole, request.CompanyId);
+        var tenantId = _currentUser.TenantId
+            ?? throw new InvalidOperationException("TenantId is required to create a role.");
+        var role = Role.Create(tenantId, request.Name, request.Description, request.IsSystemRole, request.CompanyId);
 
         // 4. Add permissions
         var permissions = request.Permissions

@@ -30,6 +30,10 @@ BEGIN
         -- Employee Reference (cross-module, opaque ID)
         EmployeeId                      UNIQUEIDENTIFIER    NOT NULL,
 
+        -- Multi-tenancy (soft reference, no FK to Organization.Tenants for module independence)
+        -- System Tenant: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+        TenantId                        UNIQUEIDENTIFIER    NOT NULL,
+
         -- Data Scope Configuration
         DefaultScopeLevel               INT                 NOT NULL DEFAULT 4, -- 0=Global, 1=Company, 2=Department, 3=Position, 4=Self
         CanAccessAllAssignedCompanies   BIT                 NOT NULL DEFAULT 1,
@@ -79,6 +83,16 @@ BEGIN
     WHERE PrimaryCompanyId IS NOT NULL
 
     PRINT 'Index IX_Identity_EmployeeProfiles_PrimaryCompanyId created'
+END
+GO
+
+-- Index: TenantId (for tenant-scoped queries)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_EmployeeProfiles_TenantId' AND object_id = OBJECT_ID('[Identity].EmployeeProfiles'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Identity_EmployeeProfiles_TenantId
+    ON [Identity].EmployeeProfiles (TenantId)
+
+    PRINT 'Index IX_Identity_EmployeeProfiles_TenantId created'
 END
 GO
 

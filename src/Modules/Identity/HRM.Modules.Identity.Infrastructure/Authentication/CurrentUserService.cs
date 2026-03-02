@@ -13,7 +13,7 @@ namespace HRM.Modules.Identity.Infrastructure.Authentication;
 /// What Identity does NOT know: ScopeLevel, CompanyId, DepartmentId, Org tree
 ///
 /// Other modules use IExecutionContext (BuildingBlocks) which provides only primitives.
-/// DI registers this as both ICurrentUserService and IExecutionContext.
+/// DI registers this as ICurrentUserService, IExecutionContext, and ITenantContext.
 /// </summary>
 public sealed class CurrentUserService : ICurrentUserService
 {
@@ -169,4 +169,16 @@ public sealed class CurrentUserService : ICurrentUserService
     /// <inheritdoc />
     public bool IsEmployeeAccount() => AccountType == AccountType.Employee;
 
+    /// <inheritdoc />
+    public Guid? TenantId
+    {
+        get
+        {
+            var claim = GetClaimValue("TenantId");
+            return Guid.TryParse(claim, out var id) ? id : null;
+        }
+    }
+
+    /// <inheritdoc />
+    public bool HasTenant => TenantId.HasValue;
 }

@@ -25,6 +25,10 @@ BEGIN
         -- Primary Key
         Id UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
 
+        -- Multi-Tenant: references Organization.Tenants (soft reference, no FK for cross-schema independence)
+        -- SystemTenantId = FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+        TenantId UNIQUEIDENTIFIER NOT NULL,
+
         -- Identity Information
         Username NVARCHAR(50) NOT NULL,
         Email NVARCHAR(255) NOT NULL,
@@ -107,7 +111,18 @@ BEGIN
 END
 GO
 
--- Index 3: Status (for filtering)
+-- Index 3: TenantId (for multi-tenant query filter)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Accounts_TenantId' AND object_id = OBJECT_ID('[Identity].Accounts'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Accounts_TenantId
+    ON [Identity].Accounts (TenantId)
+    WHERE IsDeleted = 0
+
+    PRINT 'Index IX_Accounts_TenantId created'
+END
+GO
+
+-- Index 4: Status (for filtering)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Accounts_Status' AND object_id = OBJECT_ID('[Identity].Accounts'))
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Accounts_Status
@@ -119,7 +134,7 @@ BEGIN
 END
 GO
 
--- Index 4: CreatedAtUtc (for sorting/pagination)
+-- Index 5: CreatedAtUtc (for sorting/pagination)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Accounts_CreatedAtUtc' AND object_id = OBJECT_ID('[Identity].Accounts'))
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Accounts_CreatedAtUtc
@@ -131,7 +146,7 @@ BEGIN
 END
 GO
 
--- Index 5: AccountType (for filtering by account type)
+-- Index 6: AccountType (for filtering by account type)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Accounts_AccountType' AND object_id = OBJECT_ID('[Identity].Accounts'))
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Accounts_AccountType
@@ -143,7 +158,7 @@ BEGIN
 END
 GO
 
--- Index 6: IsDeleted (for soft delete queries)
+-- Index 7: IsDeleted (for soft delete queries)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Accounts_IsDeleted' AND object_id = OBJECT_ID('[Identity].Accounts'))
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Accounts_IsDeleted
@@ -167,6 +182,7 @@ GO
 -- =============================================
 -- Default credentials: admin / Admin@123456
 -- SECURITY WARNING: Change password immediately in production!
+-- TenantId = FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF (System Tenant)
 -- =============================================
 
 IF NOT EXISTS (SELECT 1 FROM [Identity].Accounts WHERE Username = 'admin')
@@ -179,7 +195,7 @@ BEGIN
 
     INSERT INTO [Identity].Accounts
     (
-        Id, Username, Email, PasswordHash, FullName, PhoneNumber,
+        Id, TenantId, Username, Email, PasswordHash, FullName, PhoneNumber,
         AccountType, Status, ActivatedAtUtc, LastLoginAtUtc,
         IsTwoFactorEnabled, TwoFactorSecretKey, FailedLoginAttempts, LockedUntilUtc,
         PasswordChangedAtUtc, LastFailedLoginAtUtc, TwoFactorChangedAtUtc, StatusChangedAtUtc,
@@ -188,7 +204,8 @@ BEGIN
     )
     VALUES
     (
-        @AdminId, 'admin', 'admin@hrm.local', @PasswordHash, 'System Administrator', NULL,
+        @AdminId, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF',
+        'admin', 'admin@hrm.local', @PasswordHash, 'System Administrator', NULL,
         0,          -- AccountType: System
         1,          -- Status: Active
         GETUTCDATE(), NULL,

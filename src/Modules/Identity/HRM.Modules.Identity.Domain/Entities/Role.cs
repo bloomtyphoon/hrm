@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Entities;
 using HRM.Modules.Identity.Domain.Events;
 using HRM.Modules.Identity.Domain.ValueObjects;
@@ -36,9 +37,16 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// - RolePermissionsModifiedDomainEvent: Raised when permissions added/removed
 /// - RoleDeletedDomainEvent: Raised when role soft-deleted
 /// </summary>
-public sealed class Role : SoftDeletableEntity, IAggregateRoot
+public sealed class Role : SoftDeletableEntity, IAggregateRoot, ITenantEntity
 {
     private readonly List<RolePermission> _permissions = new();
+
+    /// <summary>
+    /// Tenant this role belongs to.
+    /// System roles have TenantId = WellKnownTenants.SystemTenantId.
+    /// Customer roles have TenantId = customer tenant Guid.
+    /// </summary>
+    public Guid TenantId { get; private set; }
 
     /// <summary>
     /// Unique role name (e.g., "System Administrator", "HR Manager")
@@ -116,8 +124,16 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
     /// <param name="isSystemRole">True for system role, false for employee role</param>
     /// <returns>New empty role</returns>
     /// <exception cref="ArgumentException">If name is invalid</exception>
-    public static Role Create(string name, string? description = null, bool isSystemRole = false, Guid? companyId = null)
+    public static Role Create(
+        Guid tenantId,
+        string name,
+        string? description = null,
+        bool isSystemRole = false,
+        Guid? companyId = null)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
+
         ValidateName(name);
 
         if (isSystemRole && companyId.HasValue)
@@ -126,9 +142,16 @@ public sealed class Role : SoftDeletableEntity, IAggregateRoot
                 "System roles cannot be company-scoped. Set companyId to null for system roles.");
         }
 
+        if (isSystemRole && tenantId != WellKnownTenants.SystemTenantId)
+        {
+            throw new InvalidOperationException(
+                "System roles must belong to the system tenant.");
+        }
+
         var role = new Role
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             Name = name.Trim(),
             Description = description?.Trim(),
             IsSystemRole = isSystemRole,

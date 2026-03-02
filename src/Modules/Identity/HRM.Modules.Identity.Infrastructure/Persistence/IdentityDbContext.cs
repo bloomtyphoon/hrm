@@ -1,4 +1,5 @@
 using System.Reflection;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Domain.Entities;
@@ -27,8 +28,9 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
 {
     public IdentityDbContext(
         DbContextOptions<IdentityDbContext> options,
-        IPublisher publisher)
-        : base(options, publisher)
+        IPublisher publisher,
+        ITenantContext? tenantContext = null)
+        : base(options, publisher, tenantContext)
     {
     }
 

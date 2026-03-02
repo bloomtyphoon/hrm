@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
 using HRM.Modules.Identity.Domain.Events;
@@ -20,8 +21,13 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// - Identity module does NOT depend on Personnel.Domain
 /// - This follows kgrzybek-style module isolation
 /// </summary>
-public class EmployeeProfile : AuditableEntity
+public class EmployeeProfile : AuditableEntity, ITenantEntity
 {
+    /// <summary>
+    /// Tenant this employee profile belongs to (denormalized from Account/Employee).
+    /// </summary>
+    public Guid TenantId { get; private set; }
+
     /// <summary>
     /// Reference to the Account
     /// </summary>
@@ -81,9 +87,11 @@ public class EmployeeProfile : AuditableEntity
     private EmployeeProfile() { }
 
     /// <summary>
-    /// Create a new employee profile
+    /// Create a new employee profile.
+    /// TenantId must match the account's tenant.
     /// </summary>
     public static EmployeeProfile Create(
+        Guid tenantId,
         Guid accountId,
         Guid employeeId,
         DataScopeLevel defaultScopeLevel = DataScopeLevel.Self,
@@ -92,9 +100,13 @@ public class EmployeeProfile : AuditableEntity
         Guid? primaryPositionId = null,
         IReadOnlyList<Guid>? companyIds = null)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
+
         var profile = new EmployeeProfile
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             AccountId = accountId,
             EmployeeId = employeeId,
             DefaultScopeLevel = defaultScopeLevel,

@@ -86,6 +86,7 @@ internal sealed class EmployeeCreatedIntegrationEventHandler
 
             // Create employee account
             var account = Account.CreateEmployeeAccount(
+                tenantId: notification.TenantId,
                 username: username,
                 email: notification.Email,
                 passwordHash: passwordHash,
@@ -99,6 +100,7 @@ internal sealed class EmployeeCreatedIntegrationEventHandler
 
             // Create employee profile linking account to employee
             var profile = EmployeeProfile.Create(
+                tenantId: notification.TenantId,
                 accountId: account.Id,
                 employeeId: notification.EmployeeId);
 

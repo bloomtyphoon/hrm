@@ -11,8 +11,8 @@ namespace HRM.Modules.Identity.Infrastructure.Persistence.Configurations;
 ///
 /// Table: Identity.Roles
 /// Primary Key: Id (GUID)
-/// Unique Constraint: Name
-/// Owned Entity: RolePermission (stored as JSON column)
+/// Unique Constraint: (TenantId, Name, CompanyId)
+/// Owned Entity: RolePermission (stored in separate table)
 /// </summary>
 internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
@@ -38,10 +38,18 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.Property(r => r.CompanyId)
             .IsRequired(false);
 
-        // Unique index on (Name, CompanyId) - role name unique within same company scope
-        builder.HasIndex(r => new { r.Name, r.CompanyId })
+        // TenantId: required for tenant isolation
+        // Global query filter (soft delete + tenant) applied by ModuleDbContext
+        builder.Property(r => r.TenantId)
+            .IsRequired();
+
+        builder.HasIndex(r => r.TenantId)
+            .HasDatabaseName("IX_Roles_TenantId");
+
+        // Unique index: role name unique within tenant + optional company scope
+        builder.HasIndex(r => new { r.TenantId, r.Name, r.CompanyId })
             .IsUnique()
-            .HasDatabaseName("IX_Roles_Name_CompanyId");
+            .HasDatabaseName("IX_Roles_TenantId_Name_CompanyId");
 
         builder.HasIndex(r => r.IsSystemRole)
             .HasDatabaseName("IX_Roles_IsSystemRole");
@@ -83,7 +91,7 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
                 .HasDatabaseName("IX_RolePermissions_Unique");
         });
 
-        // Soft delete filter
-        builder.HasQueryFilter(r => !r.IsDeleted);
+        // NOTE: Soft delete + tenant query filter is applied globally by ModuleDbContext.
+        // Do NOT add HasQueryFilter here — it would overwrite the combined global filter.
     }
 }

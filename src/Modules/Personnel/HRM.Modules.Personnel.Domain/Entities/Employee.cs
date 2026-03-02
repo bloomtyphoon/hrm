@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
 using HRM.Modules.Personnel.Domain.Events;
@@ -24,8 +25,13 @@ namespace HRM.Modules.Personnel.Domain.Entities;
 /// - Used for EmployeeSet scope (manager can see subordinates' data)
 /// - Resolved by IHierarchyScopeResolver in Personnel module
 /// </summary>
-public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
+public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantEntity
 {
+    /// <summary>
+    /// Tenant this employee belongs to (denormalized from PrimaryCompany's tenant).
+    /// </summary>
+    public Guid TenantId { get; private set; }
+
     /// <summary>
     /// Employee code (unique identifier).
     /// </summary>
@@ -124,9 +130,10 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
     private Employee() { }
 
     /// <summary>
-    /// Create a new employee.
+    /// Create a new employee belonging to a tenant.
     /// </summary>
     public static Employee Create(
+        Guid tenantId,
         string employeeCode,
         string firstName,
         string lastName,
@@ -136,11 +143,15 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
         DateOnly? dateOfBirth = null,
         Guid? managerId = null)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentException("TenantId is required.", nameof(tenantId));
+
         ValidateInputs(employeeCode, firstName, lastName, email);
 
         var employee = new Employee
         {
             Id = Guid.NewGuid(),
+            TenantId = tenantId,
             EmployeeCode = employeeCode.Trim().ToUpperInvariant(),
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
@@ -153,6 +164,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity
         };
 
         employee.AddDomainEvent(new EmployeeCreatedDomainEvent(
+            TenantId: tenantId,
             EmployeeId: employee.Id,
             EmployeeCode: employee.EmployeeCode,
             FirstName: employee.FirstName,

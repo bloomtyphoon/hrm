@@ -1,4 +1,5 @@
 using System.Reflection;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
 using HRM.Modules.Organization.Domain.Entities;
 using MediatR;
@@ -29,8 +30,9 @@ public sealed class OrganizationDbContext : ModuleDbContext
 {
     public OrganizationDbContext(
         DbContextOptions<OrganizationDbContext> options,
-        IPublisher publisher)
-        : base(options, publisher)
+        IPublisher publisher,
+        ITenantContext? tenantContext = null)
+        : base(options, publisher, tenantContext)
     {
     }
 
@@ -39,6 +41,11 @@ public sealed class OrganizationDbContext : ModuleDbContext
     /// CRITICAL: Must be unique across all modules.
     /// </summary>
     public override string ModuleName => "Organization";
+
+    /// <summary>
+    /// Tenants table - top-level SaaS boundary.
+    /// </summary>
+    public DbSet<Tenant> Tenants => Set<Tenant>();
 
     /// <summary>
     /// Companies table - top-level organizational units.
@@ -70,10 +77,37 @@ public sealed class OrganizationDbContext : ModuleDbContext
         // Apply entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
+        // Configure Tenant entity
+        modelBuilder.Entity<Tenant>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Code)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasIndex(e => e.Code)
+                .IsUnique()
+                .HasDatabaseName("IX_Tenants_Code");
+
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_Tenants_Status");
+        });
+
         // Configure Company entity
         modelBuilder.Entity<Company>(entity =>
         {
             entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.TenantId)
+                .IsRequired();
+
+            entity.HasIndex(e => e.TenantId)
+                .HasDatabaseName("IX_Companies_TenantId");
 
             entity.Property(e => e.Code)
                 .IsRequired()
@@ -95,6 +129,12 @@ public sealed class OrganizationDbContext : ModuleDbContext
         modelBuilder.Entity<Department>(entity =>
         {
             entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.TenantId)
+                .IsRequired();
+
+            entity.HasIndex(e => e.TenantId)
+                .HasDatabaseName("IX_Departments_TenantId");
 
             entity.Property(e => e.Code)
                 .IsRequired()

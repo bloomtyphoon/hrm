@@ -16,11 +16,16 @@ BEGIN
     CREATE TABLE [Identity].Roles
     (
         Id                  UNIQUEIDENTIFIER    NOT NULL,
+
+        -- Multi-Tenant: references Organization.Tenants (soft reference, no FK for cross-schema independence)
+        -- SystemTenantId = FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+        TenantId            UNIQUEIDENTIFIER    NOT NULL,
+
         Name                NVARCHAR(100)       NOT NULL,
         Description         NVARCHAR(500)       NULL,
         IsSystemRole        BIT                 NOT NULL DEFAULT 0,
 
-        -- Company scope: NULL = global role, GUID = company-specific role
+        -- Company scope: NULL = tenant-global role, GUID = company-specific role
         CompanyId           UNIQUEIDENTIFIER    NULL,
 
         -- Audit Fields
@@ -33,7 +38,9 @@ BEGIN
         IsDeleted           BIT                 NOT NULL DEFAULT 0,
         DeletedAtUtc        DATETIME2(7)        NULL,
 
-        CONSTRAINT PK_Identity_Roles PRIMARY KEY CLUSTERED (Id)
+        CONSTRAINT PK_Identity_Roles PRIMARY KEY CLUSTERED (Id),
+        -- System roles must be global (no company scope)
+        CONSTRAINT CK_Identity_Roles_SystemRole_GlobalOnly CHECK (IsSystemRole = 0 OR CompanyId IS NULL)
     )
 
     PRINT 'Table [Identity].Roles created successfully'
@@ -44,15 +51,41 @@ BEGIN
 END
 GO
 
--- Unique index on (Name, CompanyId) - role name unique within same company scope
--- SQL Server treats NULL as a value for UNIQUE, so global roles have unique names
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_Name_CompanyId' AND object_id = OBJECT_ID('[Identity].Roles'))
+-- =============================================
+-- Roles Indexes
+-- =============================================
+
+-- TenantId index (for multi-tenant query filter)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_TenantId' AND object_id = OBJECT_ID('[Identity].Roles'))
 BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX IX_Identity_Roles_Name_CompanyId
-    ON [Identity].Roles (Name, CompanyId)
+    CREATE NONCLUSTERED INDEX IX_Identity_Roles_TenantId
+    ON [Identity].Roles (TenantId)
     WHERE IsDeleted = 0
 
-    PRINT 'Index IX_Identity_Roles_Name_CompanyId created'
+    PRINT 'Index IX_Identity_Roles_TenantId created'
+END
+GO
+
+-- Global roles within tenant: unique Name where CompanyId IS NULL
+-- (prevents duplicate global role names within the same tenant)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Identity_Roles_TenantId_Name_Global' AND object_id = OBJECT_ID('[Identity].Roles'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Identity_Roles_TenantId_Name_Global
+    ON [Identity].Roles (TenantId, Name)
+    WHERE CompanyId IS NULL AND IsDeleted = 0
+
+    PRINT 'Index UX_Identity_Roles_TenantId_Name_Global created'
+END
+GO
+
+-- Company-scoped roles within tenant: unique (TenantId, Name, CompanyId) where CompanyId IS NOT NULL
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Identity_Roles_TenantId_Name_CompanyId' AND object_id = OBJECT_ID('[Identity].Roles'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Identity_Roles_TenantId_Name_CompanyId
+    ON [Identity].Roles (TenantId, Name, CompanyId)
+    WHERE CompanyId IS NOT NULL AND IsDeleted = 0
+
+    PRINT 'Index UX_Identity_Roles_TenantId_Name_CompanyId created'
 END
 GO
 
@@ -66,14 +99,15 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_CompanyId' AND object_id = OBJECT_ID('[Identity].Roles'))
+-- Covering index for "get roles by company" queries (most common query pattern)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_CompanyId_Active' AND object_id = OBJECT_ID('[Identity].Roles'))
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Identity_Roles_CompanyId
+    CREATE NONCLUSTERED INDEX IX_Identity_Roles_CompanyId_Active
     ON [Identity].Roles (CompanyId)
     WHERE IsDeleted = 0
-    INCLUDE (Name, IsSystemRole)
+    INCLUDE (TenantId, Name, Description, IsSystemRole, CreatedAtUtc, ModifiedAtUtc)
 
-    PRINT 'Index IX_Identity_Roles_CompanyId created'
+    PRINT 'Index IX_Identity_Roles_CompanyId_Active created'
 END
 GO
 
@@ -102,14 +136,15 @@ BEGIN
         Entity              NVARCHAR(50)        NOT NULL,
         Action              NVARCHAR(50)        NOT NULL,
 
-        -- Scope level: 0=Global, 1=Company, 2=Department, 3=Position, 4=Self
+        -- Scope level: 0=Global, 1=Company, 2=Department, 3=Position, 4=Self, NULL=unset
         Scope               INT                 NULL,
 
         CONSTRAINT PK_Identity_RolePermissions PRIMARY KEY CLUSTERED (Id),
         CONSTRAINT FK_Identity_RolePermissions_Roles FOREIGN KEY (RoleId)
             REFERENCES [Identity].Roles (Id)
             ON DELETE CASCADE,
-        CONSTRAINT UQ_Identity_RolePermissions_Unique UNIQUE (RoleId, Module, Entity, Action, Scope)
+        CONSTRAINT UQ_Identity_RolePermissions_Unique UNIQUE (RoleId, Module, Entity, Action, Scope),
+        CONSTRAINT CK_Identity_RolePermissions_Scope CHECK (Scope IS NULL OR (Scope >= 0 AND Scope <= 4))
     )
 
     PRINT 'Table [Identity].RolePermissions created successfully'
@@ -152,7 +187,7 @@ GO
 
 EXEC sys.sp_addextendedproperty
     @name = N'MS_Description',
-    @value = N'Optional company ID for company-scoped roles. NULL = global role, GUID = company-specific role.',
+    @value = N'Optional company ID for company-scoped roles. NULL = tenant-global role, GUID = company-specific role.',
     @level0type = N'SCHEMA', @level0name = N'Identity',
     @level1type = N'TABLE', @level1name = N'Roles',
     @level2type = N'COLUMN', @level2name = N'CompanyId'

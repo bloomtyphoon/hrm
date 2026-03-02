@@ -1,4 +1,5 @@
 using System.Reflection;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Domain.Entities;
@@ -15,8 +16,9 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
 {
     public PersonnelDbContext(
         DbContextOptions<PersonnelDbContext> options,
-        IPublisher publisher)
-        : base(options, publisher)
+        IPublisher publisher,
+        ITenantContext? tenantContext = null)
+        : base(options, publisher, tenantContext)
     {
     }
 
@@ -37,6 +39,12 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
         modelBuilder.Entity<Employee>(entity =>
         {
             entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.TenantId)
+                .IsRequired();
+
+            entity.HasIndex(e => e.TenantId)
+                .HasDatabaseName("IX_Employees_TenantId");
 
             entity.Property(e => e.EmployeeCode)
                 .IsRequired()

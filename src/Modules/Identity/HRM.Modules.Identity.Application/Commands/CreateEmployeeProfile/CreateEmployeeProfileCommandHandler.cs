@@ -51,6 +51,7 @@ internal sealed class CreateEmployeeProfileCommandHandler : ICommandHandler<Crea
         }
 
         var profile = EmployeeProfile.Create(
+            tenantId: account.TenantId,
             accountId: request.AccountId,
             employeeId: request.EmployeeId,
             defaultScopeLevel: request.DefaultScopeLevel,

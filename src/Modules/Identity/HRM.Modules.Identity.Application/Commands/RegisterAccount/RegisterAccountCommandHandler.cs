@@ -11,18 +11,22 @@ namespace HRM.Modules.Identity.Application.Commands.RegisterAccount;
 /// <summary>
 /// Handler for RegisterAccountCommand.
 /// Creates new account in Pending status.
+/// TenantId is resolved from the current user's JWT claim (same tenant as the registrar).
 /// </summary>
 internal sealed class RegisterAccountCommandHandler : ICommandHandler<RegisterAccountCommand, Guid>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly ICurrentUserService _currentUserService;
 
     public RegisterAccountCommandHandler(
         IAccountRepository accountRepository,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        ICurrentUserService currentUserService)
     {
         _accountRepository = accountRepository;
         _passwordHasher = passwordHasher;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Result<Guid>> Handle(RegisterAccountCommand request, CancellationToken cancellationToken)
@@ -43,6 +47,7 @@ internal sealed class RegisterAccountCommandHandler : ICommandHandler<RegisterAc
         var passwordHash = _passwordHasher.HashPassword(request.Password);
 
         // 4. Create Account aggregate using the correct factory based on AccountType
+        // Employee accounts require a TenantId from the current request context
         var account = request.AccountType switch
         {
             AccountType.System => Account.CreateSystemAccount(
@@ -52,6 +57,8 @@ internal sealed class RegisterAccountCommandHandler : ICommandHandler<RegisterAc
                 fullName: request.FullName,
                 phoneNumber: request.PhoneNumber),
             AccountType.Employee => Account.CreateEmployeeAccount(
+                tenantId: _currentUserService.TenantId
+                    ?? throw new InvalidOperationException("TenantId is required to create an employee account."),
                 username: request.Username,
                 email: request.Email,
                 passwordHash: passwordHash,
