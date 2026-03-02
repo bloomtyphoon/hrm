@@ -85,6 +85,9 @@ public sealed class DataScopeService : IDataScopeService
             DataScopeLevel.Self =>
                 DataScopeRule.Self(employeeId),
 
+            DataScopeLevel.DirectReports =>
+                await ResolveDirectReportsScopeAsync(employeeId, cancellationToken),
+
             DataScopeLevel.EmployeeSet =>
                 await ResolveEmployeeSetScopeAsync(employeeId, cancellationToken),
 
@@ -97,8 +100,27 @@ public sealed class DataScopeService : IDataScopeService
             DataScopeLevel.Company =>
                 await ResolveCompanyScopeAsync(employeeId, cancellationToken),
 
+            DataScopeLevel.Country =>
+                await ResolveCountryScopeAsync(employeeId, cancellationToken),
+
+            DataScopeLevel.Region =>
+                await ResolveRegionScopeAsync(employeeId, cancellationToken),
+
             _ => DataScopeRule.None()
         };
+    }
+
+    private async Task<DataScopeRule> ResolveDirectReportsScopeAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken)
+    {
+        // GetSubordinateIdsAsync with includeIndirect: false returns self + direct reports only
+        var ids = await _hierarchyResolver.GetSubordinateIdsAsync(
+            employeeId,
+            includeIndirect: false,
+            cancellationToken);
+
+        return DataScopeRule.DirectReports(ids);
     }
 
     private async Task<DataScopeRule> ResolveEmployeeSetScopeAsync(
@@ -145,6 +167,28 @@ public sealed class DataScopeService : IDataScopeService
             ? DataScopeRule.Company(companyIds)
             : DataScopeRule.None();
     }
+
+    private async Task<DataScopeRule> ResolveCountryScopeAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken)
+    {
+        var countryIds = await _assignmentQuery.GetEmployeeCountryIdsAsync(employeeId, cancellationToken);
+
+        return countryIds.Count > 0
+            ? DataScopeRule.Country(countryIds)
+            : DataScopeRule.None();
+    }
+
+    private async Task<DataScopeRule> ResolveRegionScopeAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken)
+    {
+        var regionIds = await _assignmentQuery.GetEmployeeRegionIdsAsync(employeeId, cancellationToken);
+
+        return regionIds.Count > 0
+            ? DataScopeRule.Region(regionIds)
+            : DataScopeRule.None();
+    }
 }
 
 /// <summary>
@@ -186,6 +230,7 @@ public sealed class DataScopePolicyService
             {
                 DataScopeLevel.Global => DataScopeRule.Global(),
                 DataScopeLevel.Self => DataScopeRule.Self(employeeId),
+                DataScopeLevel.DirectReports => await ResolveDirectReportsAsync(employeeId, cancellationToken),
                 DataScopeLevel.EmployeeSet => await ResolveEmployeeSetAsync(employeeId, cancellationToken),
                 DataScopeLevel.Position when dimensions.PositionIds.Count > 0 =>
                     DataScopeRule.Position(dimensions.PositionIds),
@@ -193,6 +238,10 @@ public sealed class DataScopePolicyService
                     DataScopeRule.Department(dimensions.DepartmentIds),
                 DataScopeLevel.Company when dimensions.CompanyIds.Count > 0 =>
                     DataScopeRule.Company(dimensions.CompanyIds),
+                DataScopeLevel.Country when dimensions.CountryIds.Count > 0 =>
+                    DataScopeRule.Country(dimensions.CountryIds),
+                DataScopeLevel.Region when dimensions.RegionIds.Count > 0 =>
+                    DataScopeRule.Region(dimensions.RegionIds),
                 _ => null
             };
 
@@ -208,6 +257,16 @@ public sealed class DataScopePolicyService
         return rules.Count > 0
             ? DataScopePolicy.Or(rules.ToArray())
             : DataScopePolicy.Or(DataScopeRule.None());
+    }
+
+    private async Task<DataScopeRule> ResolveDirectReportsAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken)
+    {
+        var ids = await _hierarchyResolver.GetSubordinateIdsAsync(
+            employeeId, includeIndirect: false, cancellationToken);
+
+        return DataScopeRule.DirectReports(ids);
     }
 
     private async Task<DataScopeRule> ResolveEmployeeSetAsync(

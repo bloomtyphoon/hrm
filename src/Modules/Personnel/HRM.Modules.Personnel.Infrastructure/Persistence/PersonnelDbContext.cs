@@ -26,6 +26,7 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
 
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EmployeeAssignment> EmployeeAssignments => Set<EmployeeAssignment>();
+    internal DbSet<EmployeeHierarchyClosure> EmployeeHierarchyClosures => Set<EmployeeHierarchyClosure>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,6 +82,12 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
             entity.HasIndex(e => e.PrimaryCompanyId)
                 .HasDatabaseName("IX_Employees_PrimaryCompanyId");
 
+            entity.HasIndex(e => e.CountryId)
+                .HasDatabaseName("IX_Employees_CountryId");
+
+            entity.HasIndex(e => e.RegionId)
+                .HasDatabaseName("IX_Employees_RegionId");
+
             entity.HasIndex(e => e.Status)
                 .HasDatabaseName("IX_Employees_Status");
 
@@ -119,6 +126,25 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
 
             entity.HasIndex(e => new { e.EmployeeId, e.CompanyId, e.DepartmentId, e.PositionId })
                 .HasDatabaseName("IX_EmployeeAssignments_Composite");
+        });
+
+        // Configure EmployeeHierarchyClosure table (closure table for hierarchy O(1) lookup)
+        modelBuilder.Entity<EmployeeHierarchyClosure>(entity =>
+        {
+            entity.ToTable("EmployeeHierarchyClosures");
+
+            entity.HasKey(e => new { e.AncestorId, e.DescendantId });
+
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Depth).IsRequired();
+
+            // Primary lookup: "give me all descendants of manager X in tenant T"
+            entity.HasIndex(e => new { e.AncestorId, e.TenantId })
+                .HasDatabaseName("IX_EmployeeHierarchyClosures_AncestorId_TenantId");
+
+            // Reverse lookup: "give me all ancestors of employee Y in tenant T" (used during graft)
+            entity.HasIndex(e => new { e.DescendantId, e.TenantId })
+                .HasDatabaseName("IX_EmployeeHierarchyClosures_DescendantId_TenantId");
         });
     }
 }

@@ -90,6 +90,8 @@ public static class EfScopeExpressionBuilder
             DataScopeLevel.Global => _ => true,
             DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
                 x => x.OwnerId == rule.SelfEmployeeId.Value,
+            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+                BuildOwnerContains<T>(rule.EmployeeIds),
             DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
                 BuildOwnerContains<T>(rule.EmployeeIds),
             _ when rule.Level > DataScopeLevel.Self => _ => true, // Wider scope = all access
@@ -118,15 +120,19 @@ public static class EfScopeExpressionBuilder
             DataScopeLevel.Global => _ => true,
             DataScopeLevel.None => _ => false,
 
-            // Set-based scopes (filter by OwnerId)
+            // Set-based scopes (filter by OwnerId IN ids)
             DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
                 x => x.OwnerId == rule.SelfEmployeeId.Value,
+
+            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+                BuildOwnerContains<T>(rule.EmployeeIds),
 
             DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
                 BuildOwnerContains<T>(rule.EmployeeIds),
 
-            // Dimension-based scopes (filter by [ScopeDimension] property)
-            DataScopeLevel.Position or DataScopeLevel.Department or DataScopeLevel.Company =>
+            // Dimension-based scopes (filter by [ScopeDimension] property IN ids)
+            DataScopeLevel.Position or DataScopeLevel.Department or DataScopeLevel.Company
+            or DataScopeLevel.Country or DataScopeLevel.Region =>
                 BuildDimensionContains<T>(rule.Level, rule.DimensionIds),
 
             _ => _ => false

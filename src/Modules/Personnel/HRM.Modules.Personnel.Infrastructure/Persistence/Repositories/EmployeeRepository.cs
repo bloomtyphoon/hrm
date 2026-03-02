@@ -57,17 +57,41 @@ internal sealed class EmployeeRepository : IEmployeeRepository
 
     public async Task<IReadOnlyList<Guid>> GetAllSubordinateIdsAsync(Guid managerId, CancellationToken cancellationToken = default)
     {
-        // Recursive CTE via raw SQL for performance.
+        var tenantId = _tenantContext?.TenantId;
+        var isSystem = tenantId is null || tenantId == WellKnownTenants.SystemTenantId;
+
+        // Try closure table first (O(1) vs recursive CTE O(N)).
+        // The self-reference row (AncestorId == DescendantId) acts as an existence marker.
+        // If it is present, the closure table is populated for this manager.
+        var closureQuery = isSystem
+            ? _context.EmployeeHierarchyClosures
+                .Where(c => c.AncestorId == managerId)
+            : _context.EmployeeHierarchyClosures
+                .Where(c => c.AncestorId == managerId && c.TenantId == tenantId!.Value);
+
+        var closureIds = await closureQuery
+            .Select(c => c.DescendantId)
+            .ToListAsync(cancellationToken);
+
+        // Self-reference row presence confirms the closure table is populated for this manager.
+        if (closureIds.Contains(managerId))
+            return closureIds; // already includes managerId via self-reference
+
+        // Fallback: recursive CTE (closure table not yet populated for this employee).
+        return await GetAllSubordinateIdsViaCteAsync(managerId, isSystem ? null : tenantId, cancellationToken);
+    }
+
+    private async Task<List<Guid>> GetAllSubordinateIdsViaCteAsync(
+        Guid managerId, Guid? tenantId, CancellationToken cancellationToken)
+    {
+        // Recursive CTE via raw SQL.
         // EF Core cannot wrap CTEs in a subquery (SQL Server limitation), so the global
         // query filter is NOT applied automatically. TenantId must be filtered explicitly.
-        var tenantId = _tenantContext?.TenantId;
-        var isSystemOrBackground = tenantId is null || tenantId == WellKnownTenants.SystemTenantId;
-
         List<Guid> ids;
 
-        if (isSystemOrBackground)
+        if (tenantId is null)
         {
-            // Background services and system admin see all tenants (consistent with global filter).
+            // Background services and system admin see all tenants.
             var sql = @"
                 WITH Subordinates AS (
                     SELECT Id FROM Personnel.Employees WHERE ManagerId = {0}
@@ -95,7 +119,7 @@ internal sealed class EmployeeRepository : IEmployeeRepository
                 SELECT Id FROM Subordinates";
 
             ids = await _context.Database
-                .SqlQueryRaw<Guid>(sql, managerId, tenantId!)
+                .SqlQueryRaw<Guid>(sql, managerId, tenantId.Value)
                 .ToListAsync(cancellationToken);
         }
 
