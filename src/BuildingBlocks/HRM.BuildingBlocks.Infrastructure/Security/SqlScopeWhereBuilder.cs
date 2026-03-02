@@ -9,38 +9,16 @@ namespace HRM.BuildingBlocks.Infrastructure.Security;
 /// NOTE: Unlike EfScopeExpressionBuilder, SQL builder requires explicit column mapping.
 /// This is OK because the module using the builder provides the mapping,
 /// BB does NOT define the org structure.
-///
-/// Usage:
-/// <code>
-/// // Single rule
-/// var rule = DataScopeRule.Department([D1]);
-/// var parameters = new DynamicParameters();
-/// var where = SqlScopeWhereBuilder.Build(rule, parameters);
-/// var sql = $"SELECT * FROM Employees e WHERE 1=1 {where}";
-///
-/// // Policy
-/// var policy = DataScopePolicy.Or(
-///     DataScopeRule.Department([D1]),
-///     DataScopeRule.Position([P9])
-/// );
-/// var where = SqlScopeWhereBuilder.Build(policy, parameters);
-/// </code>
 /// </summary>
 public static class SqlScopeWhereBuilder
 {
     #region Single Rule API
 
-    /// <summary>
-    /// Build SQL WHERE clause fragment with standard column names.
-    /// </summary>
+    /// <summary>Build SQL WHERE clause fragment with standard column names.</summary>
     public static string Build(DataScopeRule rule, DynamicParameters parameters)
-    {
-        return Build(rule, parameters, new SqlScopeColumnMapping());
-    }
+        => Build(rule, parameters, new SqlScopeColumnMapping());
 
-    /// <summary>
-    /// Build SQL WHERE clause with custom column mapping.
-    /// </summary>
+    /// <summary>Build SQL WHERE clause with custom column mapping.</summary>
     public static string Build(DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
         return rule.Level switch
@@ -48,14 +26,15 @@ public static class SqlScopeWhereBuilder
             DataScopeLevel.Global => string.Empty,
             DataScopeLevel.None => "AND 1 = 0",
 
-            // Set-based scopes
             DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
                 BuildSelfFilter(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn),
+
+            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+                BuildEmployeeSetFilter(rule.EmployeeIds, parameters, columns.OwnerColumn),
 
             DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
                 BuildEmployeeSetFilter(rule.EmployeeIds, parameters, columns.OwnerColumn),
 
-            // Dimension-based scopes
             DataScopeLevel.Position =>
                 BuildDimensionFilter(rule.DimensionIds, parameters, columns.PositionColumn, "@ScopePositionIds"),
 
@@ -65,6 +44,12 @@ public static class SqlScopeWhereBuilder
             DataScopeLevel.Company =>
                 BuildDimensionFilter(rule.DimensionIds, parameters, columns.CompanyColumn, "@ScopeCompanyIds"),
 
+            DataScopeLevel.Country =>
+                BuildDimensionFilter(rule.DimensionIds, parameters, columns.CountryColumn, "@ScopeCountryIds"),
+
+            DataScopeLevel.Region =>
+                BuildDimensionFilter(rule.DimensionIds, parameters, columns.RegionColumn, "@ScopeRegionIds"),
+
             _ => "AND 1 = 0"
         };
     }
@@ -73,26 +58,18 @@ public static class SqlScopeWhereBuilder
 
     #region Policy API
 
-    /// <summary>
-    /// Build SQL WHERE clause from a policy (multiple rules combined).
-    /// </summary>
+    /// <summary>Build SQL WHERE clause from a policy (multiple rules combined).</summary>
     public static string Build(DataScopePolicy policy, DynamicParameters parameters)
-    {
-        return Build(policy, parameters, new SqlScopeColumnMapping());
-    }
+        => Build(policy, parameters, new SqlScopeColumnMapping());
 
-    /// <summary>
-    /// Build SQL WHERE clause from a policy with custom column mapping.
-    /// </summary>
+    /// <summary>Build SQL WHERE clause from a policy with custom column mapping.</summary>
     public static string Build(DataScopePolicy policy, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
         var simplified = policy.Simplify();
 
-        // Single rule - direct build
         if (simplified.IsSingleRule)
             return Build(simplified.SingleRule!, parameters, columns);
 
-        // Multiple rules - combine
         var clauses = new List<string>();
         var counter = 0;
 
@@ -113,17 +90,11 @@ public static class SqlScopeWhereBuilder
         return $"AND ({combined})";
     }
 
-    /// <summary>
-    /// Build standalone WHERE clause from policy (without leading AND).
-    /// </summary>
+    /// <summary>Build standalone WHERE clause from policy (without leading AND).</summary>
     public static string BuildStandalone(DataScopePolicy policy, DynamicParameters parameters)
-    {
-        return BuildStandalone(policy, parameters, new SqlScopeColumnMapping());
-    }
+        => BuildStandalone(policy, parameters, new SqlScopeColumnMapping());
 
-    /// <summary>
-    /// Build standalone WHERE clause from policy with custom columns.
-    /// </summary>
+    /// <summary>Build standalone WHERE clause from policy with custom columns.</summary>
     public static string BuildStandalone(DataScopePolicy policy, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
         var simplified = policy.Simplify();
@@ -153,11 +124,9 @@ public static class SqlScopeWhereBuilder
 
     #endregion
 
-    #region Legacy Single Rule API (backward compatible)
+    #region Legacy Single Rule API
 
-    /// <summary>
-    /// Build for employee-based queries with join to EmployeeAssignments.
-    /// </summary>
+    /// <summary>Build for employee-based queries with join to EmployeeAssignments.</summary>
     public static string BuildWithAssignments(
         DataScopeRule rule,
         DynamicParameters parameters,
@@ -172,6 +141,9 @@ public static class SqlScopeWhereBuilder
             DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
                 BuildSelfFilter(rule.SelfEmployeeId.Value, parameters, $"{employeeAlias}.Id", "@ScopeEmployeeId"),
 
+            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+                BuildEmployeeSetFilter(rule.EmployeeIds, parameters, $"{employeeAlias}.Id"),
+
             DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
                 BuildEmployeeSetFilter(rule.EmployeeIds, parameters, $"{employeeAlias}.Id"),
 
@@ -184,21 +156,21 @@ public static class SqlScopeWhereBuilder
             DataScopeLevel.Company =>
                 BuildDimensionFilter(rule.DimensionIds, parameters, $"{assignmentAlias}.CompanyId", "@ScopeCompanyIds"),
 
+            DataScopeLevel.Country =>
+                BuildDimensionFilter(rule.DimensionIds, parameters, $"{employeeAlias}.CountryId", "@ScopeCountryIds"),
+
+            DataScopeLevel.Region =>
+                BuildDimensionFilter(rule.DimensionIds, parameters, $"{employeeAlias}.RegionId", "@ScopeRegionIds"),
+
             _ => "AND 1 = 0"
         };
     }
 
-    /// <summary>
-    /// Build standalone WHERE clause (without leading AND).
-    /// </summary>
+    /// <summary>Build standalone WHERE clause (without leading AND).</summary>
     public static string BuildStandalone(DataScopeRule rule, DynamicParameters parameters)
-    {
-        return BuildStandalone(rule, parameters, new SqlScopeColumnMapping());
-    }
+        => BuildStandalone(rule, parameters, new SqlScopeColumnMapping());
 
-    /// <summary>
-    /// Build standalone WHERE clause with custom column mapping.
-    /// </summary>
+    /// <summary>Build standalone WHERE clause with custom column mapping.</summary>
     public static string BuildStandalone(DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
         return rule.Level switch
@@ -208,6 +180,9 @@ public static class SqlScopeWhereBuilder
 
             DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
                 BuildStandaloneSelf(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn),
+
+            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+                BuildStandaloneEmployeeSet(rule.EmployeeIds, parameters, columns.OwnerColumn),
 
             DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
                 BuildStandaloneEmployeeSet(rule.EmployeeIds, parameters, columns.OwnerColumn),
@@ -220,6 +195,12 @@ public static class SqlScopeWhereBuilder
 
             DataScopeLevel.Company =>
                 BuildStandaloneDimension(rule.DimensionIds, parameters, columns.CompanyColumn, "@ScopeCompanyIds"),
+
+            DataScopeLevel.Country =>
+                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.CountryColumn, "@ScopeCountryIds"),
+
+            DataScopeLevel.Region =>
+                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.RegionColumn, "@ScopeRegionIds"),
 
             _ => "1 = 0"
         };
@@ -242,6 +223,9 @@ public static class SqlScopeWhereBuilder
             DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
                 BuildSelfClause(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn, $"@ScopeEmployeeId{suffix}"),
 
+            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+                BuildEmployeeSetClause(rule.EmployeeIds, parameters, columns.OwnerColumn, $"@ScopeEmployeeIds{suffix}"),
+
             DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
                 BuildEmployeeSetClause(rule.EmployeeIds, parameters, columns.OwnerColumn, $"@ScopeEmployeeIds{suffix}"),
 
@@ -254,44 +238,43 @@ public static class SqlScopeWhereBuilder
             DataScopeLevel.Company =>
                 BuildDimensionClause(rule.DimensionIds, parameters, columns.CompanyColumn, $"@ScopeCompanyIds{suffix}"),
 
+            DataScopeLevel.Country =>
+                BuildDimensionClause(rule.DimensionIds, parameters, columns.CountryColumn, $"@ScopeCountryIds{suffix}"),
+
+            DataScopeLevel.Region =>
+                BuildDimensionClause(rule.DimensionIds, parameters, columns.RegionColumn, $"@ScopeRegionIds{suffix}"),
+
             _ => "1 = 0"
         };
     }
 
     private static string BuildRuleClauseStandalone(
         DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns, int counter)
-    {
-        // Same as BuildRuleClause but for standalone use
-        return BuildRuleClause(rule, parameters, columns, counter);
-    }
+        => BuildRuleClause(rule, parameters, columns, counter);
 
     private static string BuildDimensionFilter(
-        IReadOnlyCollection<Guid> ids, DynamicParameters parameters,
-        string column, string paramName)
+        IReadOnlyCollection<Guid> ids, DynamicParameters parameters, string column, string paramName)
     {
         parameters.Add(paramName, ids);
         return $"AND {column} IN {paramName}";
     }
 
     private static string BuildDimensionClause(
-        IReadOnlyCollection<Guid> ids, DynamicParameters parameters,
-        string column, string paramName)
+        IReadOnlyCollection<Guid> ids, DynamicParameters parameters, string column, string paramName)
     {
         parameters.Add(paramName, ids);
         return $"{column} IN {paramName}";
     }
 
     private static string BuildSelfFilter(
-        Guid employeeId, DynamicParameters parameters,
-        string column, string paramName = "@ScopeEmployeeId")
+        Guid employeeId, DynamicParameters parameters, string column, string paramName = "@ScopeEmployeeId")
     {
         parameters.Add(paramName, employeeId);
         return $"AND {column} = {paramName}";
     }
 
     private static string BuildSelfClause(
-        Guid employeeId, DynamicParameters parameters,
-        string column, string paramName)
+        Guid employeeId, DynamicParameters parameters, string column, string paramName)
     {
         parameters.Add(paramName, employeeId);
         return $"{column} = {paramName}";
@@ -314,8 +297,7 @@ public static class SqlScopeWhereBuilder
     }
 
     private static string BuildStandaloneDimension(
-        IReadOnlyCollection<Guid> ids, DynamicParameters parameters,
-        string column, string paramName)
+        IReadOnlyCollection<Guid> ids, DynamicParameters parameters, string column, string paramName)
     {
         parameters.Add(paramName, ids);
         return $"{column} IN {paramName}";
@@ -341,15 +323,14 @@ public static class SqlScopeWhereBuilder
 /// <summary>
 /// Column name mapping for SQL scope queries.
 /// Override defaults when table uses different column names.
-///
-/// NOTE: This is NOT org structure leak - the module using SQL builder
-/// provides its own column mapping. BB does not define what columns exist.
 /// </summary>
 public sealed class SqlScopeColumnMapping
 {
     public string CompanyColumn { get; init; } = "CompanyId";
     public string DepartmentColumn { get; init; } = "DepartmentId";
     public string PositionColumn { get; init; } = "PositionId";
+    public string CountryColumn { get; init; } = "CountryId";
+    public string RegionColumn { get; init; } = "RegionId";
     public string OwnerColumn { get; init; } = "OwnerId";
     public string EmployeeColumn { get; init; } = "EmployeeId";
 }

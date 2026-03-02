@@ -14,5 +14,6 @@ public sealed record EmployeeCreatedDomainEvent(
     string FirstName,
     string LastName,
     string Email,
-    string? Phone
+    string? Phone,
+    Guid? ManagerId = null
 ) : DomainEvent;
