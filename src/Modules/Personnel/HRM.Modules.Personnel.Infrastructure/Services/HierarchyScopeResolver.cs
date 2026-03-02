@@ -1,4 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Caching;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.Modules.Personnel.Application.Abstractions;
 
 namespace HRM.Modules.Personnel.Infrastructure.Services;
@@ -7,25 +9,41 @@ namespace HRM.Modules.Personnel.Infrastructure.Services;
 /// Implementation of IHierarchyScopeResolver for the Personnel module.
 ///
 /// Resolves manager-subordinate hierarchies by traversing the ManagerId relationships.
-/// Uses caching for frequently accessed hierarchies.
+/// Results for recursive subordinate lookups are cached per manager with a short TTL.
 ///
 /// DESIGN: This lives in Personnel module because:
 /// - Employee hierarchy is Personnel's domain
 /// - Organization module only knows about structure (Company, Department, Position)
 /// - Personnel owns the "who reports to whom" relationship
 ///
+/// Cache:
+/// - Key: personnel:{tenantId}:hierarchy:{managerId}
+/// - TTL: 5 minutes
+/// - Invalidated by ManagerChangedDomainEventHandler on any hierarchy mutation
+/// - Background services (no tenant context) bypass the cache
+///
 /// Performance considerations:
-/// - Uses recursive CTE for database traversal
-/// - Results are cached with short TTL (hierarchy changes are infrequent)
-/// - For large organizations, consider materialized path or closure table
+/// - Uses recursive CTE for database traversal; for large organizations
+///   consider replacing with a materialized closure table.
 /// </summary>
 public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
 {
-    private readonly IEmployeeRepository _employeeRepository;
+    private const string CacheKeyPrefix = "personnel";
+    private const string HierarchySegment = "hierarchy";
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
-    public HierarchyScopeResolver(IEmployeeRepository employeeRepository)
+    private readonly IEmployeeRepository _employeeRepository;
+    private readonly ICache _cache;
+    private readonly ITenantContext? _tenantContext;
+
+    public HierarchyScopeResolver(
+        IEmployeeRepository employeeRepository,
+        ICache cache,
+        ITenantContext? tenantContext = null)
     {
         _employeeRepository = employeeRepository;
+        _cache = cache;
+        _tenantContext = tenantContext;
     }
 
     /// <inheritdoc />
@@ -36,17 +54,25 @@ public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
     {
         if (includeIndirect)
         {
-            // Get all subordinates recursively (includes manager)
+            var cacheKey = BuildCacheKey(managerId);
+
+            if (cacheKey is not null)
+            {
+                return await _cache.GetOrCreateAsync(
+                    cacheKey,
+                    () => _employeeRepository.GetAllSubordinateIdsAsync(managerId, cancellationToken),
+                    CacheTtl,
+                    cancellationToken);
+            }
+
+            // Background service (no tenant context) — skip cache
             return await _employeeRepository.GetAllSubordinateIdsAsync(managerId, cancellationToken);
         }
 
-        // Get direct reports only
+        // Direct reports only — not cached (infrequent, small result set)
         var directReports = await _employeeRepository.GetDirectReportsAsync(managerId, cancellationToken);
-
-        // Include manager + direct reports
         var result = new List<Guid> { managerId };
         result.AddRange(directReports.Select(e => e.Id));
-
         return result;
     }
 
@@ -65,7 +91,6 @@ public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
         Guid managerId,
         CancellationToken cancellationToken = default)
     {
-        // Same employee is not a subordinate of themselves
         if (employeeId == managerId)
             return false;
 
@@ -78,5 +103,21 @@ public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
         CancellationToken cancellationToken = default)
     {
         return await _employeeRepository.GetManagementChainAsync(employeeId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the cache key prefix for all hierarchy entries of a given tenant.
+    /// Used by <see cref="ManagerChangedDomainEventHandler"/> to bulk-invalidate stale entries.
+    /// </summary>
+    internal static string GetTenantHierarchyPrefix(Guid tenantId)
+        => $"{CacheKeyPrefix}:{tenantId}:{HierarchySegment}:";
+
+    private string? BuildCacheKey(Guid managerId)
+    {
+        var tenantId = _tenantContext?.TenantId;
+        if (tenantId is null)
+            return null;
+
+        return $"{CacheKeyPrefix}:{tenantId}:{HierarchySegment}:{managerId}";
     }
 }

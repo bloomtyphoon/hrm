@@ -211,8 +211,11 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
         if (managerId == Id)
             throw new InvalidOperationException("Employee cannot be their own manager");
 
+        var previousManagerId = ManagerId;
         ManagerId = managerId;
         MarkAsModified();
+
+        AddDomainEvent(new ManagerChangedDomainEvent(TenantId, Id, previousManagerId, NewManagerId: managerId));
     }
 
     /// <summary>
@@ -220,8 +223,11 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
     /// </summary>
     public void RemoveManager()
     {
+        var previousManagerId = ManagerId;
         ManagerId = null;
         MarkAsModified();
+
+        AddDomainEvent(new ManagerChangedDomainEvent(TenantId, Id, previousManagerId, NewManagerId: null));
     }
 
     #region Assignment Management
