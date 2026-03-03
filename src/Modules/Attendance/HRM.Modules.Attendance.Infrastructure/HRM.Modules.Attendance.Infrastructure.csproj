@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- EF Core -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+
+    <!-- MediatR -->
+    <PackageReference Include="MediatR" Version="14.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HRM.Modules.Attendance.Domain\HRM.Modules.Attendance.Domain.csproj" />
+    <ProjectReference Include="..\HRM.Modules.Attendance.Application\HRM.Modules.Attendance.Application.csproj" />
+    <ProjectReference Include="..\HRM.Modules.Attendance.IntegrationEvents\HRM.Modules.Attendance.IntegrationEvents.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
+  </ItemGroup>
+
+</Project>

@@ -9,6 +9,9 @@ using HRM.Modules.Organization.Infrastructure;
 using HRM.Modules.Personnel.Api.DependencyInjection;
 using HRM.Modules.Personnel.Application.DependencyInjection;
 using HRM.Modules.Personnel.Infrastructure;
+using HRM.Modules.Attendance.Api.DependencyInjection;
+using HRM.Modules.Attendance.Application.DependencyInjection;
+using HRM.Modules.Attendance.Infrastructure;
 
 namespace HRM.Api.DependencyInjection;
 
@@ -99,7 +102,15 @@ public static class ModuleExtensions
         services.AddPersonnelApplication();
 
         // 8. Personnel Module Infrastructure Layer
+        // NOTE: Registers IDataScopeService and IPersonnelQuery — must come BEFORE Attendance
         services.AddPersonnelModule(configuration);
+
+        // 9. Attendance Module Application Layer
+        // NOTE: Must come AFTER Personnel (depends on IDataScopeService and IPersonnelQuery)
+        services.AddAttendanceApplication();
+
+        // 10. Attendance Module Infrastructure Layer
+        services.AddAttendanceModule(configuration);
 
         return services;
     }
@@ -124,6 +135,9 @@ public static class ModuleExtensions
 
         // Map Personnel module endpoints
         app.MapPersonnelEndpoints();
+
+        // Map Attendance module endpoints
+        app.MapAttendanceEndpoints();
 
         return app;
     }

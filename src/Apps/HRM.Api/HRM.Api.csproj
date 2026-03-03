@@ -26,6 +26,11 @@
     <ProjectReference Include="..\..\Modules\Personnel\HRM.Modules.Personnel.Api\HRM.Modules.Personnel.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Personnel\HRM.Modules.Personnel.Application\HRM.Modules.Personnel.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Personnel\HRM.Modules.Personnel.Infrastructure\HRM.Modules.Personnel.Infrastructure.csproj" />
+
+    <!-- Attendance Module -->
+    <ProjectReference Include="..\..\Modules\Attendance\HRM.Modules.Attendance.Api\HRM.Modules.Attendance.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Attendance\HRM.Modules.Attendance.Application\HRM.Modules.Attendance.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Attendance\HRM.Modules.Attendance.Infrastructure\HRM.Modules.Attendance.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
