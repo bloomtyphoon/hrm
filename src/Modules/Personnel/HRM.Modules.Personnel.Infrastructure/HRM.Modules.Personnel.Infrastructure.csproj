@@ -28,4 +28,8 @@
     <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="HRM.Modules.Personnel.Tests" />
+  </ItemGroup>
+
 </Project>
