@@ -136,7 +136,9 @@ BEGIN
         Entity              NVARCHAR(50)        NOT NULL,
         Action              NVARCHAR(50)        NOT NULL,
 
-        -- Scope level: 0=Global, 1=Company, 2=Department, 3=Position, 4=Self, NULL=unset
+        -- Scope level (matches DataScopeLevel enum):
+        --   0=None (explicit deny), 1=Self, 2=EmployeeSet, 3=Position, 4=Department, 5=Company, 6=Global
+        -- NULL = permission exists but scope is not constrained (legacy / unchecked)
         Scope               INT                 NULL,
 
         CONSTRAINT PK_Identity_RolePermissions PRIMARY KEY CLUSTERED (Id),
@@ -144,7 +146,7 @@ BEGIN
             REFERENCES [Identity].Roles (Id)
             ON DELETE CASCADE,
         CONSTRAINT UQ_Identity_RolePermissions_Unique UNIQUE (RoleId, Module, Entity, Action, Scope),
-        CONSTRAINT CK_Identity_RolePermissions_Scope CHECK (Scope IS NULL OR (Scope >= 0 AND Scope <= 4))
+        CONSTRAINT CK_Identity_RolePermissions_Scope CHECK (Scope IS NULL OR (Scope >= 0 AND Scope <= 6))
     )
 
     PRINT 'Table [Identity].RolePermissions created successfully'
@@ -179,7 +181,7 @@ GO
 -- Extended properties
 EXEC sys.sp_addextendedproperty
     @name = N'MS_Description',
-    @value = N'Scope level (ScopeLevel enum): 0=Global, 1=Company, 2=Department, 3=Position, 4=Self',
+    @value = N'Scope level (DataScopeLevel enum): 0=None, 1=Self, 2=EmployeeSet, 3=Position, 4=Department, 5=Company, 6=Global',
     @level0type = N'SCHEMA', @level0name = N'Identity',
     @level1type = N'TABLE', @level1name = N'RolePermissions',
     @level2type = N'COLUMN', @level2name = N'Scope'
