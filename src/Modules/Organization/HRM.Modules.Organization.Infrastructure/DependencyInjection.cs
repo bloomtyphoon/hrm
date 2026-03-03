@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IModuleUnitOfWork>(sp => sp.GetRequiredService<OrganizationDbContext>());
 
         // Repositories
+        services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IPositionRepository, PositionRepository>();

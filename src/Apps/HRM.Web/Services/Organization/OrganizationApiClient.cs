@@ -26,6 +26,71 @@ public sealed class OrganizationApiClient : IOrganizationApiClient
         _logger = logger;
     }
 
+    #region Tenants
+
+    public async Task<ApiResponse<TenantResponse>> CreateTenantAsync(
+        CreateTenantRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return await PostAsync<TenantResponse>("/api/organization/tenants",
+            new { request.Code, request.Name }, "Failed to create tenant", cancellationToken);
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<TenantResponse>>> GetTenantsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/organization/tenants", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<TenantResponse>>(JsonOptions, cancellationToken);
+                return new ApiResponse<IReadOnlyList<TenantResponse>> { IsSuccess = true, Data = data ?? [] };
+            }
+
+            return await HandleErrorResponseAsync<IReadOnlyList<TenantResponse>>(response, "Failed to retrieve tenants", cancellationToken);
+        }
+        catch (HttpRequestException ex) { return HandleNetworkError<IReadOnlyList<TenantResponse>>(ex); }
+        catch (Exception ex) { return HandleUnexpectedError<IReadOnlyList<TenantResponse>>(ex); }
+    }
+
+    public async Task<ApiResponse<TenantResponse>> GetTenantByIdAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        return await GetAsync<TenantResponse>($"/api/organization/tenants/{id}", "Failed to retrieve tenant", cancellationToken);
+    }
+
+    public async Task<ApiResponse<TenantResponse>> UpdateTenantAsync(
+        Guid id, string name, CancellationToken cancellationToken = default)
+    {
+        return await PutAsync<TenantResponse>($"/api/organization/tenants/{id}",
+            new { Name = name }, "Failed to update tenant", cancellationToken);
+    }
+
+    public async Task<ApiResponse<TenantResponse>> ActivateTenantAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        return await PutAsync<TenantResponse>($"/api/organization/tenants/{id}/activate",
+            new { }, "Failed to activate tenant", cancellationToken);
+    }
+
+    public async Task<ApiResponse<TenantResponse>> SuspendTenantAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        return await PutAsync<TenantResponse>($"/api/organization/tenants/{id}/suspend",
+            new { }, "Failed to suspend tenant", cancellationToken);
+    }
+
+    public async Task<ApiResponse<TenantResponse>> DeactivateTenantAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        return await PutAsync<TenantResponse>($"/api/organization/tenants/{id}/deactivate",
+            new { }, "Failed to deactivate tenant", cancellationToken);
+    }
+
+    #endregion
+
     #region Companies
 
     public async Task<ApiResponse<CompanyResponse>> CreateCompanyAsync(
