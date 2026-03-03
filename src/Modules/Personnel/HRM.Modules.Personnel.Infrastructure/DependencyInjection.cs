@@ -8,6 +8,7 @@ using HRM.Modules.Personnel.Application;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Infrastructure.BackgroundServices;
+using HRM.Modules.Personnel.Infrastructure.Configuration;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
 using HRM.Modules.Personnel.Infrastructure.Services;
@@ -63,6 +64,10 @@ public static class DependencyInjection
         // Outbox Processor (background service for reliable integration event publishing)
         services.AddHostedService<PersonnelOutboxProcessor>();
         services.Configure<OutboxSettings>(configuration.GetSection(OutboxSettings.SectionName));
+
+        // Hierarchy cache TTL settings (configurable per org size)
+        services.Configure<HierarchyCacheSettings>(
+            configuration.GetSection(HierarchyCacheSettings.SectionName));
 
         // Permission catalog source (loaded by IPermissionCatalogService at startup)
         services.AddSingleton<IPermissionCatalogSource>(sp =>

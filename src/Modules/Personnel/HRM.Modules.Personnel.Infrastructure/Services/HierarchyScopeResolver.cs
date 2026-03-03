@@ -6,18 +6,11 @@ namespace HRM.Modules.Personnel.Infrastructure.Services;
 /// <summary>
 /// Implementation of IHierarchyScopeResolver for the Personnel module.
 ///
-/// Resolves manager-subordinate hierarchies by traversing the ManagerId relationships.
-/// Uses caching for frequently accessed hierarchies.
+/// Delegates to IEmployeeRepository which uses the closure table
+/// (Personnel.EmployeeHierarchyClosures) for all hierarchy queries.
 ///
-/// DESIGN: This lives in Personnel module because:
-/// - Employee hierarchy is Personnel's domain
-/// - Organization module only knows about structure (Company, Department, Position)
-/// - Personnel owns the "who reports to whom" relationship
-///
-/// Performance considerations:
-/// - Uses recursive CTE for database traversal
-/// - Results are cached with short TTL (hierarchy changes are infrequent)
-/// - For large organizations, consider materialized path or closure table
+/// Self-inclusion semantics: all Resolve* methods include the manager themselves.
+/// Rationale: managers always need to see their own data alongside their team's data.
 /// </summary>
 public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
 {
@@ -29,34 +22,22 @@ public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyCollection<Guid>> GetSubordinateIdsAsync(
+    public async Task<IReadOnlySet<Guid>> ResolveAllSubordinatesAsync(
         Guid managerId,
-        bool includeIndirect = true,
         CancellationToken cancellationToken = default)
     {
-        if (includeIndirect)
-        {
-            // Get all subordinates recursively (includes manager)
-            return await _employeeRepository.GetAllSubordinateIdsAsync(managerId, cancellationToken);
-        }
-
-        // Get direct reports only
-        var directReports = await _employeeRepository.GetDirectReportsAsync(managerId, cancellationToken);
-
-        // Include manager + direct reports
-        var result = new List<Guid> { managerId };
-        result.AddRange(directReports.Select(e => e.Id));
-
-        return result;
+        return await _employeeRepository.GetAllSubordinateIdsAsync(managerId, cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyCollection<Guid>> GetDirectSubordinateIdsAsync(
+    public async Task<IReadOnlySet<Guid>> ResolveDirectSubordinatesAsync(
         Guid managerId,
         CancellationToken cancellationToken = default)
     {
         var directReports = await _employeeRepository.GetDirectReportsAsync(managerId, cancellationToken);
-        return directReports.Select(e => e.Id).ToList();
+
+        var result = new HashSet<Guid>(directReports.Select(e => e.Id)) { managerId };
+        return result;
     }
 
     /// <inheritdoc />
@@ -65,9 +46,7 @@ public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
         Guid managerId,
         CancellationToken cancellationToken = default)
     {
-        // Same employee is not a subordinate of themselves
-        if (employeeId == managerId)
-            return false;
+        if (employeeId == managerId) return false;
 
         return await _employeeRepository.IsSubordinateOfAsync(employeeId, managerId, cancellationToken);
     }
