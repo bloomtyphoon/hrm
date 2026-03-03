@@ -12,6 +12,50 @@
   <!-- Protected Routes - Require authentication and specific permissions -->
   <ProtectedRoutes>
 
+    <!-- ==================== Tenant Management (System Admin Only) ==================== -->
+
+    <!-- List all tenants -->
+    <Route
+        Method="GET"
+        Path="/api/organization/tenants"
+        Permission="Organization.Tenant.View" />
+
+    <!-- Get tenant by ID -->
+    <Route
+        Method="GET"
+        Path="/api/organization/tenants/{id}"
+        Permission="Organization.Tenant.View" />
+
+    <!-- Create new tenant -->
+    <Route
+        Method="POST"
+        Path="/api/organization/tenants"
+        Permission="Organization.Tenant.Create" />
+
+    <!-- Update tenant -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/tenants/{id}"
+        Permission="Organization.Tenant.Update" />
+
+    <!-- Activate tenant -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/tenants/{id}/activate"
+        Permission="Organization.Tenant.Update" />
+
+    <!-- Suspend tenant -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/tenants/{id}/suspend"
+        Permission="Organization.Tenant.Update" />
+
+    <!-- Deactivate tenant -->
+    <Route
+        Method="PUT"
+        Path="/api/organization/tenants/{id}/deactivate"
+        Permission="Organization.Tenant.Update" />
+
     <!-- ==================== Company Management ==================== -->
 
     <!-- List companies -->

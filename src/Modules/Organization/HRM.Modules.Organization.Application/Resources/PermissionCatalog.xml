@@ -110,6 +110,29 @@
 
       </Entity>
 
+      <!-- Tenant Entity - System Administrators only (Global scope required) -->
+      <Entity name="Tenant" displayName="Tenant">
+
+        <Action name="View" displayName="Xem tenant" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Create" displayName="Tạo tenant" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+        <Action name="Update" displayName="Cập nhật tenant" defaultScope="Global">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
     </Module>
 
   </Permissions>

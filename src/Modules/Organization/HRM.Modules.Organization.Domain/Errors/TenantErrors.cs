@@ -30,4 +30,12 @@ public static class TenantErrors
     public static ValidationError SystemTenantImmutable() =>
         new("Tenant.SystemTenantImmutable",
             "The system tenant cannot be modified, suspended, or deactivated.");
+
+    /// <summary>
+    /// Returned when a non-system-tenant user attempts to access tenant management operations.
+    /// Defense-in-depth guard in the application layer (route security map is the primary gate).
+    /// </summary>
+    public static ValidationError SystemTenantAccessOnly() =>
+        new("Tenant.SystemTenantAccessOnly",
+            "Tenant management is restricted to system administrators only.");
 }
