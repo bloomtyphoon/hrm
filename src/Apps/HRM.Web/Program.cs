@@ -1,5 +1,6 @@
 using HRM.Web.Services;
 using HRM.Web.Services.Abstractions;
+using HRM.Web.Services.Attendance;
 using HRM.Web.Services.Identity;
 using HRM.Web.Services.Organization;
 using HRM.Web.Services.Personnel;
@@ -63,6 +64,14 @@ builder.Services.AddHttpClient<IOrganizationApiClient, OrganizationApiClient>(cl
 
 // Personnel module client (employees)
 builder.Services.AddHttpClient<IPersonnelApiClient, PersonnelApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+})
+.AddHttpMessageHandler<AuthTokenHandler>();
+
+// Attendance module client (check-in, check-out, attendance records)
+builder.Services.AddHttpClient<IAttendanceApiClient, AttendanceApiClient>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");

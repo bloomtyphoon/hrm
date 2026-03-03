@@ -1,5 +1,8 @@
 using HRM.BuildingBlocks.Application.DependencyInjection;
 using HRM.BuildingBlocks.Infrastructure.DependencyInjection;
+using HRM.Modules.Attendance.Api.DependencyInjection;
+using HRM.Modules.Attendance.Application.DependencyInjection;
+using HRM.Modules.Attendance.Infrastructure;
 using HRM.Modules.Identity.Api.DependencyInjection;
 using HRM.Modules.Identity.Application.DependencyInjection;
 using HRM.Modules.Identity.Infrastructure.DependencyInjection;
@@ -9,9 +12,6 @@ using HRM.Modules.Organization.Infrastructure;
 using HRM.Modules.Personnel.Api.DependencyInjection;
 using HRM.Modules.Personnel.Application.DependencyInjection;
 using HRM.Modules.Personnel.Infrastructure;
-using HRM.Modules.Attendance.Api.DependencyInjection;
-using HRM.Modules.Attendance.Application.DependencyInjection;
-using HRM.Modules.Attendance.Infrastructure;
 
 namespace HRM.Api.DependencyInjection;
 
@@ -22,8 +22,8 @@ namespace HRM.Api.DependencyInjection;
 /// Architecture:
 /// - BuildingBlocks: Shared infrastructure (MediatR, Authentication, EventBus, etc.)
 /// - Identity Module: Authentication and authorization (Accounts)
-/// - Personnel Module: Employee management (future)
-/// - Attendance Module: Time tracking (future)
+/// - Personnel Module: Employee management
+/// - Attendance Module: Time tracking
 ///
 /// Module Registration Order (CRITICAL - DO NOT CHANGE):
 /// 1. BuildingBlocks Application (MediatR + pipeline behaviors)

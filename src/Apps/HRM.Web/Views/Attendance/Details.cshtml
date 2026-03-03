@@ -1,0 +1,129 @@
+@model AttendanceDetailResponse
+
+@{
+    ViewData["Title"] = "Attendance Record";
+    var statusClass = Model.Status switch
+    {
+        "CheckedIn" => "bg-warning text-dark",
+        "CheckedOut" => "bg-success",
+        _ => "bg-secondary"
+    };
+    var statusLabel = Model.Status switch
+    {
+        "CheckedIn" => "Checked In",
+        "CheckedOut" => "Checked Out",
+        _ => Model.Status
+    };
+    TimeSpan? duration = Model.CheckOutTimeUtc.HasValue
+        ? Model.CheckOutTimeUtc.Value - Model.CheckInTimeUtc
+        : null;
+}
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <a asp-action="MyAttendance" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h2 class="mb-0">
+                    <i class="bi bi-calendar-event me-2"></i>@Model.Date.ToString("yyyy-MM-dd")
+                </h2>
+            </div>
+            <span class="badge @statusClass fs-6">@statusLabel</span>
+        </div>
+
+        <!-- Record Details -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-clock me-1"></i>Time Details
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Date</dt>
+                    <dd class="col-sm-8">@Model.Date.ToString("dddd, MMMM d, yyyy")</dd>
+
+                    <dt class="col-sm-4">Check In (UTC)</dt>
+                    <dd class="col-sm-8">@Model.CheckInTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+
+                    <dt class="col-sm-4">Check Out (UTC)</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.CheckOutTimeUtc.HasValue)
+                        {
+                            @Model.CheckOutTimeUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                        }
+                        else
+                        {
+                            <span class="text-warning">Not checked out yet</span>
+                        }
+                    </dd>
+
+                    @if (duration.HasValue)
+                    {
+                        <dt class="col-sm-4">Duration</dt>
+                        <dd class="col-sm-8">
+                            <strong>@((int)duration.Value.TotalHours)h @duration.Value.Minutes m</strong>
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-1"></i>Additional Information
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Entry Type</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.IsManualEntry)
+                        {
+                            <span class="badge bg-info text-dark">Manual (recorded by HR)</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light text-dark">Self check-in</span>
+                        }
+                    </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <dt class="col-sm-4">Notes</dt>
+                        <dd class="col-sm-8">@Model.Notes</dd>
+                    }
+
+                    <dt class="col-sm-4">Record ID</dt>
+                    <dd class="col-sm-8"><code class="small">@Model.Id</code></dd>
+
+                    <dt class="col-sm-4">Employee ID</dt>
+                    <dd class="col-sm-8"><code class="small">@Model.EmployeeId</code></dd>
+
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">
+                        <span title="@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
+                            @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                        </span>
+                    </dd>
+
+                    @if (Model.ModifiedAtUtc.HasValue)
+                    {
+                        <dt class="col-sm-4">Modified</dt>
+                        <dd class="col-sm-8">
+                            <span title="@Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC">
+                                @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm") UTC
+                            </span>
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a asp-action="MyAttendance" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to My Attendance
+            </a>
+        </div>
+    </div>
+</div>

@@ -14,6 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace HRM.Modules.Attendance.Infrastructure;
 
+/// <summary>
+/// Dependency injection registration for Attendance module.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddAttendanceModule(

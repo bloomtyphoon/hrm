@@ -39,16 +39,8 @@ public static class AttendanceEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Manual attendance recording (HR / manager)
-        group.MapPost("/manual", RecordManualAttendance)
-            .WithName("RecordManualAttendance")
-            .WithSummary("Manually record attendance for an employee (HR / manager only)")
-            .Produces<Guid>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status409Conflict);
-
         // Employee views own attendance history
-        group.MapGet("/my", GetMyAttendance)
+        group.MapGet("/me", GetMyAttendance)
             .WithName("GetMyAttendance")
             .WithSummary("Get current employee's attendance history")
             .Produces<PagedResult<AttendanceSummaryDto>>(StatusCodes.Status200OK);
@@ -60,11 +52,19 @@ public static class AttendanceEndpoints
             .Produces<PagedResult<AttendanceSummaryDto>>(StatusCodes.Status200OK);
 
         // Get a single attendance record by ID
-        group.MapGet("/{id:guid}", GetAttendanceById)
+        group.MapGet("/records/{id:guid}", GetAttendanceById)
             .WithName("GetAttendanceById")
             .WithSummary("Get attendance record by ID")
             .Produces<AttendanceRecordDetailDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Manual attendance recording (HR / manager)
+        group.MapPost("/records", RecordManualAttendance)
+            .WithName("RecordManualAttendance")
+            .WithSummary("Manually record attendance for an employee (HR / manager only)")
+            .Produces<Guid>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return app;
     }
@@ -79,7 +79,7 @@ public static class AttendanceEndpoints
         try
         {
             var result = await sender.Send(command, cancellationToken);
-            return result.ToHttpResult(id => Results.Created($"/api/attendance/{id}", id));
+            return result.ToHttpResult(id => Results.Created($"/api/attendance/records/{id}", new { Id = id }));
         }
         catch (DbUpdateException)
         {
@@ -99,36 +99,7 @@ public static class AttendanceEndpoints
     {
         var command = new CheckOutCommand(request.CheckOutTimeUtc, request.Notes);
         var result = await sender.Send(command, cancellationToken);
-        return result.ToHttpResult(id => Results.Ok(id));
-    }
-
-    private static async Task<IResult> RecordManualAttendance(
-        RecordManualAttendanceRequest request,
-        ISender sender,
-        CancellationToken cancellationToken)
-    {
-        var command = new RecordManualAttendanceCommand(
-            EmployeeId: request.EmployeeId,
-            Date: request.Date,
-            CheckInTimeUtc: request.CheckInTimeUtc,
-            CheckOutTimeUtc: request.CheckOutTimeUtc,
-            CompanyId: request.CompanyId,
-            Notes: request.Notes);
-
-        try
-        {
-            var result = await sender.Send(command, cancellationToken);
-            return result.ToHttpResult(id => Results.Created($"/api/attendance/{id}", id));
-        }
-        catch (DbUpdateException)
-        {
-            // Unique index (EmployeeId, Date) violation
-            return Results.Conflict(new
-            {
-                Code = "Attendance.AlreadyCheckedIn",
-                Message = "An attendance record already exists for this employee on the specified date."
-            });
-        }
+        return result.ToHttpResult(id => Results.Ok(new { Id = id }));
     }
 
     private static async Task<IResult> GetMyAttendance(
@@ -191,5 +162,34 @@ public static class AttendanceEndpoints
         }
 
         return Results.Ok(record);
+    }
+
+    private static async Task<IResult> RecordManualAttendance(
+        RecordManualAttendanceRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new RecordManualAttendanceCommand(
+            EmployeeId: request.EmployeeId,
+            Date: request.Date,
+            CheckInTimeUtc: request.CheckInTimeUtc,
+            CheckOutTimeUtc: request.CheckOutTimeUtc,
+            CompanyId: request.CompanyId,
+            Notes: request.Notes);
+
+        try
+        {
+            var result = await sender.Send(command, cancellationToken);
+            return result.ToHttpResult(id => Results.Created($"/api/attendance/records/{id}", new { Id = id }));
+        }
+        catch (DbUpdateException)
+        {
+            // Unique index (EmployeeId, Date) violation
+            return Results.Conflict(new
+            {
+                Code = "Attendance.AlreadyCheckedIn",
+                Message = "An attendance record already exists for this employee on the specified date."
+            });
+        }
     }
 }
