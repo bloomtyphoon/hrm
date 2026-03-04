@@ -47,10 +47,15 @@ internal sealed class AssignRolesToAccountCommandHandler : ICommandHandler<Assig
             return Result.Failure(AccountErrors.NotFound(request.AccountId));
         }
 
-        // 2. Validate and assign each role
+        // 2. Batch-load all requested roles and existing assignments
+        var roles = await _roleRepository.GetByIdsAsync(request.RoleIds, cancellationToken);
+        var existingAssignments = await _accountRoleRepository.GetByAccountIdAsync(request.AccountId, cancellationToken);
+        var existingRoleIds = existingAssignments.Select(ar => ar.RoleId).ToHashSet();
+
+        // Validate and assign each role
         foreach (var roleId in request.RoleIds)
         {
-            var role = await _roleRepository.GetByIdAsync(roleId, cancellationToken);
+            var role = roles.FirstOrDefault(r => r.Id == roleId);
             if (role is null)
             {
                 return Result.Failure(RoleErrors.NotFound(roleId));
@@ -63,7 +68,7 @@ internal sealed class AssignRolesToAccountCommandHandler : ICommandHandler<Assig
             }
 
             // Skip if already assigned
-            if (await _accountRoleRepository.ExistsAsync(request.AccountId, roleId, cancellationToken))
+            if (existingRoleIds.Contains(roleId))
             {
                 continue;
             }

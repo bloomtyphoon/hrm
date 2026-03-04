@@ -22,30 +22,31 @@ internal sealed class RoleRepository : IRoleRepository
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
+    public async Task<List<Role>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        return await _context.Roles
+            .Where(r => ids.Contains(r.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Role?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         return await _context.Roles
-            .FirstOrDefaultAsync(
-                r => r.Name.ToLower() == name.ToLower(),
-                cancellationToken);
+            .FirstOrDefaultAsync(r => r.Name == name, cancellationToken);
     }
 
     public async Task<bool> ExistsByNameAsync(string name, Guid? companyId, CancellationToken cancellationToken = default)
     {
         return await _context.Roles
             .AsNoTracking()
-            .AnyAsync(
-                r => r.Name.ToLower() == name.ToLower() && r.CompanyId == companyId,
-                cancellationToken);
+            .AnyAsync(r => r.Name == name && r.CompanyId == companyId, cancellationToken);
     }
 
     public async Task<bool> ExistsByNameAsync(string name, Guid? companyId, Guid excludeId, CancellationToken cancellationToken = default)
     {
         return await _context.Roles
             .AsNoTracking()
-            .AnyAsync(
-                r => r.Name.ToLower() == name.ToLower() && r.CompanyId == companyId && r.Id != excludeId,
-                cancellationToken);
+            .AnyAsync(r => r.Name == name && r.CompanyId == companyId && r.Id != excludeId, cancellationToken);
     }
 
     public void Add(Role role)

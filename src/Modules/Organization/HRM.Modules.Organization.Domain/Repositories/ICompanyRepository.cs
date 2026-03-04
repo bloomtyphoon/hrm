@@ -45,6 +45,11 @@ public interface ICompanyRepository
     Task<IReadOnlyList<Company>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get companies by IDs (batch load, avoids N+1).
+    /// </summary>
+    Task<IReadOnlyList<Company>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get all active companies.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>

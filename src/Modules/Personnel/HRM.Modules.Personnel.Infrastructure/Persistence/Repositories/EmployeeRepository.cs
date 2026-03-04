@@ -22,23 +22,19 @@ internal sealed class EmployeeRepository : IEmployeeRepository
     public async Task<Employee?> GetByCodeAsync(string employeeCode, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
-            .FirstOrDefaultAsync(
-                e => e.EmployeeCode.ToLower() == employeeCode.ToLower(),
-                cancellationToken);
+            .FirstOrDefaultAsync(e => e.EmployeeCode == employeeCode, cancellationToken);
     }
 
     public async Task<Employee?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
-            .FirstOrDefaultAsync(
-                e => e.Email.ToLower() == email.ToLower(),
-                cancellationToken);
+            .FirstOrDefaultAsync(e => e.Email == email, cancellationToken);
     }
 
     public async Task<Employee?> GetWithAssignmentsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
-            .Include("_assignments")
+            .Include(e => e.Assignments)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 

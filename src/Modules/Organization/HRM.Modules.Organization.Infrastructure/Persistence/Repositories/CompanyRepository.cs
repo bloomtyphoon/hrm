@@ -44,10 +44,17 @@ internal sealed class CompanyRepository : ICompanyRepository
     public async Task<Company?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
         return await _context.Companies
-            .FirstOrDefaultAsync(
-                c => c.Code.ToLower() == code.ToLower(),
-                cancellationToken
-            );
+            .FirstOrDefaultAsync(c => c.Code == code, cancellationToken);
+    }
+
+    /// <summary>
+    /// Get companies by IDs (batch load).
+    /// </summary>
+    public async Task<IReadOnlyList<Company>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        return await _context.Companies
+            .Where(c => ids.Contains(c.Id))
+            .ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -79,10 +86,7 @@ internal sealed class CompanyRepository : ICompanyRepository
     {
         return await _context.Companies
             .AsNoTracking()
-            .AnyAsync(
-                c => c.Code.ToLower() == code.ToLower(),
-                cancellationToken
-            );
+            .AnyAsync(c => c.Code == code, cancellationToken);
     }
 
     /// <summary>
