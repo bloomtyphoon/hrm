@@ -1,4 +1,3 @@
-using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Organization;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
@@ -9,7 +8,6 @@ using HRM.Modules.Organization.Infrastructure.BackgroundServices;
 using HRM.Modules.Organization.Domain.Repositories;
 using HRM.Modules.Organization.Infrastructure.Persistence;
 using HRM.Modules.Organization.Infrastructure.Persistence.Repositories;
-using HRM.Modules.Organization.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,8 +47,9 @@ public static class DependencyInjection
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IPositionRepository, PositionRepository>();
 
-        // Data scope service (uses IScopeGrantProvider + IPersonnelQuery)
-        services.AddScoped<IDataScopeService, OrganizationDataScopeService>();
+        // NOTE: IDataScopeService is NOT registered here.
+        // Personnel module owns the single IDataScopeService implementation (DataScopeService)
+        // and registers it after Organization. All modules share that one implementation.
 
         // Cross-module query interface (to be implemented)
         // services.AddScoped<IOrganizationQuery, OrganizationQuery>();

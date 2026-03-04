@@ -24,4 +24,9 @@ public static class AttendanceErrors
         new("Attendance.EmployeeNotResolved",
             "Could not resolve employee from current user context. " +
             "Ensure your account has an employee profile linked.");
+
+    public static ForbiddenError ManualRecordForbidden(Guid employeeId) =>
+        new("Attendance.ManualRecord.Forbidden",
+            $"You don't have permission to record attendance for employee '{employeeId}'. " +
+            "The employee is outside your company scope.");
 }
