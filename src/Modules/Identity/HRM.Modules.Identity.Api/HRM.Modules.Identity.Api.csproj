@@ -1,9 +1,3 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Identity.Application\HRM.Modules.Identity.Application.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Identity.Infrastructure\HRM.Modules.Identity.Infrastructure.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Identity.Domain\HRM.Modules.Identity.Domain.csproj" />
-  </ItemGroup>
-
 </Project>

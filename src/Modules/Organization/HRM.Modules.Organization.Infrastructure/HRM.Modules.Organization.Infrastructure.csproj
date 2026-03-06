@@ -1,13 +1,3 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Organization.Domain\HRM.Modules.Organization.Domain.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Organization.Application\HRM.Modules.Organization.Application.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Organization.IntegrationEvents\HRM.Modules.Organization.IntegrationEvents.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
-  </ItemGroup>
-
 </Project>

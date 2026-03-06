@@ -1,11 +1,3 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Attendance.Domain\HRM.Modules.Attendance.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\PermissionCatalog.xml" />
-  </ItemGroup>
-
 </Project>

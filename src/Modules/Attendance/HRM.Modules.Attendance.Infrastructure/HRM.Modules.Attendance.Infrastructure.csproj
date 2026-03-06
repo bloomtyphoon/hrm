@@ -1,13 +1,3 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Attendance.Domain\HRM.Modules.Attendance.Domain.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Attendance.Application\HRM.Modules.Attendance.Application.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Attendance.IntegrationEvents\HRM.Modules.Attendance.IntegrationEvents.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
-  </ItemGroup>
-
 </Project>

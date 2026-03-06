@@ -1,12 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Embedded Resources -->
+  <!-- BuildingBlocks.Infrastructure is referenced directly here because the   -->
+  <!-- Identity Application layer consumes infrastructure types (e.g. caching).-->
   <ItemGroup>
-    <EmbeddedResource Include="Resources\PermissionCatalog.xml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Identity.Domain\HRM.Modules.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 

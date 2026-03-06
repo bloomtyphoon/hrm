@@ -1,11 +1,3 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Personnel.Domain\HRM.Modules.Personnel.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\PermissionCatalog.xml" />
-  </ItemGroup>
-
 </Project>

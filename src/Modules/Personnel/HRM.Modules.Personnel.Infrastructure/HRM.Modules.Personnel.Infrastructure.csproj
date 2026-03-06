@@ -1,16 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Personnel.Domain\HRM.Modules.Personnel.Domain.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Personnel.Application\HRM.Modules.Personnel.Application.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Personnel.IntegrationEvents\HRM.Modules.Personnel.IntegrationEvents.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="HRM.Modules.Personnel.Tests" />
   </ItemGroup>
 
