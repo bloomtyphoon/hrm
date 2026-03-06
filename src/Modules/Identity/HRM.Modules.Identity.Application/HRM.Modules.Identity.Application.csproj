@@ -1,9 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- BuildingBlocks.Infrastructure is referenced directly here because the   -->
-  <!-- Identity Application layer consumes infrastructure types (e.g. caching).-->
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
-  </ItemGroup>
 
 </Project>
