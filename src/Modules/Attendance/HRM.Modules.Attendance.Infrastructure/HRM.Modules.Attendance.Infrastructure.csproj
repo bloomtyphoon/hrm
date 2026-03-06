@@ -1,16 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
-    <PackageReference Include="MediatR" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\HRM.Modules.Attendance.Domain\HRM.Modules.Attendance.Domain.csproj" />
     <ProjectReference Include="..\HRM.Modules.Attendance.Application\HRM.Modules.Attendance.Application.csproj" />
     <ProjectReference Include="..\HRM.Modules.Attendance.IntegrationEvents\HRM.Modules.Attendance.IntegrationEvents.csproj" />
-    <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

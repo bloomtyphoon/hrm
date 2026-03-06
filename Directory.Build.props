@@ -31,4 +31,44 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+    Module layer defaults — applied by naming convention.
+    Every HRM.Modules.*.{Layer} project automatically inherits the
+    BuildingBlocks dependency and shared packages for its layer.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <!-- *.Domain → BuildingBlocks.Domain -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Domain'))">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Domain/HRM.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <!-- *.IntegrationEvents → BuildingBlocks.Domain -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.IntegrationEvents'))">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Domain/HRM.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <!-- *.Application → FluentValidation + MediatR + BuildingBlocks.Application -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Application'))">
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="MediatR" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Application/HRM.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+  <!-- *.Infrastructure → EF Core + MediatR + BuildingBlocks.Infrastructure -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Infrastructure'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="MediatR" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Infrastructure/HRM.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- *.Api → OpenApi + MediatR + BuildingBlocks.Infrastructure -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Api'))">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="MediatR" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Infrastructure/HRM.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

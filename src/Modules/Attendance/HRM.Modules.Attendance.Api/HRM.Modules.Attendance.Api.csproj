@@ -1,15 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="MediatR" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\HRM.Modules.Attendance.Application\HRM.Modules.Attendance.Application.csproj" />
     <ProjectReference Include="..\HRM.Modules.Attendance.Infrastructure\HRM.Modules.Attendance.Infrastructure.csproj" />
     <ProjectReference Include="..\HRM.Modules.Attendance.Domain\HRM.Modules.Attendance.Domain.csproj" />
-    <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
