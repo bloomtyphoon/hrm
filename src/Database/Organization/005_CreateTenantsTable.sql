@@ -17,6 +17,9 @@ BEGIN
         Code            NVARCHAR(50)        NOT NULL,
         Name            NVARCHAR(200)       NOT NULL,
 
+        -- Subdomain label for host-based tenant routing (e.g. "acme" → acme.hrm.example.com)
+        Subdomain       NVARCHAR(63)        NULL,
+
         -- Status: 1=Active, 2=Suspended, 3=Deactivated
         Status          INT                 NOT NULL DEFAULT 1,
 
@@ -45,6 +48,20 @@ BEGIN
 END
 GO
 
+-- Add Subdomain column to existing table (idempotent — skipped if already present)
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('[Organization].[Tenants]')
+      AND name = 'Subdomain'
+)
+BEGIN
+    ALTER TABLE [Organization].[Tenants]
+        ADD Subdomain NVARCHAR(63) NULL;
+
+    PRINT 'Column [Organization].[Tenants].Subdomain added'
+END
+GO
+
 -- Indexes
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Tenants_Code' AND object_id = OBJECT_ID('[Organization].[Tenants]'))
 BEGIN
@@ -52,6 +69,16 @@ BEGIN
         ON [Organization].[Tenants] (Code)
         WHERE IsDeleted = 0
     PRINT 'Index IX_Tenants_Code created'
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Tenants_Subdomain' AND object_id = OBJECT_ID('[Organization].[Tenants]'))
+BEGIN
+    CREATE UNIQUE INDEX IX_Tenants_Subdomain
+        ON [Organization].[Tenants] (Subdomain)
+        WHERE IsDeleted = 0 AND Subdomain IS NOT NULL;
+
+    PRINT 'Index IX_Tenants_Subdomain created'
 END
 GO
 
