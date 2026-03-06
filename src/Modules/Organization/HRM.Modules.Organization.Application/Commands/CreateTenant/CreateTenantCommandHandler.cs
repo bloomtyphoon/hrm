@@ -27,7 +27,11 @@ internal sealed class CreateTenantCommandHandler : ICommandHandler<CreateTenantC
         if (await _tenantRepository.ExistsByCodeAsync(request.Code, cancellationToken))
             return Result.Failure<Guid>(TenantErrors.CodeAlreadyExists(request.Code));
 
-        var tenant = Tenant.Create(request.Code, request.Name);
+        if (!string.IsNullOrWhiteSpace(request.Subdomain) &&
+            await _tenantRepository.ExistsBySubdomainAsync(request.Subdomain, cancellationToken))
+            return Result.Failure<Guid>(TenantErrors.SubdomainAlreadyExists(request.Subdomain));
+
+        var tenant = Tenant.Create(request.Code, request.Name, request.Subdomain);
         _tenantRepository.Add(tenant);
 
         return Result.Success(tenant.Id);

@@ -28,6 +28,17 @@ internal sealed class UpdateTenantCommandHandler : ICommandHandler<UpdateTenantC
             return Result.Failure(TenantErrors.NotFound(request.TenantId));
 
         tenant.Update(request.Name);
+
+        // Subdomain: check uniqueness only when a non-empty value is being set
+        if (!string.IsNullOrWhiteSpace(request.Subdomain))
+        {
+            var normalized = request.Subdomain.Trim().ToLowerInvariant();
+            var existing = await _tenantRepository.GetBySubdomainAsync(normalized, cancellationToken);
+            if (existing is not null && existing.Id != tenant.Id)
+                return Result.Failure(TenantErrors.SubdomainAlreadyExists(normalized));
+        }
+
+        tenant.UpdateSubdomain(request.Subdomain);
         _tenantRepository.Update(tenant);
 
         return Result.Success();

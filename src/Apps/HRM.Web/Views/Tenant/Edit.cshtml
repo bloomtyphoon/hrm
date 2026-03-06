@@ -40,6 +40,21 @@
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
 
+            @if (!Model.IsSystemTenant)
+            {
+                <div class="mb-3">
+                    <label asp-for="Subdomain" class="form-label"></label>
+                    <div class="input-group">
+                        <input asp-for="Subdomain" class="form-control" placeholder="acme" />
+                        <span class="input-group-text text-muted">.hrm.example.com</span>
+                    </div>
+                    <span asp-validation-for="Subdomain" class="text-danger"></span>
+                    <div class="form-text">
+                        3-63 lowercase letters, numbers, or hyphens. Leave empty to clear the subdomain.
+                    </div>
+                </div>
+            }
+
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i class="bi bi-check-lg me-1"></i>Save Changes

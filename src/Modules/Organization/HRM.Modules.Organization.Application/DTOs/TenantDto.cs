@@ -6,6 +6,7 @@ public sealed record TenantDto(
     string Name,
     string Status,
     bool IsSystemTenant,
+    string? Subdomain,
     DateTime CreatedAtUtc,
     DateTime? ModifiedAtUtc
 );

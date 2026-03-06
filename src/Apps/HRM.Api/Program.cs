@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using HRM.Api.DependencyInjection;
+using HRM.Api.Middleware;
 using HRM.BuildingBlocks.Infrastructure.DependencyInjection;
 using HRM.BuildingBlocks.Infrastructure.Security;
 
@@ -90,6 +91,9 @@ if (app.Environment.IsDevelopment())
 
 // Enable HTTPS redirection
 app.UseHttpsRedirection();
+
+// Extract subdomain from Host header early in the pipeline
+app.UseSubdomainResolution();
 
 // Enable CORS
 app.UseCors("AllowFrontend");

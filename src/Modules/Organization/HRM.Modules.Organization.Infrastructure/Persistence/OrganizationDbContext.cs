@@ -90,9 +90,16 @@ public sealed class OrganizationDbContext : ModuleDbContext
                 .IsRequired()
                 .HasMaxLength(200);
 
+            entity.Property(e => e.Subdomain)
+                .HasMaxLength(63);
+
             entity.HasIndex(e => e.Code)
                 .IsUnique()
                 .HasDatabaseName("IX_Tenants_Code");
+
+            entity.HasIndex(e => e.Subdomain)
+                .IsUnique()
+                .HasDatabaseName("IX_Tenants_Subdomain");
 
             entity.HasIndex(e => e.Status)
                 .HasDatabaseName("IX_Tenants_Status");

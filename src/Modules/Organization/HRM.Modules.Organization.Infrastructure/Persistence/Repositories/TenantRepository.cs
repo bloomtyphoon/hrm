@@ -43,6 +43,21 @@ internal sealed class TenantRepository : ITenantRepository
                 cancellationToken);
     }
 
+    public async Task<Tenant?> GetBySubdomainAsync(string subdomain, CancellationToken cancellationToken = default)
+    {
+        var normalized = subdomain.ToLowerInvariant();
+        return await _context.Tenants
+            .FirstOrDefaultAsync(t => t.Subdomain == normalized, cancellationToken);
+    }
+
+    public async Task<bool> ExistsBySubdomainAsync(string subdomain, CancellationToken cancellationToken = default)
+    {
+        var normalized = subdomain.ToLowerInvariant();
+        return await _context.Tenants
+            .AsNoTracking()
+            .AnyAsync(t => t.Subdomain == normalized, cancellationToken);
+    }
+
     public void Add(Tenant tenant)
     {
         _context.Tenants.Add(tenant);

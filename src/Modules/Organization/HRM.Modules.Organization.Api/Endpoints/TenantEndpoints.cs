@@ -8,6 +8,7 @@ using HRM.Modules.Organization.Application.Commands.UpdateTenant;
 using HRM.Modules.Organization.Application.DTOs;
 using HRM.Modules.Organization.Application.Queries.GetTenantById;
 using HRM.Modules.Organization.Application.Queries.GetTenants;
+using HRM.Modules.Organization.Domain.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -54,7 +55,8 @@ public static class TenantEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPut("/{id:guid}/activate", ActivateTenant)
             .WithName("ActivateTenant")
@@ -83,6 +85,15 @@ public static class TenantEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        // Public endpoint — no auth required; used by login page to identify tenant from subdomain
+        app.MapGet("/api/organization/tenants/by-subdomain/{subdomain}", ResolveSubdomain)
+            .WithName("ResolveTenantBySubdomain")
+            .WithSummary("Resolve tenant by subdomain (public)")
+            .WithTags("Tenants")
+            .Produces<TenantSubdomainResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .AllowAnonymous();
+
         return app;
     }
 
@@ -91,7 +102,11 @@ public static class TenantEndpoints
         ISender sender,
         CancellationToken cancellationToken)
     {
-        var command = new CreateTenantCommand(Code: request.Code, Name: request.Name);
+        var command = new CreateTenantCommand(
+            Code: request.Code,
+            Name: request.Name,
+            Subdomain: request.Subdomain);
+
         var result = await sender.Send(command, cancellationToken);
 
         return await result.ToHttpResultAsync(async tenantId =>
@@ -145,7 +160,11 @@ public static class TenantEndpoints
         ISender sender,
         CancellationToken cancellationToken)
     {
-        var command = new UpdateTenantCommand(TenantId: id, Name: request.Name);
+        var command = new UpdateTenantCommand(
+            TenantId: id,
+            Name: request.Name,
+            Subdomain: request.Subdomain);
+
         var result = await sender.Send(command, cancellationToken);
         return result.ToHttpResult();
     }
@@ -180,6 +199,30 @@ public static class TenantEndpoints
         return result.ToHttpResult();
     }
 
+    private static async Task<IResult> ResolveSubdomain(
+        string subdomain,
+        ITenantRepository tenantRepository,
+        CancellationToken cancellationToken)
+    {
+        var tenant = await tenantRepository.GetBySubdomainAsync(
+            subdomain.ToLowerInvariant(), cancellationToken);
+
+        if (tenant is null || tenant.Status != HRM.Modules.Organization.Domain.Entities.TenantStatus.Active)
+        {
+            return Results.NotFound(new
+            {
+                Code = "Tenant.SubdomainNotFound",
+                Message = $"No active tenant found for subdomain '{subdomain}'."
+            });
+        }
+
+        return Results.Ok(new TenantSubdomainResponse(
+            Id: tenant.Id,
+            Code: tenant.Code,
+            Name: tenant.Name,
+            Status: tenant.Status.ToString()));
+    }
+
     private static TenantResponse MapToResponse(TenantDto dto) =>
         new(
             Id: dto.Id,
@@ -187,6 +230,7 @@ public static class TenantEndpoints
             Name: dto.Name,
             Status: dto.Status,
             IsSystemTenant: dto.IsSystemTenant,
+            Subdomain: dto.Subdomain,
             CreatedAtUtc: dto.CreatedAtUtc,
             ModifiedAtUtc: dto.ModifiedAtUtc);
 }

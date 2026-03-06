@@ -11,6 +11,10 @@ public static class TenantErrors
         new("Tenant.CodeAlreadyExists",
             $"Tenant code '{code}' is already in use. Please choose a different code.");
 
+    public static ConflictError SubdomainAlreadyExists(string subdomain) =>
+        new("Tenant.SubdomainAlreadyExists",
+            $"Subdomain '{subdomain}' is already in use. Please choose a different subdomain.");
+
     public static NotFoundError NotFound(Guid id) =>
         new("Tenant.NotFound",
             $"Tenant with ID '{id}' was not found.");

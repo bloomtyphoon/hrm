@@ -33,7 +33,7 @@ public sealed class OrganizationApiClient : IOrganizationApiClient
         CancellationToken cancellationToken = default)
     {
         return await PostAsync<TenantResponse>("/api/organization/tenants",
-            new { request.Code, request.Name }, "Failed to create tenant", cancellationToken);
+            new { request.Code, request.Name, request.Subdomain }, "Failed to create tenant", cancellationToken);
     }
 
     public async Task<ApiResponse<IReadOnlyList<TenantResponse>>> GetTenantsAsync(
@@ -62,10 +62,10 @@ public sealed class OrganizationApiClient : IOrganizationApiClient
     }
 
     public async Task<ApiResponse<TenantResponse>> UpdateTenantAsync(
-        Guid id, string name, CancellationToken cancellationToken = default)
+        Guid id, string name, string? subdomain, CancellationToken cancellationToken = default)
     {
         return await PutAsync<TenantResponse>($"/api/organization/tenants/{id}",
-            new { Name = name }, "Failed to update tenant", cancellationToken);
+            new { Name = name, Subdomain = subdomain }, "Failed to update tenant", cancellationToken);
     }
 
     public async Task<ApiResponse<TenantResponse>> ActivateTenantAsync(

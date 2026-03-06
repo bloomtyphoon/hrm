@@ -122,7 +122,8 @@ public class TenantController : Controller
             Code = tenant.Code,
             Name = tenant.Name,
             Status = tenant.Status,
-            IsSystemTenant = tenant.IsSystemTenant
+            IsSystemTenant = tenant.IsSystemTenant,
+            Subdomain = tenant.Subdomain
         };
 
         return View(model);
@@ -135,7 +136,7 @@ public class TenantController : Controller
         if (!ModelState.IsValid)
             return View(model);
 
-        var result = await _organizationClient.UpdateTenantAsync(id, model.Name);
+        var result = await _organizationClient.UpdateTenantAsync(id, model.Name, model.Subdomain);
 
         if (result.IsSuccess)
         {

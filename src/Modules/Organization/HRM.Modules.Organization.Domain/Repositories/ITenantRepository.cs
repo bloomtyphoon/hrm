@@ -15,6 +15,10 @@ public interface ITenantRepository
 
     Task<bool> ExistsByCodeAsync(string code, CancellationToken cancellationToken = default);
 
+    Task<Tenant?> GetBySubdomainAsync(string subdomain, CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsBySubdomainAsync(string subdomain, CancellationToken cancellationToken = default);
+
     void Add(Tenant tenant);
 
     void Update(Tenant tenant);

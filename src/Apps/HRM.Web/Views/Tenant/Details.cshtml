@@ -46,6 +46,19 @@
                         <span class="badge @badgeClass">@Model.Status</span>
                     </dd>
 
+                    <dt class="col-sm-3">Subdomain</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.Subdomain))
+                        {
+                            <code>@Model.Subdomain</code>
+                            <span class="text-muted ms-1">.hrm.example.com</span>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Not set</em>
+                        }
+                    </dd>
+
                     <dt class="col-sm-3">System Tenant</dt>
                     <dd class="col-sm-9">
                         @if (Model.IsSystemTenant)

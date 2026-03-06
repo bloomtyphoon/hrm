@@ -34,6 +34,7 @@ internal sealed class GetTenantByIdQueryHandler : IQueryHandler<GetTenantByIdQue
         Name: tenant.Name,
         Status: tenant.Status.ToString(),
         IsSystemTenant: tenant.IsSystemTenant,
+        Subdomain: tenant.Subdomain,
         CreatedAtUtc: tenant.CreatedAtUtc,
         ModifiedAtUtc: tenant.ModifiedAtUtc);
 }

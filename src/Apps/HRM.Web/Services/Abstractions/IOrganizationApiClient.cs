@@ -24,6 +24,7 @@ public interface IOrganizationApiClient
     Task<ApiResponse<TenantResponse>> UpdateTenantAsync(
         Guid id,
         string name,
+        string? subdomain,
         CancellationToken cancellationToken = default);
 
     Task<ApiResponse<TenantResponse>> ActivateTenantAsync(

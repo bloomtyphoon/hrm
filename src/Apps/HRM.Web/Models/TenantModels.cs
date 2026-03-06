@@ -12,6 +12,7 @@ public class TenantResponse
     public string Name { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public bool IsSystemTenant { get; set; }
+    public string? Subdomain { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ModifiedAtUtc { get; set; }
 }
@@ -39,6 +40,11 @@ public class CreateTenantRequest
     [Required(ErrorMessage = "Name is required.")]
     [StringLength(200, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 200 characters.")]
     public string Name { get; set; } = string.Empty;
+
+    [StringLength(63, MinimumLength = 3, ErrorMessage = "Subdomain must be between 3 and 63 characters.")]
+    [RegularExpression(@"^[a-z0-9]([a-z0-9\-]{1,61}[a-z0-9])?$",
+        ErrorMessage = "Subdomain may only contain lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.")]
+    public string? Subdomain { get; set; }
 }
 
 /// <summary>
@@ -54,4 +60,9 @@ public class EditTenantFormModel
     [Required(ErrorMessage = "Name is required.")]
     [StringLength(200, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 200 characters.")]
     public string Name { get; set; } = string.Empty;
+
+    [StringLength(63, MinimumLength = 3, ErrorMessage = "Subdomain must be between 3 and 63 characters.")]
+    [RegularExpression(@"^[a-z0-9]([a-z0-9\-]{1,61}[a-z0-9])?$",
+        ErrorMessage = "Subdomain may only contain lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.")]
+    public string? Subdomain { get; set; }
 }
