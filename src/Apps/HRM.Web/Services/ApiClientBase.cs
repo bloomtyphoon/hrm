@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using HRM.Web.Models;
+using HRM.Web.Services.Abstractions;
 
 namespace HRM.Web.Services;
 
