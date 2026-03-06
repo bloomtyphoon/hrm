@@ -53,7 +53,7 @@ GO
 INSERT INTO Personnel.EmployeeHierarchyClosures (TenantId, AncestorId, DescendantId, Depth)
 SELECT TenantId, Id, Id, 0
 FROM   Personnel.Employees
-WHERE  IsDeleted = 0
+WHERE  Status <> 3  -- exclude Terminated employees
   AND  NOT EXISTS (
       SELECT 1 FROM Personnel.EmployeeHierarchyClosures c
       WHERE c.TenantId = Personnel.Employees.TenantId
@@ -71,7 +71,7 @@ WHERE  IsDeleted = 0
         1             AS Depth
     FROM Personnel.Employees e
     WHERE e.ManagerId IS NOT NULL
-      AND e.IsDeleted  = 0
+      AND e.Status <> 3  -- exclude Terminated employees
 
     UNION ALL
 

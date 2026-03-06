@@ -19,7 +19,7 @@ namespace HRM.Modules.Personnel.Infrastructure.Persistence;
 ///   - ManagerChangedDomainEventHandler → Celko prune+graft on manager change
 ///   - RebuildHierarchyAsync            → full rebuild for bulk import / data recovery
 /// </summary>
-internal sealed class EmployeeHierarchyClosure
+public sealed class EmployeeHierarchyClosure
 {
     public Guid TenantId { get; set; }
     public Guid AncestorId { get; set; }

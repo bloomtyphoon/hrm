@@ -79,8 +79,9 @@ public class TenantController : Controller
 
         if (result.ValidationErrors is { Count: > 0 })
         {
-            foreach (var error in result.ValidationErrors)
-                ModelState.AddModelError(string.Empty, error);
+            foreach (var kvp in result.ValidationErrors)
+                foreach (var msg in kvp.Value)
+                    ModelState.AddModelError(kvp.Key, msg);
         }
         else
         {
