@@ -1,0 +1,95 @@
+<Project>
+
+  <!--
+    Directory.Packages.props — Central Package Management (CPM).
+    Defines the single authoritative version for every NuGet package used in
+    this solution.  Individual .csproj files reference packages WITHOUT a
+    Version attribute; CPM supplies it from here.
+
+    Rules:
+    - One version per package across the entire solution.
+    - To pin a transitive dependency explicitly, use <PackageVersion> here
+      and <PackageReference Update="..." /> (no Version) in the .csproj.
+    - PrivateAssets / IncludeAssets metadata stays in the .csproj.
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Transitive pinning: opt-in per project via <PackageReference Update="..."/> -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Domain / CQRS
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="CQRS">
+    <PackageVersion Include="MediatR"                                       Version="14.0.0" />
+    <PackageVersion Include="MediatR.Contracts"                             Version="2.0.1" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Validation
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="Validation">
+    <PackageVersion Include="FluentValidation"                              Version="12.1.1" />
+    <PackageVersion Include="FluentValidation.AspNetCore"                   Version="11.3.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Entity Framework Core
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="EF Core">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore"                 Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational"      Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer"       Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory"        Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design"          Version="9.0.0" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       ASP.NET Core
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="ASP.NET Core">
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authorization"            Version="9.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Http"                     Version="2.2.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi"                  Version="10.0.2" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Microsoft.Extensions.*
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory"           Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection"      Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions"     Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions"     Version="10.0.2" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Security / Identity
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="Security">
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt"              Version="8.3.0" />
+    <PackageVersion Include="BCrypt.Net-Next"                               Version="4.0.3" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Data Access
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="Data Access">
+    <PackageVersion Include="Dapper"                                        Version="2.1.66" />
+  </ItemGroup>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       Testing
+       ───────────────────────────────────────────────────────────────────── -->
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk"                        Version="17.12.0" />
+    <PackageVersion Include="xunit"                                         Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio"                     Version="2.8.2" />
+  </ItemGroup>
+
+</Project>

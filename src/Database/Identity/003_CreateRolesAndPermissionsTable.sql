@@ -104,8 +104,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Identity_Roles_Company
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Identity_Roles_CompanyId_Active
     ON [Identity].Roles (CompanyId)
-    WHERE IsDeleted = 0
     INCLUDE (TenantId, Name, Description, IsSystemRole, CreatedAtUtc, ModifiedAtUtc)
+    WHERE IsDeleted = 0
 
     PRINT 'Index IX_Identity_Roles_CompanyId_Active created'
 END
