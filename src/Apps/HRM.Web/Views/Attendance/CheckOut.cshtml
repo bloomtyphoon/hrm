@@ -13,23 +13,16 @@
             <h2 class="mb-0"><i class="bi bi-box-arrow-right me-2 text-warning"></i>Check Out</h2>
         </div>
 
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            Leave the time field empty to use the current server time.
-        </div>
-
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
         <div class="card">
             <div class="card-body">
-                <form asp-action="CheckOut" method="post">
-                    <div class="mb-3">
-                        <label asp-for="CheckOutTimeUtc" class="form-label"></label>
-                        <input asp-for="CheckOutTimeUtc" type="datetime-local" class="form-control" />
-                        <div class="form-text">Leave empty to use current time (UTC).</div>
-                        <span asp-validation-for="CheckOutTimeUtc" class="text-danger"></span>
-                    </div>
+                <div class="text-center mb-4">
+                    <div class="text-muted small mb-1">Current time</div>
+                    <div id="currentTime" class="fs-3 fw-semibold text-warning font-monospace"></div>
+                </div>
 
+                <form asp-action="CheckOut" method="post">
                     <div class="mb-4">
                         <label asp-for="Notes" class="form-label"></label>
                         <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Optional notes..."></textarea>
@@ -38,7 +31,7 @@
 
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-warning btn-lg">
-                            <i class="bi bi-box-arrow-right me-1"></i>Check Out
+                            <i class="bi bi-box-arrow-right me-1"></i>Check Out Now
                         </button>
                         <a asp-action="MyAttendance" class="btn btn-secondary">Cancel</a>
                     </div>
@@ -49,5 +42,14 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var el = document.getElementById('currentTime');
+            function update() {
+                el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+            update();
+            setInterval(update, 1000);
+        })();
+    </script>
 }
