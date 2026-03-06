@@ -49,10 +49,11 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Domain/HRM.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 
-  <!-- *.Application → FluentValidation + MediatR + BuildingBlocks.Application -->
+  <!-- *.Application → FluentValidation + MediatR + EF Core + BuildingBlocks.Application -->
   <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Application'))">
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Application/HRM.BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
