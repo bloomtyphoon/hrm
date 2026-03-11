@@ -9,15 +9,18 @@ namespace HRM.Web.Controllers;
 public class DepartmentController : Controller
 {
     private readonly IOrganizationApiClient _organizationClient;
+    private readonly IPersonnelApiClient _personnelClient;
     private readonly ICompanyContext _companyContext;
     private readonly ILogger<DepartmentController> _logger;
 
     public DepartmentController(
         IOrganizationApiClient organizationClient,
+        IPersonnelApiClient personnelClient,
         ICompanyContext companyContext,
         ILogger<DepartmentController> logger)
     {
         _organizationClient = organizationClient;
+        _personnelClient = personnelClient;
         _companyContext = companyContext;
         _logger = logger;
     }
@@ -87,13 +90,30 @@ public class DepartmentController : Controller
     {
         var response = await _organizationClient.GetDepartmentByIdAsync(id, cancellationToken);
 
-        if (response.IsSuccess && response.Data != null)
+        if (!response.IsSuccess || response.Data is null)
         {
-            return View(response.Data);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Department not found";
+            return RedirectToAction(nameof(Index));
         }
 
-        TempData["ErrorMessage"] = response.ErrorMessage ?? "Department not found";
-        return RedirectToAction(nameof(Index));
+        var dept = response.Data;
+        var viewModel = new DepartmentDetailViewModel { Department = dept };
+
+        if (dept.ParentDepartmentId.HasValue)
+        {
+            var parent = await _organizationClient.GetDepartmentByIdAsync(dept.ParentDepartmentId.Value, cancellationToken);
+            if (parent.IsSuccess && parent.Data != null)
+                viewModel.ParentDepartmentName = parent.Data.Name;
+        }
+
+        if (dept.ManagerId.HasValue)
+        {
+            var mgr = await _personnelClient.GetEmployeeByIdAsync(dept.ManagerId.Value, cancellationToken);
+            if (mgr.IsSuccess && mgr.Data != null)
+                viewModel.ManagerName = mgr.Data.FullName;
+        }
+
+        return View(viewModel);
     }
 
     [HttpGet]

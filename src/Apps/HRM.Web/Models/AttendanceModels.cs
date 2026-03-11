@@ -16,6 +16,13 @@ public sealed class AttendanceSummaryResponse
     public bool IsManualEntry { get; set; }
 }
 
+/// <summary>View model for attendance details page with resolved names.</summary>
+public sealed class AttendanceDetailViewModel
+{
+    public AttendanceDetailResponse Record { get; set; } = new();
+    public string? EmployeeName { get; set; }
+}
+
 /// <summary>Full detail data for a single attendance record.</summary>
 public sealed class AttendanceDetailResponse
 {
@@ -78,6 +85,13 @@ public sealed class CheckOutFormModel
     [StringLength(500)]
     [Display(Name = "Notes")]
     public string? Notes { get; set; }
+}
+
+/// <summary>View model for the HR manual attendance entry page.</summary>
+public sealed class RecordManualAttendanceViewModel
+{
+    public RecordManualAttendanceFormModel Form { get; set; } = new();
+    public IReadOnlyList<EmployeeSummaryResponse> AvailableEmployees { get; set; } = [];
 }
 
 /// <summary>Form model for HR manual attendance entry.</summary>

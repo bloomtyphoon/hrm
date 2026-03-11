@@ -1,15 +1,16 @@
-@model EmployeeDetailResponse
+@model EmployeeDetailViewModel
 
 @{
-    ViewData["Title"] = $"Employee - {Model.FullName}";
+    ViewData["Title"] = $"Employee - {Model.Employee.FullName}";
+    var emp = Model.Employee;
 }
 
 <div class="row">
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>@Model.FullName</h2>
+            <h2>@emp.FullName</h2>
             @{
-                var badgeClass = Model.Status switch
+                var badgeClass = emp.Status switch
                 {
                     "Active" => "bg-success",
                     "OnLeave" => "bg-warning text-dark",
@@ -18,7 +19,7 @@
                     _ => "bg-light text-dark"
                 };
             }
-            <span class="badge @badgeClass fs-6">@Model.Status</span>
+            <span class="badge @badgeClass fs-6">@emp.Status</span>
         </div>
 
         @if (TempData["SuccessMessage"] != null)
@@ -43,37 +44,37 @@
             <div class="card-body">
                 <dl class="row">
                     <dt class="col-sm-4">Employee ID</dt>
-                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
+                    <dd class="col-sm-8"><code>@emp.Id</code></dd>
 
                     <dt class="col-sm-4">Employee Code</dt>
-                    <dd class="col-sm-8"><code>@Model.EmployeeCode</code></dd>
+                    <dd class="col-sm-8"><code>@emp.EmployeeCode</code></dd>
 
                     <dt class="col-sm-4">Full Name</dt>
-                    <dd class="col-sm-8">@Model.FullName</dd>
+                    <dd class="col-sm-8">@emp.FullName</dd>
 
                     <dt class="col-sm-4">Email</dt>
-                    <dd class="col-sm-8"><a href="mailto:@Model.Email">@Model.Email</a></dd>
+                    <dd class="col-sm-8"><a href="mailto:@emp.Email">@emp.Email</a></dd>
 
                     <dt class="col-sm-4">Phone</dt>
-                    <dd class="col-sm-8">@(Model.Phone ?? "N/A")</dd>
+                    <dd class="col-sm-8">@(emp.Phone ?? "N/A")</dd>
 
                     <dt class="col-sm-4">Date of Birth</dt>
-                    <dd class="col-sm-8">@(Model.DateOfBirth?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                    <dd class="col-sm-8">@(emp.DateOfBirth?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
 
                     <dt class="col-sm-4">Hire Date</dt>
-                    <dd class="col-sm-8">@Model.HireDate.ToString("yyyy-MM-dd")</dd>
+                    <dd class="col-sm-8">@emp.HireDate.ToString("yyyy-MM-dd")</dd>
 
-                    @if (Model.TerminationDate.HasValue)
+                    @if (emp.TerminationDate.HasValue)
                     {
                         <dt class="col-sm-4">Termination Date</dt>
-                        <dd class="col-sm-8"><span class="text-danger">@Model.TerminationDate.Value.ToString("yyyy-MM-dd")</span></dd>
+                        <dd class="col-sm-8"><span class="text-danger">@emp.TerminationDate.Value.ToString("yyyy-MM-dd")</span></dd>
                     }
 
                     <dt class="col-sm-4">Manager</dt>
                     <dd class="col-sm-8">
-                        @if (Model.ManagerId.HasValue)
+                        @if (emp.ManagerId.HasValue)
                         {
-                            <a asp-action="Details" asp-route-id="@Model.ManagerId">@Model.ManagerId</a>
+                            <a asp-action="Details" asp-route-id="@emp.ManagerId">@(Model.ManagerName ?? emp.ManagerId.ToString())</a>
                         }
                         else
                         {
@@ -83,9 +84,9 @@
 
                     <dt class="col-sm-4">Primary Company</dt>
                     <dd class="col-sm-8">
-                        @if (Model.PrimaryCompanyId.HasValue)
+                        @if (emp.PrimaryCompanyId.HasValue)
                         {
-                            <a asp-controller="Company" asp-action="Details" asp-route-id="@Model.PrimaryCompanyId">@Model.PrimaryCompanyId</a>
+                            <a asp-controller="Company" asp-action="Details" asp-route-id="@emp.PrimaryCompanyId">@(Model.PrimaryCompanyName ?? emp.PrimaryCompanyId.ToString())</a>
                         }
                         else
                         {
@@ -95,9 +96,9 @@
 
                     <dt class="col-sm-4">Primary Department</dt>
                     <dd class="col-sm-8">
-                        @if (Model.PrimaryDepartmentId.HasValue)
+                        @if (emp.PrimaryDepartmentId.HasValue)
                         {
-                            <a asp-controller="Department" asp-action="Details" asp-route-id="@Model.PrimaryDepartmentId">@Model.PrimaryDepartmentId</a>
+                            <a asp-controller="Department" asp-action="Details" asp-route-id="@emp.PrimaryDepartmentId">@(Model.PrimaryDepartmentName ?? emp.PrimaryDepartmentId.ToString())</a>
                         }
                         else
                         {
@@ -107,9 +108,9 @@
 
                     <dt class="col-sm-4">Primary Position</dt>
                     <dd class="col-sm-8">
-                        @if (Model.PrimaryPositionId.HasValue)
+                        @if (emp.PrimaryPositionId.HasValue)
                         {
-                            <a asp-controller="Position" asp-action="Details" asp-route-id="@Model.PrimaryPositionId">@Model.PrimaryPositionId</a>
+                            <a asp-controller="Position" asp-action="Details" asp-route-id="@emp.PrimaryPositionId">@(Model.PrimaryPositionTitle ?? emp.PrimaryPositionId.ToString())</a>
                         }
                         else
                         {
@@ -118,16 +119,16 @@
                     </dd>
 
                     <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8"><span class="badge @badgeClass">@Model.Status</span></dd>
+                    <dd class="col-sm-8"><span class="badge @badgeClass">@emp.Status</span></dd>
 
                     <dt class="col-sm-4">Created</dt>
-                    <dd class="col-sm-8">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                    <dd class="col-sm-8">@emp.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
 
                     <dt class="col-sm-4">Last Modified</dt>
                     <dd class="col-sm-8">
-                        @if (Model.ModifiedAtUtc.HasValue)
+                        @if (emp.ModifiedAtUtc.HasValue)
                         {
-                            @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            @emp.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
                             <text> UTC</text>
                         }
                         else
@@ -143,12 +144,12 @@
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back to List
             </a>
-            @if (Model.Status != "Terminated")
+            @if (emp.Status != "Terminated")
             {
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <a asp-action="Edit" asp-route-id="@emp.Id" class="btn btn-primary">
                     <i class="bi bi-pencil me-1"></i>Edit
                 </a>
-                <form asp-action="Terminate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <form asp-action="Terminate" asp-route-id="@emp.Id" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to terminate this employee? This will end all active assignments.')">
                         <i class="bi bi-person-x me-1"></i>Terminate

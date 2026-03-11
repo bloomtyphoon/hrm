@@ -1,4 +1,4 @@
-@model RecordManualAttendanceFormModel
+@model RecordManualAttendanceViewModel
 
 @{
     ViewData["Title"] = "Record Manual Attendance";
@@ -27,35 +27,40 @@
             <div class="card-body">
                 <form asp-action="RecordManual" method="post">
                     <div class="mb-3">
-                        <label asp-for="EmployeeId" class="form-label"></label>
-                        <input asp-for="EmployeeId" class="form-control" placeholder="Employee GUID" />
-                        <div class="form-text">Enter the employee's ID (GUID format).</div>
-                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                        <label asp-for="Form.EmployeeId" class="form-label">Employee</label>
+                        <select asp-for="Form.EmployeeId" class="form-select">
+                            <option value="">-- Select Employee --</option>
+                            @foreach (var emp in Model.AvailableEmployees)
+                            {
+                                <option value="@emp.Id">@emp.FullName (@emp.EmployeeCode)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Form.EmployeeId" class="text-danger"></span>
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Date" class="form-label"></label>
-                        <input asp-for="Date" type="date" class="form-control" />
-                        <span asp-validation-for="Date" class="text-danger"></span>
+                        <label asp-for="Form.Date" class="form-label"></label>
+                        <input asp-for="Form.Date" type="date" class="form-control" />
+                        <span asp-validation-for="Form.Date" class="text-danger"></span>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="CheckInTimeUtc" class="form-label"></label>
-                            <input asp-for="CheckInTimeUtc" type="datetime-local" class="form-control" />
-                            <span asp-validation-for="CheckInTimeUtc" class="text-danger"></span>
+                            <label asp-for="Form.CheckInTimeUtc" class="form-label"></label>
+                            <input asp-for="Form.CheckInTimeUtc" type="datetime-local" class="form-control" />
+                            <span asp-validation-for="Form.CheckInTimeUtc" class="text-danger"></span>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label asp-for="CheckOutTimeUtc" class="form-label"></label>
-                            <input asp-for="CheckOutTimeUtc" type="datetime-local" class="form-control" />
-                            <span asp-validation-for="CheckOutTimeUtc" class="text-danger"></span>
+                            <label asp-for="Form.CheckOutTimeUtc" class="form-label"></label>
+                            <input asp-for="Form.CheckOutTimeUtc" type="datetime-local" class="form-control" />
+                            <span asp-validation-for="Form.CheckOutTimeUtc" class="text-danger"></span>
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label asp-for="Notes" class="form-label"></label>
-                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Reason for manual entry..."></textarea>
-                        <span asp-validation-for="Notes" class="text-danger"></span>
+                        <label asp-for="Form.Notes" class="form-label"></label>
+                        <textarea asp-for="Form.Notes" class="form-control" rows="3" placeholder="Reason for manual entry..."></textarea>
+                        <span asp-validation-for="Form.Notes" class="text-danger"></span>
                     </div>
 
                     <div class="d-grid gap-2">

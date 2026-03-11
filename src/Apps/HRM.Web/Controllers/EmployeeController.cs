@@ -9,15 +9,18 @@ namespace HRM.Web.Controllers;
 public class EmployeeController : Controller
 {
     private readonly IPersonnelApiClient _personnelClient;
+    private readonly IOrganizationApiClient _organizationClient;
     private readonly ICompanyContext _companyContext;
     private readonly ILogger<EmployeeController> _logger;
 
     public EmployeeController(
         IPersonnelApiClient personnelClient,
+        IOrganizationApiClient organizationClient,
         ICompanyContext companyContext,
         ILogger<EmployeeController> logger)
     {
         _personnelClient = personnelClient;
+        _organizationClient = organizationClient;
         _companyContext = companyContext;
         _logger = logger;
     }
@@ -68,13 +71,44 @@ public class EmployeeController : Controller
     {
         var response = await _personnelClient.GetEmployeeByIdAsync(id, cancellationToken);
 
-        if (response.IsSuccess && response.Data != null)
+        if (!response.IsSuccess || response.Data is null)
         {
-            return View(response.Data);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Employee not found";
+            return RedirectToAction(nameof(Index));
         }
 
-        TempData["ErrorMessage"] = response.ErrorMessage ?? "Employee not found";
-        return RedirectToAction(nameof(Index));
+        var emp = response.Data;
+        var viewModel = new EmployeeDetailViewModel { Employee = emp };
+
+        if (emp.ManagerId.HasValue)
+        {
+            var mgr = await _personnelClient.GetEmployeeByIdAsync(emp.ManagerId.Value, cancellationToken);
+            if (mgr.IsSuccess && mgr.Data != null)
+                viewModel.ManagerName = mgr.Data.FullName;
+        }
+
+        if (emp.PrimaryCompanyId.HasValue)
+        {
+            var company = await _organizationClient.GetCompanyByIdAsync(emp.PrimaryCompanyId.Value, cancellationToken);
+            if (company.IsSuccess && company.Data != null)
+                viewModel.PrimaryCompanyName = company.Data.Name;
+        }
+
+        if (emp.PrimaryDepartmentId.HasValue)
+        {
+            var dept = await _organizationClient.GetDepartmentByIdAsync(emp.PrimaryDepartmentId.Value, cancellationToken);
+            if (dept.IsSuccess && dept.Data != null)
+                viewModel.PrimaryDepartmentName = dept.Data.Name;
+        }
+
+        if (emp.PrimaryPositionId.HasValue)
+        {
+            var pos = await _organizationClient.GetPositionByIdAsync(emp.PrimaryPositionId.Value, cancellationToken);
+            if (pos.IsSuccess && pos.Data != null)
+                viewModel.PrimaryPositionTitle = pos.Data.Title;
+        }
+
+        return View(viewModel);
     }
 
     [HttpGet]
@@ -148,6 +182,7 @@ public class EmployeeController : Controller
             LastName = emp.LastName,
             Email = emp.Email,
             Phone = emp.Phone,
+            HireDate = emp.HireDate,
             DateOfBirth = emp.DateOfBirth,
             Status = emp.Status
         };

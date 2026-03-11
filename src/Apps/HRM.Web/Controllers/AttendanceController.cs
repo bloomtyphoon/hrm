@@ -199,31 +199,43 @@ public class AttendanceController : Controller
     {
         var response = await _attendanceClient.GetAttendanceByIdAsync(id, cancellationToken);
 
-        if (response.IsSuccess && response.Data != null)
+        if (!response.IsSuccess || response.Data is null)
         {
-            return View(response.Data);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Attendance record not found";
+            return RedirectToAction(nameof(MyAttendance));
         }
 
-        TempData["ErrorMessage"] = response.ErrorMessage ?? "Attendance record not found";
-        return RedirectToAction(nameof(MyAttendance));
+        var viewModel = new AttendanceDetailViewModel { Record = response.Data };
+
+        var empResponse = await _personnelClient.GetEmployeeByIdAsync(response.Data.EmployeeId, cancellationToken);
+        if (empResponse.IsSuccess && empResponse.Data != null)
+            viewModel.EmployeeName = empResponse.Data.FullName;
+
+        return View(viewModel);
     }
 
     // ─── HR Manual Record ─────────────────────────────────────────────────────
 
     [HttpGet]
-    public IActionResult RecordManual()
+    public async Task<IActionResult> RecordManual(CancellationToken cancellationToken)
     {
-        return View(new RecordManualAttendanceFormModel());
+        var viewModel = new RecordManualAttendanceViewModel();
+        await LoadAvailableEmployeesAsync(viewModel, cancellationToken);
+        return View(viewModel);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RecordManual(
-        RecordManualAttendanceFormModel model,
+        RecordManualAttendanceViewModel viewModel,
         CancellationToken cancellationToken)
     {
+        var model = viewModel.Form;
         if (!ModelState.IsValid)
-            return View(model);
+        {
+            await LoadAvailableEmployeesAsync(viewModel, cancellationToken);
+            return View(viewModel);
+        }
 
         var companyId = _companyContext.IsAllCompanies ? null : _companyContext.SelectedCompanyId;
 
@@ -253,6 +265,21 @@ public class AttendanceController : Controller
             ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to record attendance");
         }
 
-        return View(model);
+        await LoadAvailableEmployeesAsync(viewModel, cancellationToken);
+        return View(viewModel);
+    }
+
+    private async Task LoadAvailableEmployeesAsync(
+        RecordManualAttendanceViewModel viewModel,
+        CancellationToken cancellationToken)
+    {
+        var companyId = _companyContext.IsAllCompanies ? null : _companyContext.SelectedCompanyId;
+        var employeesResponse = await _personnelClient.GetEmployeesAsync(
+            status: "Active", companyId: companyId,
+            pageSize: 500, cancellationToken: cancellationToken);
+        if (employeesResponse.IsSuccess && employeesResponse.Data != null)
+        {
+            viewModel.AvailableEmployees = employeesResponse.Data.Items;
+        }
     }
 }

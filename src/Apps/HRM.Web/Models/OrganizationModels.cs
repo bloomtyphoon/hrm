@@ -39,6 +39,25 @@ public sealed class PositionResponse
 }
 
 /// <summary>
+/// View model for department details page with resolved names.
+/// </summary>
+public sealed class DepartmentDetailViewModel
+{
+    public DepartmentResponse Department { get; set; } = new();
+    public string? ParentDepartmentName { get; set; }
+    public string? ManagerName { get; set; }
+}
+
+/// <summary>
+/// View model for position details page with resolved names.
+/// </summary>
+public sealed class PositionDetailViewModel
+{
+    public PositionResponse Position { get; set; } = new();
+    public string? DepartmentName { get; set; }
+}
+
+/// <summary>
 /// View model for department list page.
 /// </summary>
 public sealed class DepartmentListViewModel

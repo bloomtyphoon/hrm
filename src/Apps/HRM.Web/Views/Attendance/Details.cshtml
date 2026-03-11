@@ -1,21 +1,22 @@
-@model AttendanceDetailResponse
+@model AttendanceDetailViewModel
 
 @{
     ViewData["Title"] = "Attendance Record";
-    var statusClass = Model.Status switch
+    var record = Model.Record;
+    var statusClass = record.Status switch
     {
         "CheckedIn" => "bg-warning text-dark",
         "CheckedOut" => "bg-success",
         _ => "bg-secondary"
     };
-    var statusLabel = Model.Status switch
+    var statusLabel = record.Status switch
     {
         "CheckedIn" => "Checked In",
         "CheckedOut" => "Checked Out",
-        _ => Model.Status
+        _ => record.Status
     };
-    TimeSpan? duration = Model.CheckOutTimeUtc.HasValue
-        ? Model.CheckOutTimeUtc.Value - Model.CheckInTimeUtc
+    TimeSpan? duration = record.CheckOutTimeUtc.HasValue
+        ? record.CheckOutTimeUtc.Value - record.CheckInTimeUtc
         : null;
 }
 
@@ -27,7 +28,7 @@
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <h2 class="mb-0">
-                    <i class="bi bi-calendar-event me-2"></i>@Model.Date.ToString("yyyy-MM-dd")
+                    <i class="bi bi-calendar-event me-2"></i>@record.Date.ToString("yyyy-MM-dd")
                 </h2>
             </div>
             <span class="badge @statusClass fs-6">@statusLabel</span>
@@ -41,16 +42,16 @@
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-4">Date</dt>
-                    <dd class="col-sm-8">@Model.Date.ToString("dddd, MMMM d, yyyy")</dd>
+                    <dd class="col-sm-8">@record.Date.ToString("dddd, MMMM d, yyyy")</dd>
 
                     <dt class="col-sm-4">Check In (UTC)</dt>
-                    <dd class="col-sm-8">@Model.CheckInTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                    <dd class="col-sm-8">@record.CheckInTimeUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
 
                     <dt class="col-sm-4">Check Out (UTC)</dt>
                     <dd class="col-sm-8">
-                        @if (Model.CheckOutTimeUtc.HasValue)
+                        @if (record.CheckOutTimeUtc.HasValue)
                         {
-                            @Model.CheckOutTimeUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            @record.CheckOutTimeUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
                         }
                         else
                         {
@@ -76,9 +77,14 @@
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
+                    <dt class="col-sm-4">Employee</dt>
+                    <dd class="col-sm-8">
+                        <a asp-controller="Employee" asp-action="Details" asp-route-id="@record.EmployeeId">@(Model.EmployeeName ?? record.EmployeeId.ToString())</a>
+                    </dd>
+
                     <dt class="col-sm-4">Entry Type</dt>
                     <dd class="col-sm-8">
-                        @if (Model.IsManualEntry)
+                        @if (record.IsManualEntry)
                         {
                             <span class="badge bg-info text-dark">Manual (recorded by HR)</span>
                         }
@@ -88,31 +94,28 @@
                         }
                     </dd>
 
-                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    @if (!string.IsNullOrEmpty(record.Notes))
                     {
                         <dt class="col-sm-4">Notes</dt>
-                        <dd class="col-sm-8">@Model.Notes</dd>
+                        <dd class="col-sm-8">@record.Notes</dd>
                     }
 
                     <dt class="col-sm-4">Record ID</dt>
-                    <dd class="col-sm-8"><code class="small">@Model.Id</code></dd>
-
-                    <dt class="col-sm-4">Employee ID</dt>
-                    <dd class="col-sm-8"><code class="small">@Model.EmployeeId</code></dd>
+                    <dd class="col-sm-8"><code class="small">@record.Id</code></dd>
 
                     <dt class="col-sm-4">Created</dt>
                     <dd class="col-sm-8">
-                        <span title="@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
-                            @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                        <span title="@record.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
+                            @record.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
                         </span>
                     </dd>
 
-                    @if (Model.ModifiedAtUtc.HasValue)
+                    @if (record.ModifiedAtUtc.HasValue)
                     {
                         <dt class="col-sm-4">Modified</dt>
                         <dd class="col-sm-8">
-                            <span title="@Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC">
-                                @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm") UTC
+                            <span title="@record.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC">
+                                @record.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm") UTC
                             </span>
                         </dd>
                     }

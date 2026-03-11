@@ -23,6 +23,13 @@
                 </div>
 
                 <form asp-action="CheckIn" method="post">
+                    <div class="mb-3">
+                        <label asp-for="CheckInTimeUtc" class="form-label"></label>
+                        <input asp-for="CheckInTimeUtc" type="datetime-local" class="form-control" />
+                        <span asp-validation-for="CheckInTimeUtc" class="text-danger"></span>
+                        <div class="form-text">Leave empty to use current server time.</div>
+                    </div>
+
                     <div class="mb-4">
                         <label asp-for="Notes" class="form-label"></label>
                         <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Optional notes..."></textarea>

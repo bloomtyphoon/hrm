@@ -1,15 +1,16 @@
-@model DepartmentResponse
+@model DepartmentDetailViewModel
 
 @{
-    ViewData["Title"] = $"Department - {Model.Name}";
+    ViewData["Title"] = $"Department - {Model.Department.Name}";
+    var dept = Model.Department;
 }
 
 <div class="row">
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>@Model.Name</h2>
+            <h2>@dept.Name</h2>
             @{
-                var badgeClass = Model.Status switch
+                var badgeClass = dept.Status switch
                 {
                     "Active" => "bg-success",
                     "Inactive" => "bg-secondary",
@@ -17,7 +18,7 @@
                     _ => "bg-light text-dark"
                 };
             }
-            <span class="badge @badgeClass fs-6">@Model.Status</span>
+            <span class="badge @badgeClass fs-6">@dept.Status</span>
         </div>
 
         @if (TempData["SuccessMessage"] != null)
@@ -42,22 +43,22 @@
             <div class="card-body">
                 <dl class="row">
                     <dt class="col-sm-4">Department ID</dt>
-                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
+                    <dd class="col-sm-8"><code>@dept.Id</code></dd>
 
                     <dt class="col-sm-4">Code</dt>
-                    <dd class="col-sm-8"><code>@Model.Code</code></dd>
+                    <dd class="col-sm-8"><code>@dept.Code</code></dd>
 
                     <dt class="col-sm-4">Name</dt>
-                    <dd class="col-sm-8">@Model.Name</dd>
+                    <dd class="col-sm-8">@dept.Name</dd>
 
                     <dt class="col-sm-4">Level</dt>
-                    <dd class="col-sm-8"><span class="badge bg-light text-dark">@Model.Level</span></dd>
+                    <dd class="col-sm-8"><span class="badge bg-light text-dark">@dept.Level</span></dd>
 
                     <dt class="col-sm-4">Parent Department</dt>
                     <dd class="col-sm-8">
-                        @if (Model.ParentDepartmentId.HasValue)
+                        @if (dept.ParentDepartmentId.HasValue)
                         {
-                            <a asp-action="Details" asp-route-id="@Model.ParentDepartmentId">@Model.ParentDepartmentId</a>
+                            <a asp-action="Details" asp-route-id="@dept.ParentDepartmentId">@(Model.ParentDepartmentName ?? dept.ParentDepartmentId.ToString())</a>
                         }
                         else
                         {
@@ -65,11 +66,11 @@
                         }
                     </dd>
 
-                    <dt class="col-sm-4">Manager ID</dt>
+                    <dt class="col-sm-4">Manager</dt>
                     <dd class="col-sm-8">
-                        @if (Model.ManagerId.HasValue)
+                        @if (dept.ManagerId.HasValue)
                         {
-                            <code>@Model.ManagerId</code>
+                            <a asp-controller="Employee" asp-action="Details" asp-route-id="@dept.ManagerId">@(Model.ManagerName ?? dept.ManagerId.ToString())</a>
                         }
                         else
                         {
@@ -78,16 +79,16 @@
                     </dd>
 
                     <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8"><span class="badge @badgeClass">@Model.Status</span></dd>
+                    <dd class="col-sm-8"><span class="badge @badgeClass">@dept.Status</span></dd>
 
                     <dt class="col-sm-4">Created</dt>
-                    <dd class="col-sm-8">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                    <dd class="col-sm-8">@dept.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
 
                     <dt class="col-sm-4">Last Modified</dt>
                     <dd class="col-sm-8">
-                        @if (Model.ModifiedAtUtc.HasValue)
+                        @if (dept.ModifiedAtUtc.HasValue)
                         {
-                            @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            @dept.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
                             <text> UTC</text>
                         }
                         else
@@ -103,23 +104,23 @@
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back to List
             </a>
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+            <a asp-action="Edit" asp-route-id="@dept.Id" class="btn btn-primary">
                 <i class="bi bi-pencil me-1"></i>Edit
             </a>
-            @if (Model.Status != "Active")
+            @if (dept.Status != "Active")
             {
-                <form asp-action="Activate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <form asp-action="Activate" asp-route-id="@dept.Id" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to activate this department?')">
                         <i class="bi bi-check-circle me-1"></i>Activate
                     </button>
                 </form>
             }
-            @if (Model.Status == "Active")
+            @if (dept.Status == "Active")
             {
-                <form asp-action="Deactivate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <form asp-action="Deactivate" asp-route-id="@dept.Id" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-warning">
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to deactivate this department?')">
                         <i class="bi bi-pause-circle me-1"></i>Deactivate
                     </button>
                 </form>

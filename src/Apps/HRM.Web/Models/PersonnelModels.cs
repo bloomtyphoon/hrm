@@ -60,6 +60,18 @@ public sealed class EmployeeListViewModel
 }
 
 /// <summary>
+/// View model for employee details page with resolved names.
+/// </summary>
+public sealed class EmployeeDetailViewModel
+{
+    public EmployeeDetailResponse Employee { get; set; } = new();
+    public string? ManagerName { get; set; }
+    public string? PrimaryCompanyName { get; set; }
+    public string? PrimaryDepartmentName { get; set; }
+    public string? PrimaryPositionTitle { get; set; }
+}
+
+/// <summary>
 /// Form model for creating an employee.
 /// </summary>
 public sealed class CreateEmployeeFormModel
@@ -125,6 +137,10 @@ public sealed class EditEmployeeFormModel
     [StringLength(20)]
     [Display(Name = "Phone")]
     public string? Phone { get; set; }
+
+    [Required(ErrorMessage = "Hire date is required")]
+    [Display(Name = "Hire Date")]
+    public DateOnly HireDate { get; set; }
 
     [Display(Name = "Date of Birth")]
     public DateOnly? DateOfBirth { get; set; }

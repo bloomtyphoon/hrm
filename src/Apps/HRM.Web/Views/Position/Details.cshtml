@@ -1,15 +1,16 @@
-@model PositionResponse
+@model PositionDetailViewModel
 
 @{
-    ViewData["Title"] = $"Position - {Model.Title}";
+    ViewData["Title"] = $"Position - {Model.Position.Title}";
+    var pos = Model.Position;
 }
 
 <div class="row">
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>@Model.Title</h2>
+            <h2>@pos.Title</h2>
             @{
-                var badgeClass = Model.Status switch
+                var badgeClass = pos.Status switch
                 {
                     "Active" => "bg-success",
                     "Inactive" => "bg-secondary",
@@ -17,7 +18,7 @@
                     _ => "bg-light text-dark"
                 };
             }
-            <span class="badge @badgeClass fs-6">@Model.Status</span>
+            <span class="badge @badgeClass fs-6">@pos.Status</span>
         </div>
 
         @if (TempData["SuccessMessage"] != null)
@@ -42,22 +43,22 @@
             <div class="card-body">
                 <dl class="row">
                     <dt class="col-sm-4">Position ID</dt>
-                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
+                    <dd class="col-sm-8"><code>@pos.Id</code></dd>
 
                     <dt class="col-sm-4">Code</dt>
-                    <dd class="col-sm-8"><code>@Model.Code</code></dd>
+                    <dd class="col-sm-8"><code>@pos.Code</code></dd>
 
                     <dt class="col-sm-4">Title</dt>
-                    <dd class="col-sm-8">@Model.Title</dd>
+                    <dd class="col-sm-8">@pos.Title</dd>
 
                     <dt class="col-sm-4">Description</dt>
-                    <dd class="col-sm-8">@(Model.Description ?? "N/A")</dd>
+                    <dd class="col-sm-8">@(pos.Description ?? "N/A")</dd>
 
                     <dt class="col-sm-4">Department</dt>
                     <dd class="col-sm-8">
-                        @if (Model.DepartmentId.HasValue)
+                        @if (pos.DepartmentId.HasValue)
                         {
-                            <a asp-controller="Department" asp-action="Details" asp-route-id="@Model.DepartmentId">@Model.DepartmentId</a>
+                            <a asp-controller="Department" asp-action="Details" asp-route-id="@pos.DepartmentId">@(Model.DepartmentName ?? pos.DepartmentId.ToString())</a>
                         }
                         else
                         {
@@ -66,11 +67,11 @@
                     </dd>
 
                     <dt class="col-sm-4">Position Level</dt>
-                    <dd class="col-sm-8"><span class="badge bg-light text-dark">@Model.PositionLevel</span></dd>
+                    <dd class="col-sm-8"><span class="badge bg-light text-dark">@pos.PositionLevel</span></dd>
 
                     <dt class="col-sm-4">Management</dt>
                     <dd class="col-sm-8">
-                        @if (Model.IsManagement)
+                        @if (pos.IsManagement)
                         {
                             <span class="badge bg-primary">Yes</span>
                         }
@@ -81,19 +82,19 @@
                     </dd>
 
                     <dt class="col-sm-4">Max Headcount</dt>
-                    <dd class="col-sm-8">@(Model.MaxHeadcount?.ToString() ?? "Unlimited")</dd>
+                    <dd class="col-sm-8">@(pos.MaxHeadcount?.ToString() ?? "Unlimited")</dd>
 
                     <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8"><span class="badge @badgeClass">@Model.Status</span></dd>
+                    <dd class="col-sm-8"><span class="badge @badgeClass">@pos.Status</span></dd>
 
                     <dt class="col-sm-4">Created</dt>
-                    <dd class="col-sm-8">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                    <dd class="col-sm-8">@pos.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
 
                     <dt class="col-sm-4">Last Modified</dt>
                     <dd class="col-sm-8">
-                        @if (Model.ModifiedAtUtc.HasValue)
+                        @if (pos.ModifiedAtUtc.HasValue)
                         {
-                            @Model.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                            @pos.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
                             <text> UTC</text>
                         }
                         else
@@ -109,30 +110,30 @@
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back to List
             </a>
-            @if (Model.Status != "Closed")
+            @if (pos.Status != "Closed")
             {
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <a asp-action="Edit" asp-route-id="@pos.Id" class="btn btn-primary">
                     <i class="bi bi-pencil me-1"></i>Edit
                 </a>
             }
-            @if (Model.Status != "Active" && Model.Status != "Closed")
+            @if (pos.Status != "Active" && pos.Status != "Closed")
             {
-                <form asp-action="Activate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <form asp-action="Activate" asp-route-id="@pos.Id" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to activate this position?')">
                         <i class="bi bi-check-circle me-1"></i>Activate
                     </button>
                 </form>
             }
-            @if (Model.Status == "Active")
+            @if (pos.Status == "Active")
             {
-                <form asp-action="Deactivate" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <form asp-action="Deactivate" asp-route-id="@pos.Id" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-warning">
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to deactivate this position?')">
                         <i class="bi bi-pause-circle me-1"></i>Deactivate
                     </button>
                 </form>
-                <form asp-action="Close" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <form asp-action="Close" asp-route-id="@pos.Id" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to close this position? This action cannot be undone.')">
                         <i class="bi bi-x-circle me-1"></i>Close

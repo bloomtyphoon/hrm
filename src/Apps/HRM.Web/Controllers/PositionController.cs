@@ -87,13 +87,23 @@ public class PositionController : Controller
     {
         var response = await _organizationClient.GetPositionByIdAsync(id, cancellationToken);
 
-        if (response.IsSuccess && response.Data != null)
+        if (!response.IsSuccess || response.Data is null)
         {
-            return View(response.Data);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Position not found";
+            return RedirectToAction(nameof(Index));
         }
 
-        TempData["ErrorMessage"] = response.ErrorMessage ?? "Position not found";
-        return RedirectToAction(nameof(Index));
+        var pos = response.Data;
+        var viewModel = new PositionDetailViewModel { Position = pos };
+
+        if (pos.DepartmentId.HasValue)
+        {
+            var dept = await _organizationClient.GetDepartmentByIdAsync(pos.DepartmentId.Value, cancellationToken);
+            if (dept.IsSuccess && dept.Data != null)
+                viewModel.DepartmentName = dept.Data.Name;
+        }
+
+        return View(viewModel);
     }
 
     [HttpGet]
