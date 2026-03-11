@@ -56,4 +56,21 @@ public static class OrganizationPermissions
         public static readonly PermissionDescriptor Update =
             new(Module, "Position", "Update");
     }
+
+    /// <summary>
+    /// Tenant management permissions.
+    /// All actions require Global scope — system administrators only.
+    /// Regular tenant users are never granted these permissions.
+    /// </summary>
+    public static class Tenant
+    {
+        public static readonly PermissionDescriptor View =
+            new(Module, "Tenant", "View");
+
+        public static readonly PermissionDescriptor Create =
+            new(Module, "Tenant", "Create");
+
+        public static readonly PermissionDescriptor Update =
+            new(Module, "Tenant", "Update");
+    }
 }

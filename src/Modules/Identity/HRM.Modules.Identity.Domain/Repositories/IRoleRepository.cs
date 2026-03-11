@@ -9,6 +9,8 @@ public interface IRoleRepository
 {
     Task<Role?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<List<Role>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+
     Task<Role?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
     /// <summary>

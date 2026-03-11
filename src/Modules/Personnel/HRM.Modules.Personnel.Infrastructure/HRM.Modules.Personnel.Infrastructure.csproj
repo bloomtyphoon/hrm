@@ -1,31 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
   <ItemGroup>
-    <!-- EF Core -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
-
-    <!-- MediatR -->
-    <PackageReference Include="MediatR" Version="14.0.0" />
-
-    <!-- Dapper inherited from BuildingBlocks.Infrastructure -->
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\HRM.Modules.Personnel.Domain\HRM.Modules.Personnel.Domain.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Personnel.Application\HRM.Modules.Personnel.Application.csproj" />
-    <ProjectReference Include="..\HRM.Modules.Personnel.IntegrationEvents\HRM.Modules.Personnel.IntegrationEvents.csproj" />
-    <ProjectReference Include="..\..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Security\RouteSecurityMap.xml" />
+    <InternalsVisibleTo Include="HRM.Modules.Personnel.Tests" />
   </ItemGroup>
 
 </Project>

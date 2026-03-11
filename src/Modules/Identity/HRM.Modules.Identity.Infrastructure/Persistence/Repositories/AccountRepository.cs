@@ -29,16 +29,20 @@ internal sealed class AccountRepository : IAccountRepository
     public async Task<Account?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         return await _context.Accounts
-            .FirstOrDefaultAsync(
-                a => a.Username.ToLower() == username.ToLower(),
-                cancellationToken);
+            .FirstOrDefaultAsync(a => a.Username == username, cancellationToken);
     }
 
     public async Task<Account?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Accounts
+            .FirstOrDefaultAsync(a => a.Email == email, cancellationToken);
+    }
+
+    public async Task<Account?> GetByUsernameOrEmailAsync(string usernameOrEmail, CancellationToken cancellationToken = default)
+    {
+        return await _context.Accounts
             .FirstOrDefaultAsync(
-                a => a.Email.ToLower() == email.ToLower(),
+                a => a.Username == usernameOrEmail || a.Email == usernameOrEmail,
                 cancellationToken);
     }
 
@@ -46,18 +50,14 @@ internal sealed class AccountRepository : IAccountRepository
     {
         return await _context.Accounts
             .AsNoTracking()
-            .AnyAsync(
-                a => a.Username.ToLower() == username.ToLower(),
-                cancellationToken);
+            .AnyAsync(a => a.Username == username, cancellationToken);
     }
 
     public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Accounts
             .AsNoTracking()
-            .AnyAsync(
-                a => a.Email.ToLower() == email.ToLower(),
-                cancellationToken);
+            .AnyAsync(a => a.Email == email, cancellationToken);
     }
 
     public void Add(Account account)

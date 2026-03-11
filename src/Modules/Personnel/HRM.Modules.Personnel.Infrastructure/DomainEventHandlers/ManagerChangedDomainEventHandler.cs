@@ -1,98 +1,113 @@
-using HRM.BuildingBlocks.Application.Abstractions.Caching;
 using HRM.Modules.Personnel.Domain.Events;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
-using HRM.Modules.Personnel.Infrastructure.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Personnel.Infrastructure.DomainEventHandlers;
 
 /// <summary>
-/// Maintains the hierarchy closure table and invalidates hierarchy caches
-/// when an employee's manager changes.
+/// Maintains the closure table when an employee's manager changes.
 ///
-/// This handler runs BEFORE SaveChanges (ModuleDbContext pattern), so it uses
-/// raw SQL via ExecuteSqlRawAsync — the closure table entries are already in the
-/// DB (committed in previous transactions), and we need immediate SQL to graft
-/// the subtree correctly.
+/// Implements the Celko 2-step prune+graft algorithm:
 ///
-/// Closure table graft algorithm (Celko):
+///   PRUNE  – Delete all rows that connect the employee's OLD ancestors
+///            to the employee's subtree (descendants including self).
 ///
-/// When employee E moves from OldManager to NewManager:
+///   GRAFT  – Insert new rows connecting the NEW manager's ancestors
+///            to the employee's subtree.
 ///
-/// Step 1 — Prune old cross-tree links:
-///   Delete links where:
-///   - descendant is E or any of E's subordinates
-///   - ancestor is any ancestor of E (i.e., above E, not within E's subtree)
+/// If NewManagerId is null (manager removed), only PRUNE is executed —
+/// the employee becomes a root node with only self-reference rows.
 ///
-/// Step 2 — Graft new cross-tree links (only if NewManager is not null):
-///   Insert links: for each ancestor of NewManager × each descendant of E.
-///   Depth = ancestor.Depth + 1 + descendant.Depth
-///
-/// Cache invalidation:
-///   Removes all cached hierarchy lookups for the tenant (broad but safe).
+/// Reference: Joe Celko "SQL for Smarties" ch. 36 (Closure Tables)
 /// </summary>
 internal sealed class ManagerChangedDomainEventHandler
     : INotificationHandler<ManagerChangedDomainEvent>
 {
     private readonly PersonnelDbContext _dbContext;
-    private readonly ICache _cache;
 
-    public ManagerChangedDomainEventHandler(PersonnelDbContext dbContext, ICache cache)
+    public ManagerChangedDomainEventHandler(PersonnelDbContext dbContext)
     {
         _dbContext = dbContext;
-        _cache = cache;
     }
 
-    public async Task Handle(ManagerChangedDomainEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(
+        ManagerChangedDomainEvent notification,
+        CancellationToken cancellationToken)
     {
-        var employeeId = notification.EmployeeId;
-        var tenantId = notification.TenantId;
-        var newManagerId = notification.NewManagerId;
+        var tenantId    = notification.TenantId;
+        var employeeId  = notification.EmployeeId;
 
-        // Step 1: Prune all cross-tree entries:
-        //   Delete rows where the descendant is in E's subtree
-        //   AND the ancestor is NOT in E's subtree (i.e., it is from the old parent chain).
-        //
-        // SQL: DELETE rows where descendant ∈ descendants(E) AND ancestor ∉ descendants(E)
-        var pruneSQL = @"
-            DELETE link
-            FROM Personnel.EmployeeHierarchyClosures link
-            INNER JOIN Personnel.EmployeeHierarchyClosures sub
-                ON link.DescendantId = sub.DescendantId
-                AND sub.AncestorId = {0}
-                AND sub.TenantId = {1}
-            WHERE link.TenantId = {1}
-              AND link.AncestorId NOT IN (
-                  SELECT DescendantId
-                  FROM Personnel.EmployeeHierarchyClosures
-                  WHERE AncestorId = {0} AND TenantId = {1}
-              );";
+        // ── STEP 1: PRUNE ──────────────────────────────────────────────────
+        // Remove rows that link any OLD ancestor to any descendant of employeeId.
+        // Keep self-reference rows (Depth = 0) — they are existence markers.
 
-        await _dbContext.Database.ExecuteSqlRawAsync(
-            pruneSQL, new object[] { employeeId, tenantId }, cancellationToken);
+        // Collect IDs of all descendants (including self)
+        var descendantIds = await _dbContext.EmployeeHierarchyClosures
+            .Where(c =>
+                c.TenantId   == tenantId &&
+                c.AncestorId == employeeId)
+            .Select(c => c.DescendantId)
+            .ToListAsync(cancellationToken);
 
-        // Step 2: Graft into new position (skip if employee becomes a root node).
-        if (newManagerId.HasValue)
+        // Collect IDs of all OLD ancestors (excluding self, Depth > 0)
+        var oldAncestorIds = await _dbContext.EmployeeHierarchyClosures
+            .Where(c =>
+                c.TenantId     == tenantId &&
+                c.DescendantId == employeeId &&
+                c.Depth        > 0)
+            .Select(c => c.AncestorId)
+            .ToListAsync(cancellationToken);
+
+        if (oldAncestorIds.Count > 0)
         {
-            // Insert: for every ancestor of the new manager × every descendant of E.
-            // Depth = (new manager ancestor depth) + 1 + (descendant-of-E depth from E).
-            var graftSQL = @"
-                INSERT INTO Personnel.EmployeeHierarchyClosures (AncestorId, DescendantId, Depth, TenantId)
-                SELECT sup.AncestorId, sub.DescendantId, sup.Depth + sub.Depth + 1, {1}
-                FROM Personnel.EmployeeHierarchyClosures sup
-                CROSS JOIN Personnel.EmployeeHierarchyClosures sub
-                WHERE sup.DescendantId = {2}
-                  AND sup.TenantId = {1}
-                  AND sub.AncestorId = {0}
-                  AND sub.TenantId = {1};";
+            // Delete all rows: old-ancestor → any-descendant-of-employee
+            var rowsToRemove = await _dbContext.EmployeeHierarchyClosures
+                .Where(c =>
+                    c.TenantId     == tenantId &&
+                    oldAncestorIds.Contains(c.AncestorId) &&
+                    descendantIds.Contains(c.DescendantId))
+                .ToListAsync(cancellationToken);
 
-            await _dbContext.Database.ExecuteSqlRawAsync(
-                graftSQL, new object[] { employeeId, tenantId, newManagerId.Value }, cancellationToken);
+            _dbContext.EmployeeHierarchyClosures.RemoveRange(rowsToRemove);
         }
 
-        // Invalidate all hierarchy caches for this tenant.
-        var prefix = HierarchyScopeResolver.GetTenantHierarchyPrefix(tenantId);
-        await _cache.RemoveByPrefixAsync(prefix);
+        // ── STEP 2: GRAFT ──────────────────────────────────────────────────
+        // If a new manager is specified, connect the new manager's ancestors
+        // to the employee's full subtree (descendants including self).
+
+        if (notification.NewManagerId.HasValue)
+        {
+            // Ancestors of the new manager (including the manager themselves via Depth=0)
+            var newManagerAncestors = await _dbContext.EmployeeHierarchyClosures
+                .Where(c =>
+                    c.TenantId     == tenantId &&
+                    c.DescendantId == notification.NewManagerId.Value)
+                .ToListAsync(cancellationToken);
+
+            // Subtree of the moved employee (descendants including self)
+            var employeeSubtree = await _dbContext.EmployeeHierarchyClosures
+                .Where(c =>
+                    c.TenantId   == tenantId &&
+                    c.AncestorId == employeeId)
+                .ToListAsync(cancellationToken);
+
+            // Cross-join: one new row per (ancestor, descendant) combination
+            // New depth = ancestor.Depth + descendant.Depth + 1
+            //   (+1 because ancestor connects to employeeId, then subtree continues)
+            var newRows = newManagerAncestors
+                .SelectMany(
+                    _ => employeeSubtree,
+                    (anc, desc) => new EmployeeHierarchyClosure
+                    {
+                        TenantId     = tenantId,
+                        AncestorId   = anc.AncestorId,
+                        DescendantId = desc.DescendantId,
+                        Depth        = anc.Depth + desc.Depth + 1
+                    })
+                .ToList();
+
+            _dbContext.EmployeeHierarchyClosures.AddRange(newRows);
+        }
     }
 }

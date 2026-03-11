@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Entities;
 
@@ -42,16 +43,31 @@ public class Tenant : AuditableEntity, IAggregateRoot
     /// </summary>
     public bool IsSystemTenant { get; private set; }
 
+    /// <summary>
+    /// Optional DNS subdomain label used to identify the tenant from the request host.
+    /// Example: "acme" → acme.hrm.example.com
+    /// Rules: 3-63 lowercase alphanumeric characters or hyphens; cannot start/end with a hyphen.
+    /// Must be globally unique.
+    /// </summary>
+    public string? Subdomain { get; private set; }
+
     // EF Core constructor
     private Tenant() { }
 
     /// <summary>
     /// Create a new customer tenant.
     /// </summary>
-    public static Tenant Create(string code, string name)
+    public static Tenant Create(string code, string name, string? subdomain = null)
     {
         ValidateCode(code);
         ValidateName(name);
+
+        string? normalizedSubdomain = null;
+        if (!string.IsNullOrWhiteSpace(subdomain))
+        {
+            normalizedSubdomain = subdomain.Trim().ToLowerInvariant();
+            ValidateSubdomain(normalizedSubdomain);
+        }
 
         return new Tenant
         {
@@ -59,7 +75,8 @@ public class Tenant : AuditableEntity, IAggregateRoot
             Code = code.Trim().ToUpperInvariant(),
             Name = name.Trim(),
             Status = TenantStatus.Active,
-            IsSystemTenant = false
+            IsSystemTenant = false,
+            Subdomain = normalizedSubdomain
         };
     }
 
@@ -75,7 +92,8 @@ public class Tenant : AuditableEntity, IAggregateRoot
             Code = "SYSTEM",
             Name = "System Tenant",
             Status = TenantStatus.Active,
-            IsSystemTenant = true
+            IsSystemTenant = true,
+            Subdomain = null
         };
     }
 
@@ -86,6 +104,29 @@ public class Tenant : AuditableEntity, IAggregateRoot
     {
         ValidateName(name);
         Name = name.Trim();
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Update the subdomain. Pass null to clear.
+    /// Not allowed for system tenant.
+    /// </summary>
+    public void UpdateSubdomain(string? subdomain)
+    {
+        if (IsSystemTenant)
+            throw new InvalidOperationException("System tenant subdomain cannot be changed.");
+
+        if (string.IsNullOrWhiteSpace(subdomain))
+        {
+            Subdomain = null;
+        }
+        else
+        {
+            var normalized = subdomain.Trim().ToLowerInvariant();
+            ValidateSubdomain(normalized);
+            Subdomain = normalized;
+        }
+
         MarkAsModified();
     }
 
@@ -154,6 +195,19 @@ public class Tenant : AuditableEntity, IAggregateRoot
             throw new ArgumentException("Tenant name is required.", nameof(name));
         if (name.Trim().Length > 200)
             throw new ArgumentException("Tenant name must not exceed 200 characters.", nameof(name));
+    }
+
+    private static readonly Regex SubdomainRegex =
+        new(@"^[a-z0-9]([a-z0-9\-]{1,61}[a-z0-9])?$", RegexOptions.Compiled);
+
+    private static void ValidateSubdomain(string subdomain)
+    {
+        if (subdomain.Length < 3 || subdomain.Length > 63)
+            throw new ArgumentException("Subdomain must be between 3 and 63 characters.", nameof(subdomain));
+        if (!SubdomainRegex.IsMatch(subdomain))
+            throw new ArgumentException(
+                "Subdomain may only contain lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.",
+                nameof(subdomain));
     }
 }
 

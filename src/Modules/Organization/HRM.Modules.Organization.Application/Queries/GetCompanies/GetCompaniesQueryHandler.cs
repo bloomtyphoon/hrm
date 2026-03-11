@@ -61,14 +61,8 @@ internal sealed class GetCompaniesQueryHandler : IQueryHandler<GetCompaniesQuery
         IReadOnlyCollection<Guid> companyIds,
         CancellationToken cancellationToken)
     {
-        var results = new List<CompanyDto>();
-        foreach (var companyId in companyIds)
-        {
-            var company = await _companyRepository.GetByIdAsync(companyId, cancellationToken);
-            if (company is not null)
-                results.Add(MapToDto(company));
-        }
-        return results;
+        var companies = await _companyRepository.GetByIdsAsync(companyIds, cancellationToken);
+        return companies.Select(MapToDto).ToList();
     }
 
     private static CompanyDto MapToDto(Company company) => new(

@@ -1,5 +1,8 @@
 using HRM.BuildingBlocks.Application.DependencyInjection;
 using HRM.BuildingBlocks.Infrastructure.DependencyInjection;
+using HRM.Modules.Attendance.Api.DependencyInjection;
+using HRM.Modules.Attendance.Application.DependencyInjection;
+using HRM.Modules.Attendance.Infrastructure;
 using HRM.Modules.Identity.Api.DependencyInjection;
 using HRM.Modules.Identity.Application.DependencyInjection;
 using HRM.Modules.Identity.Infrastructure.DependencyInjection;
@@ -19,8 +22,8 @@ namespace HRM.Api.DependencyInjection;
 /// Architecture:
 /// - BuildingBlocks: Shared infrastructure (MediatR, Authentication, EventBus, etc.)
 /// - Identity Module: Authentication and authorization (Accounts)
-/// - Personnel Module: Employee management (future)
-/// - Attendance Module: Time tracking (future)
+/// - Personnel Module: Employee management
+/// - Attendance Module: Time tracking
 ///
 /// Module Registration Order (CRITICAL - DO NOT CHANGE):
 /// 1. BuildingBlocks Application (MediatR + pipeline behaviors)
@@ -99,7 +102,15 @@ public static class ModuleExtensions
         services.AddPersonnelApplication();
 
         // 8. Personnel Module Infrastructure Layer
+        // NOTE: Registers IDataScopeService and IPersonnelQuery — must come BEFORE Attendance
         services.AddPersonnelModule(configuration);
+
+        // 9. Attendance Module Application Layer
+        // NOTE: Must come AFTER Personnel (depends on IDataScopeService and IPersonnelQuery)
+        services.AddAttendanceApplication();
+
+        // 10. Attendance Module Infrastructure Layer
+        services.AddAttendanceModule(configuration);
 
         return services;
     }
@@ -124,6 +135,9 @@ public static class ModuleExtensions
 
         // Map Personnel module endpoints
         app.MapPersonnelEndpoints();
+
+        // Map Attendance module endpoints
+        app.MapAttendanceEndpoints();
 
         return app;
     }

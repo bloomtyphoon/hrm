@@ -87,7 +87,9 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     /// <param name="publisher">MediatR publisher for domain events</param>
     /// <param name="tenantContext">
     /// Current tenant context. Null for background services (no HTTP context).
-    /// When null, tenant query filters are bypassed (background service access).
+    /// When null, the DbContext operates as SystemTenant (system-wide access),
+    /// which is semantically equivalent but makes the intent explicit:
+    /// background services are authorised system-level operations, not anonymous requests.
     /// </param>
     protected ModuleDbContext(DbContextOptions options, IPublisher publisher, ITenantContext? tenantContext = null)
         : base(options)
@@ -99,9 +101,15 @@ public abstract class ModuleDbContext : DbContext, IModuleUnitOfWork
     /// <summary>
     /// Returns the current tenant ID from the request context.
     /// Evaluated at query time (not at model build time) — safe for per-request scoping.
-    /// Returns null when there is no tenant context (background services).
+    ///
+    /// When ITenantContext is absent (background services / DI scopes without HTTP context),
+    /// returns WellKnownTenants.SystemTenantId to make the intent explicit:
+    /// "this context has system-wide access" rather than "no context = uncontrolled bypass".
+    /// The EF Core filter behaviour (allow all rows) is identical to the previous null path,
+    /// but the SystemTenantId path is deliberate and auditable.
     /// </summary>
-    private Guid? GetCurrentTenantId() => _tenantContext?.TenantId;
+    private Guid? GetCurrentTenantId() =>
+        _tenantContext?.TenantId ?? WellKnownTenants.SystemTenantId;
 
     /// <summary>
     /// Add an integration event to the outbox for reliable asynchronous publishing.

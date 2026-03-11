@@ -44,6 +44,9 @@ public static class OrganizationApiExtensions
     /// </summary>
     public static IEndpointRouteBuilder MapOrganizationEndpoints(this IEndpointRouteBuilder app)
     {
+        // Map tenant management endpoints
+        app.MapTenantEndpoints();
+
         // Map company management endpoints
         app.MapCompanyEndpoints();
 

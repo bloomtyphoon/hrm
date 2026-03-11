@@ -1,5 +1,5 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
-using HRM.Modules.Identity.Domain.Enums;
+using HRM.Modules.Identity.Application.Abstractions.Authentication;
 using HRM.Modules.Identity.Domain.Repositories;
 using MediatR;
 
@@ -11,6 +11,7 @@ namespace HRM.Modules.Identity.Application.Queries.GetActiveSessions;
 ///
 /// Dependencies:
 /// - IRefreshTokenRepository: Access RefreshTokens
+/// - ICurrentUserService: Resolve current user's AccountType
 ///
 /// Query Logic:
 /// 1. Find all refresh tokens for operator
@@ -34,19 +35,23 @@ public sealed class GetActiveSessionsQueryHandler
     : IRequestHandler<GetActiveSessionsQuery, Result<List<SessionInfo>>>
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetActiveSessionsQueryHandler(IRefreshTokenRepository refreshTokenRepository)
+    public GetActiveSessionsQueryHandler(
+        IRefreshTokenRepository refreshTokenRepository,
+        ICurrentUserService currentUserService)
     {
         _refreshTokenRepository = refreshTokenRepository;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Result<List<SessionInfo>>> Handle(
         GetActiveSessionsQuery request,
         CancellationToken cancellationToken)
     {
-        // Query active sessions from repository
+        // Query active sessions using the actual AccountType from JWT claims
         var activeTokens = await _refreshTokenRepository.GetActiveSessionsAsync(
-            AccountType.System,     // System account
+            _currentUserService.AccountType,
             request.AccountId,
             cancellationToken);
 

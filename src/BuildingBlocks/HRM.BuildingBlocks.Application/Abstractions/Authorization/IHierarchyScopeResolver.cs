@@ -1,16 +1,14 @@
-using HRM.BuildingBlocks.Domain.Abstractions.Security;
-
 namespace HRM.BuildingBlocks.Application.Abstractions.Authorization;
 
 /// <summary>
 /// Contract for resolving hierarchical scope (manager → subordinates).
 ///
 /// This interface lives in BuildingBlocks as a CONTRACT.
-/// Implementation lives in the Organization module that owns the employee hierarchy.
+/// Implementation lives in the Personnel module that owns the employee hierarchy.
 ///
 /// Design (separation of concerns):
 /// - Identity module: Determines scope LEVEL (Self, EmployeeSet, etc.)
-/// - Organization module: Resolves scope MEMBERS (which employee IDs)
+/// - Personnel module: Resolves scope MEMBERS (which employee IDs)
 ///
 /// Flow:
 /// 1. Identity determines user has EmployeeSet scope level
@@ -18,35 +16,32 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Authorization;
 /// 3. Identity creates DataScopeRule.EmployeeSet(subordinateIds)
 /// 4. Query handlers apply the rule via EfScopeExpressionBuilder
 ///
-/// Hierarchy Types:
-/// - Direct: Only immediate subordinates
-/// - Recursive: All subordinates (subordinates of subordinates)
-/// - Custom: Based on explicit manager assignments
+/// Self-inclusion semantics (confirmed):
+/// - ResolveAllSubordinatesAsync  includes manager themselves (Depth=0 row)
+/// - ResolveDirectSubordinatesAsync includes manager themselves
+/// Rationale: managers always need to see their own data alongside their team's data.
 /// </summary>
 public interface IHierarchyScopeResolver
 {
     /// <summary>
-    /// Get all subordinate employee IDs for a manager.
-    /// Includes the manager themselves (they can see their own data).
+    /// Get all subordinate employee IDs for a manager (recursive).
+    /// Includes the manager themselves.
+    /// Uses closure table — O(1) single-query lookup.
     /// </summary>
-    /// <param name="managerId">Manager's employee ID</param>
-    /// <param name="includeIndirect">True to include indirect reports (recursive)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Set of employee IDs including manager and subordinates</returns>
-    Task<IReadOnlyCollection<Guid>> GetSubordinateIdsAsync(
+    Task<IReadOnlySet<Guid>> ResolveAllSubordinatesAsync(
         Guid managerId,
-        bool includeIndirect = true,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get direct subordinates only (no recursion).
+    /// Get direct subordinates only (Depth=1), plus the manager themselves.
     /// </summary>
-    Task<IReadOnlyCollection<Guid>> GetDirectSubordinateIdsAsync(
+    Task<IReadOnlySet<Guid>> ResolveDirectSubordinatesAsync(
         Guid managerId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Check if one employee is a subordinate of another.
+    /// Uses closure table EXISTS — O(1), no subtree load.
     /// </summary>
     Task<bool> IsSubordinateOfAsync(
         Guid employeeId,
@@ -55,7 +50,8 @@ public interface IHierarchyScopeResolver
 
     /// <summary>
     /// Get the management chain for an employee (bottom-up).
-    /// Returns [employee, directManager, manager's manager, ...] up to root.
+    /// Returns [employee, directManager, manager's manager, ...] ordered from self to root.
+    /// Uses closure table — single query, no N+1.
     /// </summary>
     Task<IReadOnlyList<Guid>> GetManagementChainAsync(
         Guid employeeId,

@@ -1,0 +1,174 @@
+@model MyAttendanceViewModel
+
+@{
+    ViewData["Title"] = "My Attendance";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar-check me-2"></i>My Attendance</h2>
+    <div class="d-flex gap-2">
+        <a asp-action="CheckIn" class="btn btn-success">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Check In
+        </a>
+        <a asp-action="CheckOut" class="btn btn-warning">
+            <i class="bi bi-box-arrow-right me-1"></i>Check Out
+        </a>
+    </div>
+</div>
+
+<!-- Date Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="MyAttendance" method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">From Date</label>
+                <input type="date" name="fromDate"
+                       value="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                       class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">To Date</label>
+                <input type="date" name="toDate"
+                       value="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                       class="form-control" />
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search me-1"></i>Filter
+                </button>
+                <a asp-action="MyAttendance" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Records Table -->
+<div class="card">
+    <div class="card-body">
+        @if (Model.Records.Items.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x display-4 text-muted"></i>
+                <p class="mt-3 text-muted">No attendance records found.</p>
+                @if (Model.FromDate.HasValue || Model.ToDate.HasValue)
+                {
+                    <a asp-action="MyAttendance" class="btn btn-link">Clear filters</a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Check In (UTC)</th>
+                            <th>Check Out (UTC)</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Type</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in Model.Records.Items)
+                        {
+                            <tr>
+                                <td><strong>@record.Date.ToString("yyyy-MM-dd")</strong></td>
+                                <td>@record.CheckInTimeUtc.ToString("HH:mm")</td>
+                                <td>
+                                    @if (record.CheckOutTimeUtc.HasValue)
+                                    {
+                                        @record.CheckOutTimeUtc.Value.ToString("HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (record.CheckOutTimeUtc.HasValue)
+                                    {
+                                        var duration = record.CheckOutTimeUtc.Value - record.CheckInTimeUtc;
+                                        @($"{(int)duration.TotalHours}h {duration.Minutes}m")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-warning">In progress</span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var statusClass = record.Status switch
+                                        {
+                                            "CheckedIn" => "bg-warning text-dark",
+                                            "CheckedOut" => "bg-success",
+                                            _ => "bg-secondary"
+                                        };
+                                        var statusLabel = record.Status switch
+                                        {
+                                            "CheckedIn" => "Checked In",
+                                            "CheckedOut" => "Checked Out",
+                                            _ => record.Status
+                                        };
+                                    }
+                                    <span class="badge @statusClass">@statusLabel</span>
+                                </td>
+                                <td>
+                                    @if (record.IsManualEntry)
+                                    {
+                                        <span class="badge bg-info text-dark" title="Recorded by HR">Manual</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-dark">Self</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@record.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted">
+                    Showing @Model.Records.Items.Count of @Model.Records.TotalCount records
+                    (Page @Model.Records.PageNumber of @Model.Records.TotalPages)
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        @if (Model.Records.HasPreviousPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="MyAttendance"
+                                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-pageNumber="@(Model.Records.PageNumber - 1)"
+                                   asp-route-pageSize="@Model.PageSize">Previous</a>
+                            </li>
+                        }
+                        @if (Model.Records.HasNextPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="MyAttendance"
+                                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-pageNumber="@(Model.Records.PageNumber + 1)"
+                                   asp-route-pageSize="@Model.PageSize">Next</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>

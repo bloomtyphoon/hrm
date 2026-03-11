@@ -26,7 +26,7 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
 
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EmployeeAssignment> EmployeeAssignments => Set<EmployeeAssignment>();
-    internal DbSet<EmployeeHierarchyClosure> EmployeeHierarchyClosures => Set<EmployeeHierarchyClosure>();
+    public DbSet<EmployeeHierarchyClosure> EmployeeHierarchyClosures => Set<EmployeeHierarchyClosure>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -105,6 +105,28 @@ public sealed class PersonnelDbContext : ModuleDbContext, IPersonnelQueryContext
 
             entity.Navigation(e => e.Assignments)
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        // Configure EmployeeHierarchyClosure (closure table for hierarchy queries)
+        modelBuilder.Entity<EmployeeHierarchyClosure>(entity =>
+        {
+            entity.ToTable("EmployeeHierarchyClosures");
+
+            // Composite primary key: tenant + ancestor + descendant
+            entity.HasKey(c => new { c.TenantId, c.AncestorId, c.DescendantId });
+
+            entity.Property(c => c.TenantId).IsRequired();
+            entity.Property(c => c.AncestorId).IsRequired();
+            entity.Property(c => c.DescendantId).IsRequired();
+            entity.Property(c => c.Depth).IsRequired();
+
+            // Index for "get all descendants of ancestor" queries (subtree lookup)
+            entity.HasIndex(c => new { c.TenantId, c.AncestorId, c.Depth })
+                .HasDatabaseName("IX_EmployeeHierarchyClosures_AncestorId");
+
+            // Index for "get all ancestors of descendant" queries (management chain)
+            entity.HasIndex(c => new { c.TenantId, c.DescendantId, c.Depth })
+                .HasDatabaseName("IX_EmployeeHierarchyClosures_DescendantId");
         });
 
         // Configure EmployeeAssignment entity

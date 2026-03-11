@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionCatalog Module="Attendance" Version="1.0" xmlns="http://hrm.system/permissions">
+  <!--
+    Attendance Module Permission Catalog
+    Defines all permissions for attendance (chấm công) management.
+
+    This file is embedded as a resource and loaded via IPermissionCatalogSourceFactory.
+
+    Scope Hierarchy (matches DataScopeLevel enum):
+    - None (0): No access - explicit deny
+    - Self (1): Only own data
+    - EmployeeSet (2): Manager's subordinates (hierarchical scope)
+    - Company (5): Whole company access
+    - Global (6): System-wide access (super admin)
+  -->
+
+  <ScopeDefinitions>
+    <Scope Name="None" Level="0" DisplayName="Không có quyền" />
+    <Scope Name="Self" Level="1" DisplayName="Chỉ bản thân" />
+    <Scope Name="EmployeeSet" Level="2" DisplayName="Nhân viên cấp dưới" />
+    <Scope Name="Company" Level="5" DisplayName="Toàn công ty" />
+    <Scope Name="Global" Level="6" DisplayName="Toàn hệ thống" />
+  </ScopeDefinitions>
+
+  <Permissions>
+
+    <Module name="Attendance" displayName="Chấm công">
+
+      <!-- AttendanceRecord Entity -->
+      <Entity name="Record" displayName="Bản ghi chấm công">
+
+        <Action name="CheckIn" displayName="Chấm công vào" defaultScope="Self">
+          <Scopes>
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="CheckOut" displayName="Chấm công ra" defaultScope="Self">
+          <Scopes>
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="View" displayName="Xem lịch sử chấm công" defaultScope="Self">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="EmployeeSet" displayName="Nhân viên cấp dưới" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="ManualRecord" displayName="Ghi chấm công thủ công" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+    </Module>
+
+  </Permissions>
+
+</PermissionCatalog>

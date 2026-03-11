@@ -163,19 +163,10 @@ public sealed class LoginCommandHandler
     }
 
     /// <summary>
-    /// Find account by username or email (flexible login).
+    /// Find account by username or email in a single query.
     /// </summary>
-    private async Task<Account?> FindAccountAsync(
+    private Task<Account?> FindAccountAsync(
         string usernameOrEmail,
         CancellationToken cancellationToken)
-    {
-        var account = await _accountRepository.GetByUsernameAsync(
-            usernameOrEmail, cancellationToken);
-
-        if (account is not null)
-            return account;
-
-        return await _accountRepository.GetByEmailAsync(
-            usernameOrEmail, cancellationToken);
-    }
+        => _accountRepository.GetByUsernameOrEmailAsync(usernameOrEmail, cancellationToken);
 }

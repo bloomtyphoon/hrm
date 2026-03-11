@@ -1,0 +1,31 @@
+<Project>
+
+  <!--
+    Directory.Build.targets — Solution-wide MSBuild targets.
+    Applied to ALL projects AFTER their .csproj is evaluated.
+    Use this file for targets that need to react to properties already set by
+    the individual project (e.g. IsTestProject, IsPackable).
+  -->
+
+  <!--
+    Enforce that every non-test, non-IntegrationEvents project produces an
+    XML documentation file when documentation generation is opted in.
+    Currently disabled (GenerateDocumentationFile defaults to false).
+    Uncomment to enable solution-wide XML docs:
+
+  <PropertyGroup Condition="'$(IsTestProject)' != 'true' and '$(GenerateDocumentationFile)' == ''">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  -->
+
+  <!--
+    Test projects: configure parallel test execution and disable runtime
+    identifier output directory nesting that can confuse some runners.
+  -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <!-- Keep test output flat so test runners find assemblies easily -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+</Project>

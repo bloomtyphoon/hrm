@@ -1,0 +1,75 @@
+@model RecordManualAttendanceFormModel
+
+@{
+    ViewData["Title"] = "Record Manual Attendance";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="d-flex align-items-center mb-4">
+            <a asp-action="MyAttendance" class="btn btn-sm btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0">
+                <i class="bi bi-pencil-square me-2"></i>Record Manual Attendance
+            </h2>
+        </div>
+
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>HR Only:</strong> This form creates an attendance record on behalf of an employee.
+            Only one record per employee per day is allowed.
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="RecordManual" method="post">
+                    <div class="mb-3">
+                        <label asp-for="EmployeeId" class="form-label"></label>
+                        <input asp-for="EmployeeId" class="form-control" placeholder="Employee GUID" />
+                        <div class="form-text">Enter the employee's ID (GUID format).</div>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Date" class="form-label"></label>
+                        <input asp-for="Date" type="date" class="form-control" />
+                        <span asp-validation-for="Date" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CheckInTimeUtc" class="form-label"></label>
+                            <input asp-for="CheckInTimeUtc" type="datetime-local" class="form-control" />
+                            <span asp-validation-for="CheckInTimeUtc" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CheckOutTimeUtc" class="form-label"></label>
+                            <input asp-for="CheckOutTimeUtc" type="datetime-local" class="form-control" />
+                            <span asp-validation-for="CheckOutTimeUtc" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Reason for manual entry..."></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save me-1"></i>Save Attendance Record
+                        </button>
+                        <a asp-action="MyAttendance" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

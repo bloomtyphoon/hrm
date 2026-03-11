@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RouteSecurityMap Module="Attendance" Version="1.0" xmlns="http://hrm.system/route-security">
+  <!--
+    Attendance Module Route Security Map
+    Maps API routes to required permissions.
+  -->
+
+  <!-- Public Routes - No authentication required -->
+  <PublicRoutes>
+  </PublicRoutes>
+
+  <!-- Protected Routes - Require authentication and specific permissions -->
+  <ProtectedRoutes>
+
+    <!-- ==================== Self Check-In / Check-Out ==================== -->
+
+    <!-- Employee checks in (self) -->
+    <Route
+        Method="POST"
+        Path="/api/attendance/check-in"
+        Permission="Attendance.Record.CheckIn" />
+
+    <!-- Employee checks out (self) -->
+    <Route
+        Method="POST"
+        Path="/api/attendance/check-out"
+        Permission="Attendance.Record.CheckOut" />
+
+    <!-- ==================== Attendance History ==================== -->
+
+    <!-- Current user's own attendance history -->
+    <Route
+        Method="GET"
+        Path="/api/attendance/me"
+        Permission="Attendance.Record.View" />
+
+    <!-- View specific employee's attendance (manager/HR) -->
+    <Route
+        Method="GET"
+        Path="/api/attendance/employees/{employeeId}"
+        Permission="Attendance.Record.View" />
+
+    <!-- View a specific attendance record by ID -->
+    <Route
+        Method="GET"
+        Path="/api/attendance/records/{id}"
+        Permission="Attendance.Record.View" />
+
+    <!-- ==================== HR Manual Record ==================== -->
+
+    <!-- HR manually records attendance for an employee -->
+    <Route
+        Method="POST"
+        Path="/api/attendance/records"
+        Permission="Attendance.Record.ManualRecord" />
+
+  </ProtectedRoutes>
+
+</RouteSecurityMap>

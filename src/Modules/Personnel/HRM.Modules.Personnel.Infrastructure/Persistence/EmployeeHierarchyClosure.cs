@@ -1,31 +1,28 @@
 namespace HRM.Modules.Personnel.Infrastructure.Persistence;
 
 /// <summary>
-/// Materialized closure table for the employee management hierarchy.
+/// Closure table for employee hierarchy.
 ///
-/// Each row represents a reachable (AncestorId → DescendantId) path at a given depth.
-/// A self-reference row (AncestorId == DescendantId, Depth == 0) is maintained for
-/// every employee, which also serves as an existence marker for cache-vs-table checks.
+/// Materializes all ancestor-descendant relationships at every depth level,
+/// enabling O(1) hierarchy queries (subtree, management chain, IsSubordinate).
+///
+/// Schema:
+///   AncestorId   = the manager (or any ancestor)
+///   DescendantId = the employee (or any descendant)
+///   Depth        = 0 for self-reference row (existence marker), 1 for direct report, etc.
+///
+/// Self-reference row (Depth=0): every employee has a row where AncestorId == DescendantId.
+/// This allows "subtree of X" queries to naturally include X itself.
 ///
 /// Maintained by:
-/// - EmployeeCreatedHierarchyClosureHandler — inserts self-reference on employee creation
-/// - ManagerChangedDomainEventHandler — grafts subtree when manager assignment changes
-///
-/// Query pattern (all subordinates of a manager):
-///   SELECT DescendantId FROM EmployeeHierarchyClosures
-///   WHERE AncestorId = @managerId AND TenantId = @tenantId
+///   - EmployeeCreatedHierarchyHandler  → inserts self-ref + parent chain on creation
+///   - ManagerChangedDomainEventHandler → Celko prune+graft on manager change
+///   - RebuildHierarchyAsync            → full rebuild for bulk import / data recovery
 /// </summary>
-internal sealed class EmployeeHierarchyClosure
+public sealed class EmployeeHierarchyClosure
 {
-    /// <summary>The ancestor (manager at any level, or the employee themselves for self-reference).</summary>
-    public Guid AncestorId { get; set; }
-
-    /// <summary>The descendant (subordinate at any depth, or the employee themselves for self-reference).</summary>
-    public Guid DescendantId { get; set; }
-
-    /// <summary>Number of edges between ancestor and descendant. 0 = self-reference.</summary>
-    public int Depth { get; set; }
-
-    /// <summary>Tenant ID — used to scope closure table queries to the correct tenant.</summary>
     public Guid TenantId { get; set; }
+    public Guid AncestorId { get; set; }
+    public Guid DescendantId { get; set; }
+    public int Depth { get; set; }
 }

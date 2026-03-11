@@ -1,0 +1,60 @@
+@model CreateTenantRequest
+
+@{
+    ViewData["Title"] = "Create Tenant";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Create New Tenant</h2>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <form asp-action="Create" method="post" class="needs-validation" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label asp-for="Code" class="form-label"></label>
+                <input asp-for="Code" class="form-control" placeholder="Enter tenant code" />
+                <span asp-validation-for="Code" class="text-danger"></span>
+                <div class="form-text">
+                    Tenant code must be 1-50 characters and contain only letters, numbers, underscores, or hyphens.
+                    <br />
+                    Examples: ACME, CORP-01, CLIENT_A
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" placeholder="Enter tenant name" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <div class="form-text">Tenant name (1-200 characters).</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Subdomain" class="form-label"></label>
+                <div class="input-group">
+                    <input asp-for="Subdomain" class="form-control" placeholder="acme" />
+                    <span class="input-group-text text-muted">.hrm.example.com</span>
+                </div>
+                <span asp-validation-for="Subdomain" class="text-danger"></span>
+                <div class="form-text">
+                    Optional. 3-63 lowercase letters, numbers, or hyphens. Cannot start or end with a hyphen.
+                    <br />
+                    Example: <code>acme</code> → <code>acme.hrm.example.com</code>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-building me-1"></i>Create Tenant
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

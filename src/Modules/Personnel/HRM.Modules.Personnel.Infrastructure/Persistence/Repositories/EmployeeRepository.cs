@@ -26,27 +26,24 @@ internal sealed class EmployeeRepository : IEmployeeRepository
     public async Task<Employee?> GetByCodeAsync(string employeeCode, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
-            .FirstOrDefaultAsync(
-                e => e.EmployeeCode.ToLower() == employeeCode.ToLower(),
-                cancellationToken);
+            .FirstOrDefaultAsync(e => e.EmployeeCode == employeeCode, cancellationToken);
     }
 
     public async Task<Employee?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
-            .FirstOrDefaultAsync(
-                e => e.Email.ToLower() == email.ToLower(),
-                cancellationToken);
+            .FirstOrDefaultAsync(e => e.Email == email, cancellationToken);
     }
 
     public async Task<Employee?> GetWithAssignmentsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
-            .Include("_assignments")
+            .Include(e => e.Assignments)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Employee>> GetDirectReportsAsync(Guid managerId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Employee>> GetDirectReportsAsync(
+        Guid managerId, CancellationToken cancellationToken = default)
     {
         return await _context.Employees
             .Where(e => e.ManagerId == managerId)
@@ -55,102 +52,113 @@ internal sealed class EmployeeRepository : IEmployeeRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Guid>> GetAllSubordinateIdsAsync(Guid managerId, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    /// Uses closure table: SELECT DescendantId WHERE AncestorId = managerId.
+    /// Depth=0 row (self-reference) naturally includes the manager themselves.
+    public async Task<IReadOnlySet<Guid>> GetAllSubordinateIdsAsync(
+        Guid managerId, CancellationToken cancellationToken = default)
     {
-        var tenantId = _tenantContext?.TenantId;
-        var isSystem = tenantId is null || tenantId == WellKnownTenants.SystemTenantId;
-
-        // Try closure table first (O(1) vs recursive CTE O(N)).
-        // The self-reference row (AncestorId == DescendantId) acts as an existence marker.
-        // If it is present, the closure table is populated for this manager.
-        var closureQuery = isSystem
-            ? _context.EmployeeHierarchyClosures
-                .Where(c => c.AncestorId == managerId)
-            : _context.EmployeeHierarchyClosures
-                .Where(c => c.AncestorId == managerId && c.TenantId == tenantId!.Value);
-
-        var closureIds = await closureQuery
+        var ids = await _context.EmployeeHierarchyClosures
+            .Where(c => c.AncestorId == managerId)
             .Select(c => c.DescendantId)
             .ToListAsync(cancellationToken);
 
-        // Self-reference row presence confirms the closure table is populated for this manager.
-        if (closureIds.Contains(managerId))
-            return closureIds; // already includes managerId via self-reference
-
-        // Fallback: recursive CTE (closure table not yet populated for this employee).
-        return await GetAllSubordinateIdsViaCteAsync(managerId, isSystem ? null : tenantId, cancellationToken);
+        return ids.ToHashSet();
     }
 
-    private async Task<List<Guid>> GetAllSubordinateIdsViaCteAsync(
-        Guid managerId, Guid? tenantId, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    /// Uses closure table: single query ordered by Depth ASC.
+    /// Replaces the previous N+1 loop (one GetByIdAsync per level).
+    public async Task<IReadOnlyList<Guid>> GetManagementChainAsync(
+        Guid employeeId, CancellationToken cancellationToken = default)
     {
-        // Recursive CTE via raw SQL.
-        // EF Core cannot wrap CTEs in a subquery (SQL Server limitation), so the global
-        // query filter is NOT applied automatically. TenantId must be filtered explicitly.
-        List<Guid> ids;
-
-        if (tenantId is null)
-        {
-            // Background services and system admin see all tenants.
-            var sql = @"
-                WITH Subordinates AS (
-                    SELECT Id FROM Personnel.Employees WHERE ManagerId = {0}
-                    UNION ALL
-                    SELECT e.Id FROM Personnel.Employees e
-                    INNER JOIN Subordinates s ON e.ManagerId = s.Id
-                )
-                SELECT Id FROM Subordinates";
-
-            ids = await _context.Database
-                .SqlQueryRaw<Guid>(sql, managerId)
-                .ToListAsync(cancellationToken);
-        }
-        else
-        {
-            // Customer tenant: restrict CTE traversal to the current tenant only.
-            var sql = @"
-                WITH Subordinates AS (
-                    SELECT Id FROM Personnel.Employees WHERE ManagerId = {0} AND TenantId = {1}
-                    UNION ALL
-                    SELECT e.Id FROM Personnel.Employees e
-                    INNER JOIN Subordinates s ON e.ManagerId = s.Id
-                    WHERE e.TenantId = {1}
-                )
-                SELECT Id FROM Subordinates";
-
-            ids = await _context.Database
-                .SqlQueryRaw<Guid>(sql, managerId, tenantId.Value)
-                .ToListAsync(cancellationToken);
-        }
-
-        // Include the manager themselves
-        ids.Insert(0, managerId);
-        return ids;
+        return await _context.EmployeeHierarchyClosures
+            .Where(c => c.DescendantId == employeeId)
+            .OrderBy(c => c.Depth)
+            .Select(c => c.AncestorId)
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Guid>> GetManagementChainAsync(Guid employeeId, CancellationToken cancellationToken = default)
-    {
-        var chain = new List<Guid>();
-        var current = await GetByIdAsync(employeeId, cancellationToken);
-
-        while (current != null)
-        {
-            chain.Add(current.Id);
-            if (current.ManagerId.HasValue)
-                current = await GetByIdAsync(current.ManagerId.Value, cancellationToken);
-            else
-                break;
-        }
-
-        return chain;
-    }
-
-    public async Task<bool> IsSubordinateOfAsync(Guid employeeId, Guid managerId, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    /// Uses closure table EXISTS query — O(1), no subtree load.
+    /// Depth > 0 excludes self-reference rows (an employee is not their own subordinate).
+    public async Task<bool> IsSubordinateOfAsync(
+        Guid employeeId, Guid managerId, CancellationToken cancellationToken = default)
     {
         if (employeeId == managerId) return false;
 
-        var subordinateIds = await GetAllSubordinateIdsAsync(managerId, cancellationToken);
-        return subordinateIds.Contains(employeeId);
+        return await _context.EmployeeHierarchyClosures
+            .AnyAsync(
+                c => c.AncestorId   == managerId &&
+                     c.DescendantId == employeeId &&
+                     c.Depth        > 0,
+                cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// Full closure table rebuild for a tenant.
+    /// Use after bulk import or HR system sync.
+    public async Task RebuildHierarchyAsync(
+        Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        // Step 1: Remove all existing closure rows for this tenant
+        var existing = await _context.EmployeeHierarchyClosures
+            .Where(c => c.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
+
+        _context.EmployeeHierarchyClosures.RemoveRange(existing);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Step 2: Insert self-reference rows for all active employees
+        var employees = await _context.Employees
+            .Where(e => e.TenantId == tenantId)
+            .Select(e => new { e.Id, e.TenantId })
+            .ToListAsync(cancellationToken);
+
+        var selfRows = employees.Select(e => new EmployeeHierarchyClosure
+        {
+            TenantId     = e.TenantId,
+            AncestorId   = e.Id,
+            DescendantId = e.Id,
+            Depth        = 0
+        }).ToList();
+
+        _context.EmployeeHierarchyClosures.AddRange(selfRows);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Step 3: Rebuild all ancestor-descendant paths via SQL recursive CTE
+        // This is more efficient than doing it in application code for large orgs.
+        await _context.Database.ExecuteSqlRawAsync(
+            """
+            ;WITH Hierarchy AS (
+                SELECT
+                    e.TenantId,
+                    e.ManagerId   AS AncestorId,
+                    e.Id          AS DescendantId,
+                    1             AS Depth
+                FROM Personnel.Employees e
+                WHERE e.ManagerId IS NOT NULL
+                  AND e.TenantId  = {0}
+
+                UNION ALL
+
+                SELECT
+                    h.TenantId,
+                    e.ManagerId,
+                    h.DescendantId,
+                    h.Depth + 1
+                FROM Hierarchy h
+                INNER JOIN Personnel.Employees e
+                    ON e.Id       = h.AncestorId
+                    AND e.TenantId = h.TenantId
+                WHERE e.ManagerId IS NOT NULL
+            )
+            INSERT INTO Personnel.EmployeeHierarchyClosures
+                (TenantId, AncestorId, DescendantId, Depth)
+            SELECT DISTINCT TenantId, AncestorId, DescendantId, Depth
+            FROM Hierarchy
+            """,
+            tenantId);
     }
 
     public void Add(Employee employee)

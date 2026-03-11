@@ -42,10 +42,10 @@ public sealed class GetRolesQueryHandler
         // Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
-            var searchTerm = request.SearchTerm.ToLower();
+            var pattern = $"%{request.SearchTerm}%";
             query = query.Where(r =>
-                r.Name.ToLower().Contains(searchTerm) ||
-                (r.Description != null && r.Description.ToLower().Contains(searchTerm)));
+                EF.Functions.Like(r.Name, pattern) ||
+                (r.Description != null && EF.Functions.Like(r.Description, pattern)));
         }
 
         // System role filter

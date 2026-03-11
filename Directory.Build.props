@@ -1,0 +1,102 @@
+<Project>
+
+  <!--
+    Directory.Build.props — Solution-wide MSBuild properties.
+    Applied to ALL projects before their .csproj is evaluated.
+    Place project-specific overrides inside the .csproj file.
+  -->
+
+  <PropertyGroup Label="SDK Defaults">
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Build Quality">
+    <!-- Treat warnings as errors in CI / Release builds -->
+    <TreatWarningsAsErrors Condition="'$(CI)' == 'true' or '$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
+    <!-- CS1591 = Missing XML comment for publicly visible type/member (opt-in later) -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Artifacts">
+    <!-- All binaries go under a single root for easier tooling -->
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+  </PropertyGroup>
+
+  <!-- Test project defaults — detected by naming convention *.Tests -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+    Module layer defaults — applied by naming convention.
+    Every HRM.Modules.*.{Layer} project automatically inherits the
+    BuildingBlocks dependency and shared packages for its layer.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <!-- *.Domain → BuildingBlocks.Domain -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Domain'))">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Domain/HRM.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <!-- *.IntegrationEvents → BuildingBlocks.Domain -->
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.IntegrationEvents'))">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Domain/HRM.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <!--
+    For *.Application / *.Infrastructure / *.Api we derive the module prefix
+    (e.g. "HRM.Modules.Personnel") from the project name so we can build
+    sibling project paths automatically.
+  -->
+
+  <!-- *.Application → packages + BuildingBlocks.Application
+                     + sibling .Domain ref + PermissionCatalog.xml -->
+  <PropertyGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Application'))">
+    <_HrmModulePrefix>$(MSBuildProjectName.Replace('.Application', ''))</_HrmModulePrefix>
+  </PropertyGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Application'))">
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Application/HRM.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).Domain/$(_HrmModulePrefix).Domain.csproj" />
+    <EmbeddedResource Include="Resources\PermissionCatalog.xml" Condition="Exists('Resources\PermissionCatalog.xml')" />
+  </ItemGroup>
+
+  <!-- *.Infrastructure → packages + BuildingBlocks.Infrastructure
+                        + sibling .Domain/.Application/.IntegrationEvents refs + RouteSecurityMap.xml -->
+  <PropertyGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Infrastructure'))">
+    <_HrmModulePrefix>$(MSBuildProjectName.Replace('.Infrastructure', ''))</_HrmModulePrefix>
+  </PropertyGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Infrastructure'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="MediatR" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Infrastructure/HRM.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).Domain/$(_HrmModulePrefix).Domain.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).Application/$(_HrmModulePrefix).Application.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).IntegrationEvents/$(_HrmModulePrefix).IntegrationEvents.csproj" />
+    <EmbeddedResource Include="Security\RouteSecurityMap.xml" Condition="Exists('Security\RouteSecurityMap.xml')" />
+  </ItemGroup>
+
+  <!-- *.Api → packages + BuildingBlocks.Infrastructure
+             + sibling .Application/.Infrastructure/.Domain refs -->
+  <PropertyGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Api'))">
+    <_HrmModulePrefix>$(MSBuildProjectName.Replace('.Api', ''))</_HrmModulePrefix>
+  </PropertyGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.Contains('.Modules.')) And $(MSBuildProjectName.EndsWith('.Api'))">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="MediatR" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/BuildingBlocks/HRM.BuildingBlocks.Infrastructure/HRM.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).Application/$(_HrmModulePrefix).Application.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).Infrastructure/$(_HrmModulePrefix).Infrastructure.csproj" />
+    <ProjectReference Include="$(MSBuildProjectDirectory)/../$(_HrmModulePrefix).Domain/$(_HrmModulePrefix).Domain.csproj" />
+  </ItemGroup>
+
+</Project>

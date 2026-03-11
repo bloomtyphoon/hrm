@@ -34,7 +34,27 @@
     <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Infrastructure/HRM.Modules.Personnel.Infrastructure.csproj" Id="b1b2c3d4-0004-4000-8000-000000000004" />
     <Project Path="src/Modules/Personnel/HRM.Modules.Personnel.Api/HRM.Modules.Personnel.Api.csproj" Id="b1b2c3d4-0005-4000-8000-000000000005" />
   </Folder>
+  <Folder Name="/src/Modules/Attendance/">
+    <Project Path="src/Modules/Attendance/HRM.Modules.Attendance.Domain/HRM.Modules.Attendance.Domain.csproj" Id="c1b2c3d4-0001-4000-8000-000000000001" />
+    <Project Path="src/Modules/Attendance/HRM.Modules.Attendance.IntegrationEvents/HRM.Modules.Attendance.IntegrationEvents.csproj" Id="c1b2c3d4-0002-4000-8000-000000000002" />
+    <Project Path="src/Modules/Attendance/HRM.Modules.Attendance.Application/HRM.Modules.Attendance.Application.csproj" Id="c1b2c3d4-0003-4000-8000-000000000003" />
+    <Project Path="src/Modules/Attendance/HRM.Modules.Attendance.Infrastructure/HRM.Modules.Attendance.Infrastructure.csproj" Id="c1b2c3d4-0004-4000-8000-000000000004" />
+    <Project Path="src/Modules/Attendance/HRM.Modules.Attendance.Api/HRM.Modules.Attendance.Api.csproj" Id="c1b2c3d4-0005-4000-8000-000000000005" />
+  </Folder>
   <Folder Name="/src/Database/" />
+  <Folder Name="/src/Database/Organization/">
+    <File Path="src/Database/Organization/001_CreateCompaniesTable.sql" />
+    <File Path="src/Database/Organization/002_CreateDepartmentsTable.sql" />
+    <File Path="src/Database/Organization/003_CreatePositionsTable.sql" />
+    <File Path="src/Database/Organization/004_CreateOutboxMessagesTable.sql" />
+    <File Path="src/Database/Organization/005_CreateTenantsTable.sql" />
+  </Folder>
+  <Folder Name="/src/Database/Personnel/">
+    <File Path="src/Database/Personnel/001_CreateEmployeesTable.sql" />
+    <File Path="src/Database/Personnel/002_CreateEmployeeAssignmentsTable.sql" />
+    <File Path="src/Database/Personnel/003_CreateOutboxMessagesTable.sql" />
+    <File Path="src/Database/Personnel/004_CreateEmployeeHierarchyClosuresTable.sql" />
+  </Folder>
   <Folder Name="/src/Database/Identity/">
     <File Path="src/Database/Identity/001_CreateAccountsTable.sql" />
     <File Path="src/Database/Identity/002_CreateRefreshTokensTable.sql" />
@@ -45,5 +65,10 @@
     <File Path="src/Database/Identity/007_CreateSystemProfilesTable.sql" />
     <File Path="src/Database/Identity/008_CreateEmployeeProfilesTable.sql" />
     <File Path="src/Database/Identity/README.md" />
+  </Folder>
+  <Folder Name="/src/Database/Attendance/">
+    <File Path="src/Database/Attendance/001_CreateAttendanceSchema.sql" />
+    <File Path="src/Database/Attendance/002_CreateAttendanceRecordsTable.sql" />
+    <File Path="src/Database/Attendance/003_CreateOutboxMessagesTable.sql" />
   </Folder>
 </Solution>

@@ -1,0 +1,115 @@
+@model TenantListViewModel
+
+@{
+    ViewData["Title"] = "Tenants";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Tenants</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Create Tenant
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" name="searchTerm" value="@Model.SearchTerm" placeholder="Search by code or name..." />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="Active" selected="@(Model.StatusFilter == "Active")">Active</option>
+                <option value="Suspended" selected="@(Model.StatusFilter == "Suspended")">Suspended</option>
+                <option value="Deactivated" selected="@(Model.StatusFilter == "Deactivated")">Deactivated</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-funnel me-1"></i>Filter
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Tenants Table -->
+@if (Model.Tenants.Count == 0)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        No tenants found.
+        <a asp-action="Create" class="alert-link">Create your first tenant</a>.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Subdomain</th>
+                    <th>Status</th>
+                    <th>System</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tenant in Model.Tenants)
+                {
+                    <tr>
+                        <td><code>@tenant.Code</code></td>
+                        <td>@tenant.Name</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(tenant.Subdomain))
+                            {
+                                <code>@tenant.Subdomain</code>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @{
+                                var badgeClass = tenant.Status switch
+                                {
+                                    "Active" => "bg-success",
+                                    "Suspended" => "bg-warning text-dark",
+                                    "Deactivated" => "bg-secondary",
+                                    _ => "bg-light text-dark"
+                                };
+                            }
+                            <span class="badge @badgeClass">@tenant.Status</span>
+                        </td>
+                        <td>
+                            @if (tenant.IsSystemTenant)
+                            {
+                                <span class="badge bg-info text-dark"><i class="bi bi-shield-lock me-1"></i>System</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>@tenant.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@tenant.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@tenant.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

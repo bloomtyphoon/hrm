@@ -59,12 +59,12 @@ public sealed class GetEmployeesQueryHandler
         // Layer 2: Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
-            var searchTerm = request.SearchTerm.ToLower();
+            var pattern = $"%{request.SearchTerm}%";
             query = query.Where(e =>
-                e.EmployeeCode.ToLower().Contains(searchTerm) ||
-                e.FirstName.ToLower().Contains(searchTerm) ||
-                e.LastName.ToLower().Contains(searchTerm) ||
-                e.Email.ToLower().Contains(searchTerm));
+                EF.Functions.Like(e.EmployeeCode, pattern) ||
+                EF.Functions.Like(e.FirstName, pattern) ||
+                EF.Functions.Like(e.LastName, pattern) ||
+                EF.Functions.Like(e.Email, pattern));
         }
 
         // Layer 2: Status filter
@@ -137,7 +137,6 @@ public sealed class GetEmployeesQueryHandler
         IQueryable<Employee> query,
         IReadOnlyCollection<Guid> companyIds)
     {
-        var ids = companyIds.ToList();
-        return query.Where(e => e.PrimaryCompanyId != null && ids.Contains(e.PrimaryCompanyId.Value));
+        return query.Where(e => e.PrimaryCompanyId != null && companyIds.Contains(e.PrimaryCompanyId.Value));
     }
 }

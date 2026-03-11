@@ -6,6 +6,7 @@ namespace HRM.Modules.Personnel.Domain.Events;
 /// Raised when a new employee is created in the Personnel module.
 /// Consumed by the domain event handler to publish EmployeeCreatedIntegrationEvent
 /// for cross-module communication (e.g., Identity module creates Account + EmployeeProfile).
+/// Also consumed by EmployeeCreatedHierarchyHandler to initialize the closure table row.
 /// </summary>
 public sealed record EmployeeCreatedDomainEvent(
     Guid TenantId,

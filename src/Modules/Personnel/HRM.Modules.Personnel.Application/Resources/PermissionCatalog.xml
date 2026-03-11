@@ -16,17 +16,6 @@
     - Global (6): System-wide access (super admin)
   -->
 
-  <!-- Scope Definitions (reusable) - matches DataScopeLevel enum -->
-  <ScopeDefinitions>
-    <Scope Name="None" Level="0" DisplayName="Không có quyền" />
-    <Scope Name="Self" Level="1" DisplayName="Chỉ bản thân" />
-    <Scope Name="EmployeeSet" Level="2" DisplayName="Nhân viên cấp dưới" />
-    <Scope Name="Position" Level="3" DisplayName="Cùng vị trí" />
-    <Scope Name="Department" Level="4" DisplayName="Cùng phòng ban" />
-    <Scope Name="Company" Level="5" DisplayName="Toàn công ty" />
-    <Scope Name="Global" Level="6" DisplayName="Toàn hệ thống" />
-  </ScopeDefinitions>
-
   <Permissions>
 
     <Module name="Personnel" displayName="Quản lý nhân sự">

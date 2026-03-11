@@ -4,10 +4,43 @@ namespace HRM.Web.Services.Abstractions;
 
 /// <summary>
 /// API client for Organization module operations.
-/// Handles company, department, and position management.
+/// Handles tenant, company, department, and position management.
 /// </summary>
 public interface IOrganizationApiClient
 {
+    #region Tenants
+
+    Task<ApiResponse<TenantResponse>> CreateTenantAsync(
+        CreateTenantRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<IReadOnlyList<TenantResponse>>> GetTenantsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<TenantResponse>> GetTenantByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<TenantResponse>> UpdateTenantAsync(
+        Guid id,
+        string name,
+        string? subdomain,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<TenantResponse>> ActivateTenantAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<TenantResponse>> SuspendTenantAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<TenantResponse>> DeactivateTenantAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    #endregion
+
     #region Companies
 
     Task<ApiResponse<CompanyResponse>> CreateCompanyAsync(

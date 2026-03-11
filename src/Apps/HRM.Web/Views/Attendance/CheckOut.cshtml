@@ -1,0 +1,55 @@
+@model CheckOutFormModel
+
+@{
+    ViewData["Title"] = "Check Out";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="d-flex align-items-center mb-4">
+            <a asp-action="MyAttendance" class="btn btn-sm btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0"><i class="bi bi-box-arrow-right me-2 text-warning"></i>Check Out</h2>
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="text-muted small mb-1">Current time</div>
+                    <div id="currentTime" class="fs-3 fw-semibold text-warning font-monospace"></div>
+                </div>
+
+                <form asp-action="CheckOut" method="post">
+                    <div class="mb-4">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Optional notes..."></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="bi bi-box-arrow-right me-1"></i>Check Out Now
+                        </button>
+                        <a asp-action="MyAttendance" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var el = document.getElementById('currentTime');
+            function update() {
+                el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+            update();
+            setInterval(update, 1000);
+        })();
+    </script>
+}

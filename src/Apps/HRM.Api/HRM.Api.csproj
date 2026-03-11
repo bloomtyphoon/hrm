@@ -1,39 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>HRM.Api</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- BuildingBlocks references -->
     <ProjectReference Include="..\..\BuildingBlocks\HRM.BuildingBlocks.Application\HRM.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\HRM.BuildingBlocks.Infrastructure\HRM.BuildingBlocks.Infrastructure.csproj" />
-
-    <!-- Module References -->
     <ProjectReference Include="..\..\Modules\Identity\HRM.Modules.Identity.Api\HRM.Modules.Identity.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\HRM.Modules.Identity.Application\HRM.Modules.Identity.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\HRM.Modules.Identity.Infrastructure\HRM.Modules.Identity.Infrastructure.csproj" />
-
-    <!-- Organization Module -->
     <ProjectReference Include="..\..\Modules\Organization\HRM.Modules.Organization.Api\HRM.Modules.Organization.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Organization\HRM.Modules.Organization.Application\HRM.Modules.Organization.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Organization\HRM.Modules.Organization.Infrastructure\HRM.Modules.Organization.Infrastructure.csproj" />
-
-    <!-- Personnel Module -->
     <ProjectReference Include="..\..\Modules\Personnel\HRM.Modules.Personnel.Api\HRM.Modules.Personnel.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Personnel\HRM.Modules.Personnel.Application\HRM.Modules.Personnel.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Personnel\HRM.Modules.Personnel.Infrastructure\HRM.Modules.Personnel.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Attendance\HRM.Modules.Attendance.Api\HRM.Modules.Attendance.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Attendance\HRM.Modules.Attendance.Application\HRM.Modules.Attendance.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Attendance\HRM.Modules.Attendance.Infrastructure\HRM.Modules.Attendance.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- ASP.NET Core packages -->
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
-
-    <!-- Database packages -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

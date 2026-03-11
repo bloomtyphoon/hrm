@@ -225,6 +225,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
 
     /// <summary>
     /// Assign a manager to the employee.
+    /// Raises ManagerChangedDomainEvent to maintain the closure table.
     /// </summary>
     public void AssignManager(Guid managerId)
     {
@@ -232,23 +233,32 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
         if (managerId == Id)
             throw new InvalidOperationException("Employee cannot be their own manager");
 
-        var previousManagerId = ManagerId;
+        var oldManagerId = ManagerId;
         ManagerId = managerId;
         MarkAsModified();
 
-        AddDomainEvent(new ManagerChangedDomainEvent(TenantId, Id, previousManagerId, NewManagerId: managerId));
+        AddDomainEvent(new ManagerChangedDomainEvent(
+            TenantId: TenantId,
+            EmployeeId: Id,
+            OldManagerId: oldManagerId,
+            NewManagerId: managerId));
     }
 
     /// <summary>
     /// Remove manager assignment.
+    /// Raises ManagerChangedDomainEvent to maintain the closure table.
     /// </summary>
     public void RemoveManager()
     {
-        var previousManagerId = ManagerId;
+        var oldManagerId = ManagerId;
         ManagerId = null;
         MarkAsModified();
 
-        AddDomainEvent(new ManagerChangedDomainEvent(TenantId, Id, previousManagerId, NewManagerId: null));
+        AddDomainEvent(new ManagerChangedDomainEvent(
+            TenantId: TenantId,
+            EmployeeId: Id,
+            OldManagerId: oldManagerId,
+            NewManagerId: null));
     }
 
     #region Assignment Management
