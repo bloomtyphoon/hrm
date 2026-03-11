@@ -1,3 +1,5 @@
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
+using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -7,10 +9,12 @@ namespace HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
 internal sealed class EmployeeRepository : IEmployeeRepository
 {
     private readonly PersonnelDbContext _context;
+    private readonly ITenantContext? _tenantContext;
 
-    public EmployeeRepository(PersonnelDbContext context)
+    public EmployeeRepository(PersonnelDbContext context, ITenantContext? tenantContext = null)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
     public async Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

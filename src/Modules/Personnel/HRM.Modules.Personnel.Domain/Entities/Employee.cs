@@ -113,6 +113,26 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
 
     #endregion
 
+    #region Geographic Scope Dimensions - Weak References
+
+    /// <summary>
+    /// Country ID (weak reference to Organization.Country).
+    /// Used for Country scope filtering.
+    /// Populated via SetGeographicScope or integration events from Organization module.
+    /// </summary>
+    [ScopeDimension(DataScopeLevel.Country)]
+    public Guid? CountryId { get; private set; }
+
+    /// <summary>
+    /// Region ID (weak reference to Organization.Region).
+    /// Used for Region scope filtering.
+    /// Populated via SetGeographicScope or integration events from Organization module.
+    /// </summary>
+    [ScopeDimension(DataScopeLevel.Region)]
+    public Guid? RegionId { get; private set; }
+
+    #endregion
+
     /// <summary>
     /// Employee owns their own data.
     /// </summary>
@@ -353,6 +373,21 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
             .ToList();
 
         AddDomainEvent(new EmployeeAssignmentsChangedDomainEvent(Id, activeCompanyIds));
+    }
+
+    #endregion
+
+    #region Geographic Scope Management
+
+    /// <summary>
+    /// Set or update the employee's geographic scope dimensions.
+    /// Called by admin operations or integration events from Organization module.
+    /// </summary>
+    public void SetGeographicScope(Guid? countryId, Guid? regionId)
+    {
+        CountryId = countryId;
+        RegionId = regionId;
+        MarkAsModified();
     }
 
     #endregion

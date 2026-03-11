@@ -46,6 +46,26 @@ internal sealed class EmployeeAssignmentQuery : IEmployeeAssignmentQuery
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<Guid>> GetEmployeeCountryIdsAsync(
+        Guid employeeId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Employees
+            .AsNoTracking()
+            .Where(e => e.Id == employeeId && e.CountryId != null)
+            .Select(e => e.CountryId!.Value)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<Guid>> GetEmployeeRegionIdsAsync(
+        Guid employeeId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Employees
+            .AsNoTracking()
+            .Where(e => e.Id == employeeId && e.RegionId != null)
+            .Select(e => e.RegionId!.Value)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<ScopeDimensionIds> GetScopeDimensionIdsAsync(
         Guid employeeId, CancellationToken cancellationToken = default)
     {
@@ -54,14 +74,22 @@ internal sealed class EmployeeAssignmentQuery : IEmployeeAssignmentQuery
             .Where(a => a.EmployeeId == employeeId && a.Status == AssignmentStatus.Active)
             .ToListAsync(cancellationToken);
 
-        if (activeAssignments.Count == 0)
+        var employee = await _context.Employees
+            .AsNoTracking()
+            .Where(e => e.Id == employeeId)
+            .Select(e => new { e.CountryId, e.RegionId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (activeAssignments.Count == 0 && employee is null)
             return ScopeDimensionIds.Empty;
 
         return new ScopeDimensionIds
         {
             CompanyIds = activeAssignments.Select(a => a.CompanyId).Distinct().ToList(),
             DepartmentIds = activeAssignments.Select(a => a.DepartmentId).Distinct().ToList(),
-            PositionIds = activeAssignments.Select(a => a.PositionId).Distinct().ToList()
+            PositionIds = activeAssignments.Select(a => a.PositionId).Distinct().ToList(),
+            CountryIds = employee?.CountryId is { } cid ? [cid] : Array.Empty<Guid>(),
+            RegionIds = employee?.RegionId is { } rid ? [rid] : Array.Empty<Guid>()
         };
     }
 }

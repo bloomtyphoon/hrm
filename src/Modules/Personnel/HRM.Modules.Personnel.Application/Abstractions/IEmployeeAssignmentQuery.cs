@@ -28,6 +28,22 @@ public interface IEmployeeAssignmentQuery
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get the country ID the employee belongs to (from Employee.CountryId).
+    /// Returns 0 or 1 item.
+    /// </summary>
+    Task<IReadOnlyCollection<Guid>> GetEmployeeCountryIdsAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the region ID the employee belongs to (from Employee.RegionId).
+    /// Returns 0 or 1 item.
+    /// </summary>
+    Task<IReadOnlyCollection<Guid>> GetEmployeeRegionIdsAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get scope dimension IDs for an employee at a specific level.
     /// </summary>
     Task<ScopeDimensionIds> GetScopeDimensionIdsAsync(
@@ -56,12 +72,24 @@ public sealed record ScopeDimensionIds
     public required IReadOnlyCollection<Guid> PositionIds { get; init; }
 
     /// <summary>
+    /// Country ID (0 or 1 item) from Employee.CountryId.
+    /// </summary>
+    public IReadOnlyCollection<Guid> CountryIds { get; init; } = Array.Empty<Guid>();
+
+    /// <summary>
+    /// Region ID (0 or 1 item) from Employee.RegionId.
+    /// </summary>
+    public IReadOnlyCollection<Guid> RegionIds { get; init; } = Array.Empty<Guid>();
+
+    /// <summary>
     /// Empty dimension IDs.
     /// </summary>
     public static ScopeDimensionIds Empty => new()
     {
         CompanyIds = Array.Empty<Guid>(),
         DepartmentIds = Array.Empty<Guid>(),
-        PositionIds = Array.Empty<Guid>()
+        PositionIds = Array.Empty<Guid>(),
+        CountryIds = Array.Empty<Guid>(),
+        RegionIds = Array.Empty<Guid>()
     };
 }

@@ -1,4 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Application.Abstractions.Caching;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.Modules.Personnel.Application.Abstractions;
 
 namespace HRM.Modules.Personnel.Infrastructure.Services;
@@ -14,11 +16,22 @@ namespace HRM.Modules.Personnel.Infrastructure.Services;
 /// </summary>
 public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
 {
-    private readonly IEmployeeRepository _employeeRepository;
+    private const string CacheKeyPrefix = "personnel";
+    private const string HierarchySegment = "hierarchy";
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
-    public HierarchyScopeResolver(IEmployeeRepository employeeRepository)
+    private readonly IEmployeeRepository _employeeRepository;
+    private readonly ICache _cache;
+    private readonly ITenantContext? _tenantContext;
+
+    public HierarchyScopeResolver(
+        IEmployeeRepository employeeRepository,
+        ICache cache,
+        ITenantContext? tenantContext = null)
     {
         _employeeRepository = employeeRepository;
+        _cache = cache;
+        _tenantContext = tenantContext;
     }
 
     /// <inheritdoc />
@@ -57,5 +70,21 @@ public sealed class HierarchyScopeResolver : IHierarchyScopeResolver
         CancellationToken cancellationToken = default)
     {
         return await _employeeRepository.GetManagementChainAsync(employeeId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the cache key prefix for all hierarchy entries of a given tenant.
+    /// Used by <see cref="ManagerChangedDomainEventHandler"/> to bulk-invalidate stale entries.
+    /// </summary>
+    internal static string GetTenantHierarchyPrefix(Guid tenantId)
+        => $"{CacheKeyPrefix}:{tenantId}:{HierarchySegment}:";
+
+    private string? BuildCacheKey(Guid managerId)
+    {
+        var tenantId = _tenantContext?.TenantId;
+        if (tenantId is null)
+            return null;
+
+        return $"{CacheKeyPrefix}:{tenantId}:{HierarchySegment}:{managerId}";
     }
 }
