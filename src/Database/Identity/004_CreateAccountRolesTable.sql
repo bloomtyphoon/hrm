@@ -5,9 +5,6 @@
 -- Dependencies: 001_CreateAccountsTable.sql, 003_CreateRolesAndPermissionsTable.sql
 -- =============================================
 
-USE HrmDb
-GO
-
 -- =============================================
 -- Create AccountRoles Junction Table
 -- =============================================

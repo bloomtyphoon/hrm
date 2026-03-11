@@ -25,7 +25,7 @@ BEGIN
         -- Tenant ID for multi-tenant isolation (no FK to maintain module independence)
         TenantId     UNIQUEIDENTIFIER NOT NULL,
 
-        CONSTRAINT PK_EmployeeHierarchyClosures PRIMARY KEY CLUSTERED (AncestorId, DescendantId),
+        CONSTRAINT PK_EmployeeHierarchyClosures PRIMARY KEY CLUSTERED (TenantId, AncestorId, DescendantId),
         CONSTRAINT CK_EmployeeHierarchyClosures_Depth CHECK (Depth >= 0)
     )
 

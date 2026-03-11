@@ -12,9 +12,6 @@
 --   Scope=1 (Self)   for self-service actions (CheckIn/CheckOut) which only allow Self scope
 -- =============================================
 
-USE HrmDb
-GO
-
 -- =============================================
 -- Step 1: Create System Administrator Role
 -- =============================================
