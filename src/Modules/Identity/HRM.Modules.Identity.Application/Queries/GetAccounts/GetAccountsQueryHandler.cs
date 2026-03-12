@@ -135,13 +135,11 @@ public sealed class GetAccountsQueryHandler
                 .Select(ep => ep.AccountId),
             DataScopeLevel.Department => _context.EmployeeProfiles
                 .AsNoTracking()
-                .Where(ep => ep.PrimaryDepartmentId.HasValue
-                             && rule.DimensionIds.Contains(ep.PrimaryDepartmentId.Value))
+                .Where(ep => ep.DepartmentAccess.Any(da => rule.DimensionIds.Contains(da.DepartmentId)))
                 .Select(ep => ep.AccountId),
             DataScopeLevel.Position => _context.EmployeeProfiles
                 .AsNoTracking()
-                .Where(ep => ep.PrimaryPositionId.HasValue
-                             && rule.DimensionIds.Contains(ep.PrimaryPositionId.Value))
+                .Where(ep => ep.PositionAccess.Any(pa => rule.DimensionIds.Contains(pa.PositionId)))
                 .Select(ep => ep.AccountId),
             _ => _context.EmployeeProfiles.AsNoTracking().Where(_ => false).Select(ep => ep.AccountId)
         };

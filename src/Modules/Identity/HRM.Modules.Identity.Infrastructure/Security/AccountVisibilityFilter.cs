@@ -84,8 +84,21 @@ public sealed class AccountVisibilityFilter : IAccountVisibilityFilter
                 var departmentIds = rule.DimensionIds;
                 var accountIds = await _context.EmployeeProfiles
                     .AsNoTracking()
-                    .Where(ep => ep.PrimaryDepartmentId.HasValue
-                                 && departmentIds.Contains(ep.PrimaryDepartmentId.Value))
+                    .Where(ep => ep.DepartmentAccess.Any(da => departmentIds.Contains(da.DepartmentId)))
+                    .Select(ep => ep.AccountId)
+                    .ToListAsync(cancellationToken);
+
+                var result = accountIds.ToHashSet();
+                result.Add(userId);
+                return result;
+            }
+
+            case DataScopeLevel.Position:
+            {
+                var positionIds = rule.DimensionIds;
+                var accountIds = await _context.EmployeeProfiles
+                    .AsNoTracking()
+                    .Where(ep => ep.PositionAccess.Any(pa => positionIds.Contains(pa.PositionId)))
                     .Select(ep => ep.AccountId)
                     .ToListAsync(cancellationToken);
 
