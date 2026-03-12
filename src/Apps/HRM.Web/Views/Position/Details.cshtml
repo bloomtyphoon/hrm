@@ -106,6 +106,37 @@
             </div>
         </div>
 
+        <!-- Move Position Section -->
+        @if (pos.Status != "Closed")
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <i class="bi bi-arrows-move me-1"></i>Move to Department
+                </div>
+                <div class="card-body">
+                    <form asp-action="Move" asp-route-id="@pos.Id" method="post" class="row g-2 align-items-end">
+                        @Html.AntiForgeryToken()
+                        <div class="col-auto flex-grow-1">
+                            <label class="form-label form-label-sm">Department</label>
+                            <select name="departmentId" class="form-select form-select-sm">
+                                <option value="">-- None (No department) --</option>
+                                @foreach (var d in Model.AvailableDepartments)
+                                {
+                                    var selected = d.Id == pos.DepartmentId ? "selected" : "";
+                                    <option value="@d.Id" @selected>@d.Name (@d.Code)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Move this position to a different department?')">
+                                <i class="bi bi-arrows-move me-1"></i>Move
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
         <div class="mt-4 d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back to List

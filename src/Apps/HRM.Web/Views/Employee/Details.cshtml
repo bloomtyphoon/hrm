@@ -6,7 +6,7 @@
 }
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>@emp.FullName</h2>
             @{
@@ -37,15 +37,13 @@
             </div>
         }
 
-        <div class="card">
+        <!-- Employee Details -->
+        <div class="card mb-4">
             <div class="card-header">
                 <i class="bi bi-person me-1"></i>Employee Details
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-4">Employee ID</dt>
-                    <dd class="col-sm-8"><code>@emp.Id</code></dd>
-
                     <dt class="col-sm-4">Employee Code</dt>
                     <dd class="col-sm-8"><code>@emp.EmployeeCode</code></dd>
 
@@ -70,19 +68,72 @@
                         <dd class="col-sm-8"><span class="text-danger">@emp.TerminationDate.Value.ToString("yyyy-MM-dd")</span></dd>
                     }
 
-                    <dt class="col-sm-4">Manager</dt>
-                    <dd class="col-sm-8">
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">@emp.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                    @if (emp.ModifiedAtUtc.HasValue)
+                    {
+                        <dt class="col-sm-4">Last Modified</dt>
+                        <dd class="col-sm-8">@emp.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Manager Section -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person-lines-fill me-1"></i>Manager</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="flex-grow-1">
                         @if (emp.ManagerId.HasValue)
                         {
-                            <a asp-action="Details" asp-route-id="@emp.ManagerId">@(Model.ManagerName ?? emp.ManagerId.ToString())</a>
+                            <a asp-action="Details" asp-route-id="@emp.ManagerId" class="fw-semibold">@(Model.ManagerName ?? emp.ManagerId.ToString())</a>
                         }
                         else
                         {
-                            <em>Not assigned</em>
+                            <em class="text-muted">No manager assigned</em>
                         }
-                    </dd>
+                    </div>
+                    @if (emp.Status != "Terminated")
+                    {
+                        <div class="d-flex gap-2 align-items-center">
+                            <form asp-action="AssignManager" asp-route-id="@emp.Id" method="post" class="d-flex gap-2 align-items-center">
+                                @Html.AntiForgeryToken()
+                                <select name="managerId" class="form-select form-select-sm" style="width: 220px;" required>
+                                    <option value="">-- Select Manager --</option>
+                                    @foreach (var mgr in Model.AvailableManagers)
+                                    {
+                                        <option value="@mgr.Id" selected="@(mgr.Id == emp.ManagerId)">@mgr.FullName</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Assign</button>
+                            </form>
+                            @if (emp.ManagerId.HasValue)
+                            {
+                                <form asp-action="RemoveManager" asp-route-id="@emp.Id" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove manager assignment?')">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
 
-                    <dt class="col-sm-4">Primary Company</dt>
+        <!-- Organization (Primary) Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-building me-1"></i>Primary Organization
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Company</dt>
                     <dd class="col-sm-8">
                         @if (emp.PrimaryCompanyId.HasValue)
                         {
@@ -90,11 +141,11 @@
                         }
                         else
                         {
-                            <em>Not assigned</em>
+                            <em class="text-muted">Not assigned</em>
                         }
                     </dd>
 
-                    <dt class="col-sm-4">Primary Department</dt>
+                    <dt class="col-sm-4">Department</dt>
                     <dd class="col-sm-8">
                         @if (emp.PrimaryDepartmentId.HasValue)
                         {
@@ -102,11 +153,11 @@
                         }
                         else
                         {
-                            <em>Not assigned</em>
+                            <em class="text-muted">Not assigned</em>
                         }
                     </dd>
 
-                    <dt class="col-sm-4">Primary Position</dt>
+                    <dt class="col-sm-4">Position</dt>
                     <dd class="col-sm-8">
                         @if (emp.PrimaryPositionId.HasValue)
                         {
@@ -114,33 +165,151 @@
                         }
                         else
                         {
-                            <em>Not assigned</em>
-                        }
-                    </dd>
-
-                    <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8"><span class="badge @badgeClass">@emp.Status</span></dd>
-
-                    <dt class="col-sm-4">Created</dt>
-                    <dd class="col-sm-8">@emp.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
-
-                    <dt class="col-sm-4">Last Modified</dt>
-                    <dd class="col-sm-8">
-                        @if (emp.ModifiedAtUtc.HasValue)
-                        {
-                            @emp.ModifiedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss")
-                            <text> UTC</text>
-                        }
-                        else
-                        {
-                            <em>Never modified</em>
+                            <em class="text-muted">Not assigned</em>
                         }
                     </dd>
                 </dl>
             </div>
         </div>
 
-        <div class="mt-4 d-flex gap-2 flex-wrap">
+        <!-- Assignments -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-briefcase me-1"></i>Assignments</span>
+                @if (emp.Status != "Terminated")
+                {
+                    <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#addAssignmentForm">
+                        <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                    </button>
+                }
+            </div>
+            <div class="card-body">
+                @if (emp.Status != "Terminated")
+                {
+                    <div class="collapse mb-3" id="addAssignmentForm">
+                        <div class="card card-body bg-light">
+                            <h6 class="mb-3">New Assignment</h6>
+                            <form asp-action="AddAssignment" asp-route-id="@emp.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Company</label>
+                                        <select name="companyId" id="assignCompany" class="form-select" required>
+                                            <option value="">-- Select --</option>
+                                            @foreach (var c in Model.AvailableCompanies)
+                                            {
+                                                <option value="@c.Id">@c.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Department</label>
+                                        <select name="departmentId" id="assignDepartment" class="form-select" required>
+                                            <option value="">-- Select Company first --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Position</label>
+                                        <select name="positionId" id="assignPosition" class="form-select" required>
+                                            <option value="">-- Select Company first --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Start Date</label>
+                                        <input type="date" name="startDate" class="form-control" value="@DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")" required />
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <div class="form-check">
+                                            <input type="checkbox" name="isPrimary" value="true" class="form-check-input" id="isPrimaryCheck" />
+                                            <label class="form-check-label" for="isPrimaryCheck">Set as primary</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-plus-circle me-1"></i>Add
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.Assignments.Count == 0)
+                {
+                    <p class="text-muted mb-0"><em>No assignments yet. Add one to assign this employee to a company, department, and position.</em></p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Department</th>
+                                    <th>Position</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in Model.Assignments)
+                                {
+                                    <tr class="@(a.IsPrimary ? "table-info" : "")">
+                                        <td>@a.CompanyName</td>
+                                        <td>@a.DepartmentName</td>
+                                        <td>@a.PositionTitle</td>
+                                        <td>@a.StartDate.ToString("yyyy-MM-dd")</td>
+                                        <td>@(a.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                        <td>
+                                            @if (a.IsPrimary)
+                                            {
+                                                <span class="badge bg-primary">Primary</span>
+                                            }
+                                            @{
+                                                var aStatusClass = a.Status switch
+                                                {
+                                                    "Active" => "bg-success",
+                                                    "Ended" => "bg-secondary",
+                                                    "Pending" => "bg-warning text-dark",
+                                                    _ => "bg-light text-dark"
+                                                };
+                                            }
+                                            <span class="badge @aStatusClass">@a.Status</span>
+                                        </td>
+                                        <td class="text-end">
+                                            @if (a.Status == "Active" && emp.Status != "Terminated")
+                                            {
+                                                @if (!a.IsPrimary)
+                                                {
+                                                    <form asp-action="SetPrimaryAssignment" asp-route-id="@emp.Id" asp-route-assignmentId="@a.Id" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Set as primary">
+                                                            <i class="bi bi-star"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                                <form asp-action="EndAssignment" asp-route-id="@emp.Id" asp-route-assignmentId="@a.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="End assignment" onclick="return confirm('End this assignment?')">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back to List
             </a>
@@ -159,3 +328,45 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var companySelect = document.getElementById('assignCompany');
+            var deptSelect = document.getElementById('assignDepartment');
+            var posSelect = document.getElementById('assignPosition');
+
+            if (!companySelect) return;
+
+            companySelect.addEventListener('change', function () {
+                var companyId = this.value;
+                deptSelect.innerHTML = '<option value="">Loading...</option>';
+                posSelect.innerHTML = '<option value="">Loading...</option>';
+
+                if (!companyId) {
+                    deptSelect.innerHTML = '<option value="">-- Select Company first --</option>';
+                    posSelect.innerHTML = '<option value="">-- Select Company first --</option>';
+                    return;
+                }
+
+                fetch('@Url.Action("GetDepartmentsByCompany")?companyId=' + companyId)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        deptSelect.innerHTML = '<option value="">-- Select --</option>';
+                        data.forEach(function (d) {
+                            deptSelect.innerHTML += '<option value="' + d.id + '">' + d.name + '</option>';
+                        });
+                    });
+
+                fetch('@Url.Action("GetPositionsByCompany")?companyId=' + companyId)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        posSelect.innerHTML = '<option value="">-- Select --</option>';
+                        data.forEach(function (p) {
+                            posSelect.innerHTML += '<option value="' + p.id + '">' + p.title + '</option>';
+                        });
+                    });
+            });
+        })();
+    </script>
+}

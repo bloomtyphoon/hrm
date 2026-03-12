@@ -46,6 +46,8 @@ public sealed class DepartmentDetailViewModel
     public DepartmentResponse Department { get; set; } = new();
     public string? ParentDepartmentName { get; set; }
     public string? ManagerName { get; set; }
+    public IReadOnlyList<EmployeeSummaryResponse> AvailableEmployees { get; set; } = [];
+    public IReadOnlyList<DepartmentResponse> AvailableDepartments { get; set; } = [];
 }
 
 /// <summary>
@@ -55,6 +57,7 @@ public sealed class PositionDetailViewModel
 {
     public PositionResponse Position { get; set; } = new();
     public string? DepartmentName { get; set; }
+    public IReadOnlyList<DepartmentResponse> AvailableDepartments { get; set; } = [];
 }
 
 /// <summary>

@@ -66,18 +66,6 @@
                         }
                     </dd>
 
-                    <dt class="col-sm-4">Manager</dt>
-                    <dd class="col-sm-8">
-                        @if (dept.ManagerId.HasValue)
-                        {
-                            <a asp-controller="Employee" asp-action="Details" asp-route-id="@dept.ManagerId">@(Model.ManagerName ?? dept.ManagerId.ToString())</a>
-                        }
-                        else
-                        {
-                            <em>Not assigned</em>
-                        }
-                    </dd>
-
                     <dt class="col-sm-4">Status</dt>
                     <dd class="col-sm-8"><span class="badge @badgeClass">@dept.Status</span></dd>
 
@@ -97,6 +85,82 @@
                         }
                     </dd>
                 </dl>
+            </div>
+        </div>
+
+        <!-- Manager Section -->
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person-badge me-1"></i>Manager</span>
+            </div>
+            <div class="card-body">
+                @if (dept.ManagerId.HasValue)
+                {
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <a asp-controller="Employee" asp-action="Details" asp-route-id="@dept.ManagerId">
+                                <i class="bi bi-person me-1"></i>@(Model.ManagerName ?? dept.ManagerId.ToString())
+                            </a>
+                        </div>
+                        <form asp-action="RemoveManager" asp-route-id="@dept.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this manager from the department?')">
+                                <i class="bi bi-x-circle me-1"></i>Remove
+                            </button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-2">No manager assigned</p>
+                }
+                <hr />
+                <form asp-action="AssignManager" asp-route-id="@dept.Id" method="post" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-auto flex-grow-1">
+                        <label class="form-label form-label-sm">Assign Manager</label>
+                        <select name="managerId" class="form-select form-select-sm" required>
+                            <option value="">-- Select Employee --</option>
+                            @foreach (var emp in Model.AvailableEmployees)
+                            {
+                                <option value="@emp.Id">@emp.FullName (@emp.EmployeeCode)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-person-check me-1"></i>Assign
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Move Department Section -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-arrows-move me-1"></i>Move Department
+            </div>
+            <div class="card-body">
+                <form asp-action="Move" asp-route-id="@dept.Id" method="post" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-auto flex-grow-1">
+                        <label class="form-label form-label-sm">New Parent Department</label>
+                        <select name="newParentDepartmentId" class="form-select form-select-sm">
+                            <option value="">-- None (Top-level) --</option>
+                            @foreach (var d in Model.AvailableDepartments)
+                            {
+                                var selected = d.Id == dept.ParentDepartmentId ? "selected" : "";
+                                <option value="@d.Id" @selected>@d.Name (@d.Code)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Move this department to a new parent?')">
+                            <i class="bi bi-arrows-move me-1"></i>Move
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

@@ -103,6 +103,11 @@ public class PositionController : Controller
                 viewModel.DepartmentName = dept.Data.Name;
         }
 
+        // Load available departments for move
+        var departments = await _organizationClient.GetDepartmentsByCompanyAsync(pos.CompanyId, cancellationToken);
+        if (departments.IsSuccess && departments.Data != null)
+            viewModel.AvailableDepartments = departments.Data;
+
         return View(viewModel);
     }
 
@@ -280,6 +285,16 @@ public class PositionController : Controller
         var response = await _organizationClient.ClosePositionAsync(id, cancellationToken);
         TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
             response.IsSuccess ? "Position closed successfully!" : (response.ErrorMessage ?? "Failed to close position");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Move(Guid id, Guid? departmentId, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.MovePositionAsync(id, departmentId, cancellationToken);
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Position moved successfully!" : (response.ErrorMessage ?? "Failed to move position");
         return RedirectToAction(nameof(Details), new { id });
     }
 }

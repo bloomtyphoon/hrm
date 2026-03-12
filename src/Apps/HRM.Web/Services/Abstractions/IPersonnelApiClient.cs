@@ -40,4 +40,42 @@ public interface IPersonnelApiClient
         Guid id,
         DateOnly terminationDate,
         CancellationToken cancellationToken = default);
+
+    // ─── Manager ──────────────────────────────────────────────────────────
+
+    Task<ApiResponse<object>> AssignManagerAsync(
+        Guid employeeId,
+        Guid managerId,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> RemoveManagerAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken = default);
+
+    // ─── Assignments ──────────────────────────────────────────────────────
+
+    Task<ApiResponse<IReadOnlyList<AssignmentResponse>>> GetAssignmentsAsync(
+        Guid employeeId,
+        string? status = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<AssignmentResponse>> AddAssignmentAsync(
+        Guid employeeId,
+        Guid companyId,
+        Guid departmentId,
+        Guid positionId,
+        DateOnly startDate,
+        bool isPrimary,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> EndAssignmentAsync(
+        Guid employeeId,
+        Guid assignmentId,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> SetPrimaryAssignmentAsync(
+        Guid employeeId,
+        Guid assignmentId,
+        CancellationToken cancellationToken = default);
 }

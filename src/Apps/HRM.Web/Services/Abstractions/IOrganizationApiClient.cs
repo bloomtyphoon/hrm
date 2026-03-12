@@ -100,6 +100,20 @@ public interface IOrganizationApiClient
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResponse<object>> AssignDepartmentManagerAsync(
+        Guid departmentId,
+        Guid managerId,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> RemoveDepartmentManagerAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> MoveDepartmentAsync(
+        Guid departmentId,
+        Guid? newParentDepartmentId,
+        CancellationToken cancellationToken = default);
+
     #endregion
 
     #region Positions
@@ -142,6 +156,11 @@ public interface IOrganizationApiClient
 
     Task<ApiResponse<PositionResponse>> ClosePositionAsync(
         Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> MovePositionAsync(
+        Guid positionId,
+        Guid? departmentId,
         CancellationToken cancellationToken = default);
 
     #endregion

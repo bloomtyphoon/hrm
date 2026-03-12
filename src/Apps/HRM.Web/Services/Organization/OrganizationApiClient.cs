@@ -140,6 +140,21 @@ public sealed class OrganizationApiClient(
         => PutAsync<DepartmentResponse>($"/api/organization/departments/{id}/deactivate",
             new { }, "Failed to deactivate department", cancellationToken);
 
+    public Task<ApiResponse<object>> AssignDepartmentManagerAsync(
+        Guid departmentId, Guid managerId, CancellationToken cancellationToken = default)
+        => PutAsync<object>($"/api/organization/departments/{departmentId}/manager",
+            new { ManagerId = managerId }, "Failed to assign department manager", cancellationToken);
+
+    public Task<ApiResponse<object>> RemoveDepartmentManagerAsync(
+        Guid departmentId, CancellationToken cancellationToken = default)
+        => DeleteAsync<object>($"/api/organization/departments/{departmentId}/manager",
+            "Failed to remove department manager", cancellationToken);
+
+    public Task<ApiResponse<object>> MoveDepartmentAsync(
+        Guid departmentId, Guid? newParentDepartmentId, CancellationToken cancellationToken = default)
+        => PutAsync<object>($"/api/organization/departments/{departmentId}/move",
+            new { NewParentDepartmentId = newParentDepartmentId }, "Failed to move department", cancellationToken);
+
     #endregion
 
     #region Positions
@@ -200,6 +215,11 @@ public sealed class OrganizationApiClient(
         Guid id, CancellationToken cancellationToken = default)
         => PutAsync<PositionResponse>($"/api/organization/positions/{id}/close",
             new { }, "Failed to close position", cancellationToken);
+
+    public Task<ApiResponse<object>> MovePositionAsync(
+        Guid positionId, Guid? departmentId, CancellationToken cancellationToken = default)
+        => PutAsync<object>($"/api/organization/positions/{positionId}/move",
+            new { DepartmentId = departmentId }, "Failed to move position", cancellationToken);
 
     #endregion
 }

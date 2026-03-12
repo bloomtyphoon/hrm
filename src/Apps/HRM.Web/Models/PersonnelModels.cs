@@ -60,6 +60,22 @@ public sealed class EmployeeListViewModel
 }
 
 /// <summary>
+/// Response model for assignment data.
+/// </summary>
+public sealed class AssignmentResponse
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Guid CompanyId { get; set; }
+    public Guid DepartmentId { get; set; }
+    public Guid PositionId { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
+    public bool IsPrimary { get; set; }
+    public string Status { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// View model for employee details page with resolved names.
 /// </summary>
 public sealed class EmployeeDetailViewModel
@@ -69,6 +85,26 @@ public sealed class EmployeeDetailViewModel
     public string? PrimaryCompanyName { get; set; }
     public string? PrimaryDepartmentName { get; set; }
     public string? PrimaryPositionTitle { get; set; }
+    public IReadOnlyList<AssignmentDisplayItem> Assignments { get; set; } = [];
+    public IReadOnlyList<EmployeeSummaryResponse> AvailableManagers { get; set; } = [];
+    public IReadOnlyList<CompanyResponse> AvailableCompanies { get; set; } = [];
+    public IReadOnlyList<DepartmentResponse> AvailableDepartments { get; set; } = [];
+    public IReadOnlyList<PositionResponse> AvailablePositions { get; set; } = [];
+}
+
+/// <summary>
+/// Display item for an assignment with resolved names.
+/// </summary>
+public sealed class AssignmentDisplayItem
+{
+    public Guid Id { get; set; }
+    public string CompanyName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
+    public string PositionTitle { get; set; } = string.Empty;
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
+    public bool IsPrimary { get; set; }
+    public string Status { get; set; } = string.Empty;
 }
 
 /// <summary>

@@ -76,4 +76,60 @@ public sealed class PersonnelApiClient(
         => PutAsync<object>($"/api/personnel/employees/{id}/terminate",
             new { TerminationDate = terminationDate },
             "Failed to terminate employee", cancellationToken);
+
+    // ─── Manager ──────────────────────────────────────────────────────────
+
+    public Task<ApiResponse<object>> AssignManagerAsync(
+        Guid employeeId, Guid managerId,
+        CancellationToken cancellationToken = default)
+        => PutAsync<object>($"/api/personnel/employees/{employeeId}/manager",
+            new { ManagerId = managerId },
+            "Failed to assign manager", cancellationToken);
+
+    public Task<ApiResponse<object>> RemoveManagerAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken = default)
+        => DeleteAsync<object>($"/api/personnel/employees/{employeeId}/manager",
+            "Failed to remove manager", cancellationToken);
+
+    // ─── Assignments ──────────────────────────────────────────────────────
+
+    public async Task<ApiResponse<IReadOnlyList<AssignmentResponse>>> GetAssignmentsAsync(
+        Guid employeeId, string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"/api/personnel/employees/{employeeId}/assignments";
+        if (!string.IsNullOrWhiteSpace(status))
+            url += $"?status={Uri.EscapeDataString(status)}";
+
+        var response = await HttpClient.GetAsync(url, cancellationToken);
+        if (response.IsSuccessStatusCode)
+        {
+            var data = await response.Content.ReadFromJsonAsync<List<AssignmentResponse>>(JsonOptions, cancellationToken);
+            return new ApiResponse<IReadOnlyList<AssignmentResponse>> { IsSuccess = true, Data = data ?? [] };
+        }
+        return await HandleErrorResponseAsync<IReadOnlyList<AssignmentResponse>>(response, "Failed to retrieve assignments", cancellationToken);
+    }
+
+    public Task<ApiResponse<AssignmentResponse>> AddAssignmentAsync(
+        Guid employeeId, Guid companyId, Guid departmentId, Guid positionId,
+        DateOnly startDate, bool isPrimary,
+        CancellationToken cancellationToken = default)
+        => PostAsync<AssignmentResponse>($"/api/personnel/employees/{employeeId}/assignments",
+            new { CompanyId = companyId, DepartmentId = departmentId, PositionId = positionId, StartDate = startDate, IsPrimary = isPrimary },
+            "Failed to add assignment", cancellationToken);
+
+    public Task<ApiResponse<object>> EndAssignmentAsync(
+        Guid employeeId, Guid assignmentId, DateOnly endDate,
+        CancellationToken cancellationToken = default)
+        => PutAsync<object>($"/api/personnel/employees/{employeeId}/assignments/{assignmentId}/end",
+            new { EndDate = endDate },
+            "Failed to end assignment", cancellationToken);
+
+    public Task<ApiResponse<object>> SetPrimaryAssignmentAsync(
+        Guid employeeId, Guid assignmentId,
+        CancellationToken cancellationToken = default)
+        => PutAsync<object>($"/api/personnel/employees/{employeeId}/assignments/{assignmentId}/primary",
+            new { },
+            "Failed to set primary assignment", cancellationToken);
 }

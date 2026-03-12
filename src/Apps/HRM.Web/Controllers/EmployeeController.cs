@@ -80,6 +80,7 @@ public class EmployeeController : Controller
         var emp = response.Data;
         var viewModel = new EmployeeDetailViewModel { Employee = emp };
 
+        // Resolve names for primary references
         if (emp.ManagerId.HasValue)
         {
             var mgr = await _personnelClient.GetEmployeeByIdAsync(emp.ManagerId.Value, cancellationToken);
@@ -106,6 +107,51 @@ public class EmployeeController : Controller
             var pos = await _organizationClient.GetPositionByIdAsync(emp.PrimaryPositionId.Value, cancellationToken);
             if (pos.IsSuccess && pos.Data != null)
                 viewModel.PrimaryPositionTitle = pos.Data.Title;
+        }
+
+        // Load assignments with resolved names
+        var assignmentsResponse = await _personnelClient.GetAssignmentsAsync(emp.Id, cancellationToken: cancellationToken);
+        if (assignmentsResponse.IsSuccess && assignmentsResponse.Data != null)
+        {
+            var displayItems = new List<AssignmentDisplayItem>();
+            foreach (var a in assignmentsResponse.Data)
+            {
+                var item = new AssignmentDisplayItem
+                {
+                    Id = a.Id,
+                    StartDate = a.StartDate,
+                    EndDate = a.EndDate,
+                    IsPrimary = a.IsPrimary,
+                    Status = a.Status
+                };
+
+                var c = await _organizationClient.GetCompanyByIdAsync(a.CompanyId, cancellationToken);
+                item.CompanyName = c.IsSuccess && c.Data != null ? c.Data.Name : a.CompanyId.ToString();
+
+                var d = await _organizationClient.GetDepartmentByIdAsync(a.DepartmentId, cancellationToken);
+                item.DepartmentName = d.IsSuccess && d.Data != null ? d.Data.Name : a.DepartmentId.ToString();
+
+                var p = await _organizationClient.GetPositionByIdAsync(a.PositionId, cancellationToken);
+                item.PositionTitle = p.IsSuccess && p.Data != null ? p.Data.Title : a.PositionId.ToString();
+
+                displayItems.Add(item);
+            }
+            viewModel.Assignments = displayItems;
+        }
+
+        // Load available options for assignment/manager forms
+        if (emp.Status != "Terminated")
+        {
+            var managersResponse = await _personnelClient.GetEmployeesAsync(
+                status: "Active", pageSize: 500, cancellationToken: cancellationToken);
+            if (managersResponse.IsSuccess && managersResponse.Data != null)
+                viewModel.AvailableManagers = managersResponse.Data.Items
+                    .Where(e => e.Id != emp.Id).ToList();
+
+            var companiesResponse = await _organizationClient.GetCompaniesAsync(cancellationToken);
+            if (companiesResponse.IsSuccess && companiesResponse.Data != null)
+                viewModel.AvailableCompanies = companiesResponse.Data
+                    .Where(c => c.Status == "Active").ToList();
         }
 
         return View(viewModel);
@@ -245,5 +291,94 @@ public class EmployeeController : Controller
             response.IsSuccess ? "Employee terminated successfully." : (response.ErrorMessage ?? "Failed to terminate employee");
 
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    // ─── Manager ──────────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignManager(Guid id, Guid managerId, CancellationToken cancellationToken)
+    {
+        var response = await _personnelClient.AssignManagerAsync(id, managerId, cancellationToken);
+
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Manager assigned successfully!" : (response.ErrorMessage ?? "Failed to assign manager");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveManager(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _personnelClient.RemoveManagerAsync(id, cancellationToken);
+
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Manager removed successfully!" : (response.ErrorMessage ?? "Failed to remove manager");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    // ─── Assignments ──────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddAssignment(
+        Guid id, Guid companyId, Guid departmentId, Guid positionId,
+        DateOnly startDate, bool isPrimary,
+        CancellationToken cancellationToken)
+    {
+        var response = await _personnelClient.AddAssignmentAsync(
+            id, companyId, departmentId, positionId, startDate, isPrimary, cancellationToken);
+
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Assignment added successfully!" : (response.ErrorMessage ?? "Failed to add assignment");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EndAssignment(Guid id, Guid assignmentId, CancellationToken cancellationToken)
+    {
+        var endDate = DateOnly.FromDateTime(DateTime.Today);
+        var response = await _personnelClient.EndAssignmentAsync(id, assignmentId, endDate, cancellationToken);
+
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Assignment ended successfully!" : (response.ErrorMessage ?? "Failed to end assignment");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPrimaryAssignment(Guid id, Guid assignmentId, CancellationToken cancellationToken)
+    {
+        var response = await _personnelClient.SetPrimaryAssignmentAsync(id, assignmentId, cancellationToken);
+
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Primary assignment updated!" : (response.ErrorMessage ?? "Failed to set primary assignment");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    // ─── AJAX: Load departments/positions by company ──────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> GetDepartmentsByCompany(Guid companyId, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.GetDepartmentsByCompanyAsync(companyId, cancellationToken);
+        if (response.IsSuccess && response.Data != null)
+            return Json(response.Data.Where(d => d.Status == "Active").Select(d => new { d.Id, d.Name }));
+        return Json(Array.Empty<object>());
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetPositionsByCompany(Guid companyId, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.GetPositionsByCompanyAsync(companyId, cancellationToken);
+        if (response.IsSuccess && response.Data != null)
+            return Json(response.Data.Where(p => p.Status == "Active").Select(p => new { p.Id, p.Title }));
+        return Json(Array.Empty<object>());
     }
 }

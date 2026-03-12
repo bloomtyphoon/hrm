@@ -113,6 +113,16 @@ public class DepartmentController : Controller
                 viewModel.ManagerName = mgr.Data.FullName;
         }
 
+        // Load available employees for manager assignment
+        var employees = await _personnelClient.GetEmployeesAsync(status: "Active", cancellationToken: cancellationToken);
+        if (employees.IsSuccess && employees.Data != null)
+            viewModel.AvailableEmployees = employees.Data.Items;
+
+        // Load available departments for move (exclude self)
+        var departments = await _organizationClient.GetDepartmentsByCompanyAsync(dept.CompanyId, cancellationToken);
+        if (departments.IsSuccess && departments.Data != null)
+            viewModel.AvailableDepartments = departments.Data.Where(d => d.Id != dept.Id).ToList();
+
         return View(viewModel);
     }
 
@@ -266,6 +276,36 @@ public class DepartmentController : Controller
         var response = await _organizationClient.DeactivateDepartmentAsync(id, cancellationToken);
         TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
             response.IsSuccess ? "Department deactivated successfully!" : (response.ErrorMessage ?? "Failed to deactivate department");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignManager(Guid id, Guid managerId, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.AssignDepartmentManagerAsync(id, managerId, cancellationToken);
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Manager assigned successfully!" : (response.ErrorMessage ?? "Failed to assign manager");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveManager(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.RemoveDepartmentManagerAsync(id, cancellationToken);
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Manager removed successfully!" : (response.ErrorMessage ?? "Failed to remove manager");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Move(Guid id, Guid? newParentDepartmentId, CancellationToken cancellationToken)
+    {
+        var response = await _organizationClient.MoveDepartmentAsync(id, newParentDepartmentId, cancellationToken);
+        TempData[response.IsSuccess ? "SuccessMessage" : "ErrorMessage"] =
+            response.IsSuccess ? "Department moved successfully!" : (response.ErrorMessage ?? "Failed to move department");
         return RedirectToAction(nameof(Details), new { id });
     }
 }
