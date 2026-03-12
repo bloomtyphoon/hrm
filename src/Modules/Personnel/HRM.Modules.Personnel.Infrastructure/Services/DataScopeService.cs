@@ -114,10 +114,8 @@ public sealed class DataScopeService : IDataScopeService
         Guid employeeId,
         CancellationToken cancellationToken)
     {
-        // GetSubordinateIdsAsync with includeIndirect: false returns self + direct reports only
-        var ids = await _hierarchyResolver.GetSubordinateIdsAsync(
+        var ids = await _hierarchyResolver.ResolveDirectSubordinatesAsync(
             employeeId,
-            includeIndirect: false,
             cancellationToken);
 
         return DataScopeRule.DirectReports(ids);
@@ -262,8 +260,8 @@ public sealed class DataScopePolicyService
         Guid employeeId,
         CancellationToken cancellationToken)
     {
-        var ids = await _hierarchyResolver.GetSubordinateIdsAsync(
-            employeeId, includeIndirect: false, cancellationToken);
+        var ids = await _hierarchyResolver.ResolveDirectSubordinatesAsync(
+            employeeId, cancellationToken);
 
         return DataScopeRule.DirectReports(ids);
     }

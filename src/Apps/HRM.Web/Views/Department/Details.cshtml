@@ -150,8 +150,7 @@
                             <option value="">-- None (Top-level) --</option>
                             @foreach (var d in Model.AvailableDepartments)
                             {
-                                var selected = d.Id == dept.ParentDepartmentId ? "selected" : "";
-                                <option value="@d.Id" @selected>@d.Name (@d.Code)</option>
+                                <option value="@d.Id" selected="@(d.Id == dept.ParentDepartmentId)">@d.Name (@d.Code)</option>
                             }
                         </select>
                     </div>

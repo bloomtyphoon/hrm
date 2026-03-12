@@ -122,8 +122,7 @@
                                 <option value="">-- None (No department) --</option>
                                 @foreach (var d in Model.AvailableDepartments)
                                 {
-                                    var selected = d.Id == pos.DepartmentId ? "selected" : "";
-                                    <option value="@d.Id" @selected>@d.Name (@d.Code)</option>
+                                    <option value="@d.Id" selected="@(d.Id == pos.DepartmentId)">@d.Name (@d.Code)</option>
                                 }
                             </select>
                         </div>
