@@ -4,11 +4,14 @@ namespace HRM.Modules.Personnel.IntegrationEvents;
 
 /// <summary>
 /// Published when an employee's assignments change.
-/// Consumed by Identity module to sync CompanyAccess on EmployeeProfile.
+/// Consumed by Identity module to sync CompanyAccess, DepartmentAccess,
+/// and PositionAccess on EmployeeProfile.
 /// </summary>
 public sealed record EmployeeAssignmentsChangedIntegrationEvent(
     Guid Id,
     DateTime OccurredOnUtc,
     Guid EmployeeId,
-    IReadOnlyList<Guid> ActiveCompanyIds
+    IReadOnlyList<Guid> ActiveCompanyIds,
+    IReadOnlyList<Guid> ActiveDepartmentIds,
+    IReadOnlyList<Guid> ActivePositionIds
 ) : IIntegrationEvent;

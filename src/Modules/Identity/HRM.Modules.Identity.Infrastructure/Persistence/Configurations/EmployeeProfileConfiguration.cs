@@ -68,5 +68,41 @@ internal sealed class EmployeeProfileConfiguration : IEntityTypeConfiguration<Em
             companyBuilder.HasIndex(ca => ca.CompanyId)
                 .HasDatabaseName("IX_EmployeeProfileCompanies_CompanyId");
         });
+
+        // Department access collection (denormalized from Personnel.EmployeeAssignments)
+        builder.OwnsMany(ep => ep.DepartmentAccess, departmentBuilder =>
+        {
+            departmentBuilder.ToTable("EmployeeProfileDepartments");
+
+            departmentBuilder.WithOwner().HasForeignKey("EmployeeProfileId");
+
+            departmentBuilder.Property(da => da.DepartmentId)
+                .IsRequired();
+
+            departmentBuilder.HasIndex("EmployeeProfileId", "DepartmentId")
+                .IsUnique()
+                .HasDatabaseName("IX_EmployeeProfileDepartments_Unique");
+
+            departmentBuilder.HasIndex(da => da.DepartmentId)
+                .HasDatabaseName("IX_EmployeeProfileDepartments_DepartmentId");
+        });
+
+        // Position access collection (denormalized from Personnel.EmployeeAssignments)
+        builder.OwnsMany(ep => ep.PositionAccess, positionBuilder =>
+        {
+            positionBuilder.ToTable("EmployeeProfilePositions");
+
+            positionBuilder.WithOwner().HasForeignKey("EmployeeProfileId");
+
+            positionBuilder.Property(pa => pa.PositionId)
+                .IsRequired();
+
+            positionBuilder.HasIndex("EmployeeProfileId", "PositionId")
+                .IsUnique()
+                .HasDatabaseName("IX_EmployeeProfilePositions_Unique");
+
+            positionBuilder.HasIndex(pa => pa.PositionId)
+                .HasDatabaseName("IX_EmployeeProfilePositions_PositionId");
+        });
     }
 }

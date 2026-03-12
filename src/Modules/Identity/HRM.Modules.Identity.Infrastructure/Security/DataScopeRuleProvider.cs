@@ -15,14 +15,10 @@ namespace HRM.Modules.Identity.Infrastructure.Security;
 /// SINGLE SOURCE OF TRUTH for all data scoping logic.
 /// Uses only Identity schema data — no cross-module queries.
 ///
-/// Data sources (all in Identity schema):
-/// - Company scope: EmployeeProfile.CompanyAccess (denormalized from Personnel)
-/// - Department scope: EmployeeProfile.PrimaryDepartmentId
-/// - Position scope: EmployeeProfile.PrimaryPositionId
-///
-/// Note: Department/Position currently use primary values only.
-/// For multi-department/position support, add DepartmentAccess/PositionAccess
-/// collections following the same pattern as CompanyAccess.
+/// Data sources (all in Identity schema, denormalized from Personnel):
+/// - Company scope: EmployeeProfile.CompanyAccess
+/// - Department scope: EmployeeProfile.DepartmentAccess
+/// - Position scope: EmployeeProfile.PositionAccess
 /// </summary>
 public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 {
@@ -176,16 +172,19 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
         }
 
         var profile = await LoadEmployeeProfileAsync(context.EmployeeId.Value, cancellationToken);
-        if (profile?.PrimaryDepartmentId == null)
+        if (profile == null || profile.DepartmentIds.Count == 0)
         {
+            _logger.LogWarning(
+                "No department access found for employee {EmployeeId}",
+                context.EmployeeId.Value);
             return DataScopeRule.None();
         }
 
         _logger.LogDebug(
-            "Department scope for user {UserId}: department {DepartmentId}",
-            context.UserId, profile.PrimaryDepartmentId);
+            "Department scope for user {UserId}: {DepartmentCount} departments",
+            context.UserId, profile.DepartmentIds.Count);
 
-        return DataScopeRule.Department([profile.PrimaryDepartmentId.Value]);
+        return DataScopeRule.Department(profile.DepartmentIds);
     }
 
     private async Task<DataScopeRule> BuildPositionScopeRuleAsync(
@@ -198,16 +197,19 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
         }
 
         var profile = await LoadEmployeeProfileAsync(context.EmployeeId.Value, cancellationToken);
-        if (profile?.PrimaryPositionId == null)
+        if (profile == null || profile.PositionIds.Count == 0)
         {
+            _logger.LogWarning(
+                "No position access found for employee {EmployeeId}",
+                context.EmployeeId.Value);
             return DataScopeRule.None();
         }
 
         _logger.LogDebug(
-            "Position scope for user {UserId}: position {PositionId}",
-            context.UserId, profile.PrimaryPositionId);
+            "Position scope for user {UserId}: {PositionCount} positions",
+            context.UserId, profile.PositionIds.Count);
 
-        return DataScopeRule.Position([profile.PrimaryPositionId.Value]);
+        return DataScopeRule.Position(profile.PositionIds);
     }
 
     private DataScopeRule BuildSelfScopeRule(DataScopeContext context)
@@ -244,9 +246,9 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
             .Where(ep => ep.EmployeeId == employeeId)
             .Select(ep => new EmployeeScopeData
             {
-                PrimaryDepartmentId = ep.PrimaryDepartmentId,
-                PrimaryPositionId = ep.PrimaryPositionId,
-                CompanyIds = ep.CompanyAccess.Select(ca => ca.CompanyId).ToList()
+                CompanyIds = ep.CompanyAccess.Select(ca => ca.CompanyId).ToList(),
+                DepartmentIds = ep.DepartmentAccess.Select(da => da.DepartmentId).ToList(),
+                PositionIds = ep.PositionAccess.Select(pa => pa.PositionId).ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -260,8 +262,8 @@ public sealed class DataScopeRuleProvider : IDataScopeRuleProvider
 
     private sealed class EmployeeScopeData
     {
-        public Guid? PrimaryDepartmentId { get; init; }
-        public Guid? PrimaryPositionId { get; init; }
         public List<Guid> CompanyIds { get; init; } = [];
+        public List<Guid> DepartmentIds { get; init; } = [];
+        public List<Guid> PositionIds { get; init; } = [];
     }
 }

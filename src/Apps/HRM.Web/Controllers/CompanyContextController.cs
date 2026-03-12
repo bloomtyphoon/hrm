@@ -6,6 +6,11 @@ namespace HRM.Web.Controllers;
 
 /// <summary>
 /// Handles global company context switching from the navbar dropdown.
+///
+/// Security note: CompanyContext is a UI convenience filter only.
+/// The real security boundary is in query handlers' ApplyScopeRule,
+/// which filters via Assignments table regardless of cookie values.
+/// Validation here provides defense-in-depth.
 /// </summary>
 [Authorize]
 public class CompanyContextController : Controller
@@ -25,6 +30,14 @@ public class CompanyContextController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Switch(Guid? companyId, string? returnUrl = null)
     {
+        var accountType = User.FindFirst("AccountType")?.Value;
+
+        // Only System accounts can select "All Companies" (null)
+        if (!companyId.HasValue && accountType != "System")
+        {
+            return Forbid();
+        }
+
         _companyContext.SetSelectedCompanyId(companyId);
 
         // Redirect back to the page the user was on

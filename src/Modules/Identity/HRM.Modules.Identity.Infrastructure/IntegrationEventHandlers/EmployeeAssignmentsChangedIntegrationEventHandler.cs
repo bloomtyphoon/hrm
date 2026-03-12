@@ -8,10 +8,10 @@ namespace HRM.Modules.Identity.Infrastructure.IntegrationEventHandlers;
 
 /// <summary>
 /// Handles EmployeeAssignmentsChangedIntegrationEvent from Personnel module.
-/// Syncs the CompanyAccess list on EmployeeProfile to keep Identity module's
-/// denormalized data consistent with Personnel assignments.
+/// Syncs CompanyAccess, DepartmentAccess, and PositionAccess on EmployeeProfile
+/// to keep Identity module's denormalized data consistent with Personnel assignments.
 ///
-/// Idempotency: Uses Inbox pattern. CompanyAccess sync is also naturally idempotent
+/// Idempotency: Uses Inbox pattern. Access sync is also naturally idempotent
 /// (replaces entire list), but inbox prevents unnecessary processing.
 /// </summary>
 internal sealed class EmployeeAssignmentsChangedIntegrationEventHandler
@@ -54,7 +54,7 @@ internal sealed class EmployeeAssignmentsChangedIntegrationEventHandler
             if (profile is null)
             {
                 _logger.LogDebug(
-                    "No EmployeeProfile found for EmployeeId={EmployeeId}, skipping CompanyAccess sync",
+                    "No EmployeeProfile found for EmployeeId={EmployeeId}, skipping access sync",
                     notification.EmployeeId);
 
                 // Still mark as processed to prevent re-processing
@@ -66,7 +66,10 @@ internal sealed class EmployeeAssignmentsChangedIntegrationEventHandler
                 return;
             }
 
-            profile.SyncCompanyAccess(notification.ActiveCompanyIds);
+            profile.SyncAllAccess(
+                notification.ActiveCompanyIds,
+                notification.ActiveDepartmentIds,
+                notification.ActivePositionIds);
             _employeeProfileRepository.Update(profile);
 
             // Mark event as processed in inbox (same transaction)
@@ -79,16 +82,18 @@ internal sealed class EmployeeAssignmentsChangedIntegrationEventHandler
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
-                "Synced CompanyAccess for EmployeeId={EmployeeId}, ProfileId={ProfileId}, Companies={CompanyCount}",
+                "Synced access for EmployeeId={EmployeeId}, ProfileId={ProfileId}, Companies={CompanyCount}, Departments={DepartmentCount}, Positions={PositionCount}",
                 notification.EmployeeId,
                 profile.Id,
-                notification.ActiveCompanyIds.Count);
+                notification.ActiveCompanyIds.Count,
+                notification.ActiveDepartmentIds.Count,
+                notification.ActivePositionIds.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(
                 ex,
-                "Failed to sync CompanyAccess for EmployeeId={EmployeeId} from {EventType}",
+                "Failed to sync access for EmployeeId={EmployeeId} from {EventType}",
                 notification.EmployeeId,
                 nameof(EmployeeAssignmentsChangedIntegrationEvent));
             throw;

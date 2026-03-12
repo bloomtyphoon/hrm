@@ -22,7 +22,9 @@ internal sealed class EmployeeAssignmentsChangedDomainEventHandler
                 Id: Guid.NewGuid(),
                 OccurredOnUtc: notification.OccurredOnUtc,
                 EmployeeId: notification.EmployeeId,
-                ActiveCompanyIds: notification.ActiveCompanyIds));
+                ActiveCompanyIds: notification.ActiveCompanyIds,
+                ActiveDepartmentIds: notification.ActiveDepartmentIds,
+                ActivePositionIds: notification.ActivePositionIds));
 
         return Task.CompletedTask;
     }

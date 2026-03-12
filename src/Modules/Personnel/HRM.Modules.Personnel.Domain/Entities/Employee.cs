@@ -366,13 +366,14 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
 
     private void RaiseAssignmentsChangedEvent()
     {
-        var activeCompanyIds = _assignments
-            .Where(a => a.IsActive)
-            .Select(a => a.CompanyId)
-            .Distinct()
-            .ToList();
+        var activeAssignments = _assignments.Where(a => a.IsActive).ToList();
 
-        AddDomainEvent(new EmployeeAssignmentsChangedDomainEvent(Id, activeCompanyIds));
+        var activeCompanyIds = activeAssignments.Select(a => a.CompanyId).Distinct().ToList();
+        var activeDepartmentIds = activeAssignments.Select(a => a.DepartmentId).Distinct().ToList();
+        var activePositionIds = activeAssignments.Select(a => a.PositionId).Distinct().ToList();
+
+        AddDomainEvent(new EmployeeAssignmentsChangedDomainEvent(
+            Id, activeCompanyIds, activeDepartmentIds, activePositionIds));
     }
 
     #endregion

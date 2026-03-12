@@ -70,6 +70,8 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
     public bool CanAccessAllAssignedCompanies { get; private set; } = true;
 
     private readonly List<EmployeeCompanyAccess> _companyAccess = new();
+    private readonly List<EmployeeDepartmentAccess> _departmentAccess = new();
+    private readonly List<EmployeePositionAccess> _positionAccess = new();
 
     /// <summary>
     /// All companies this employee has access to.
@@ -82,6 +84,18 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
     /// - Integration events from Personnel module when assignments change
     /// </summary>
     public IReadOnlyCollection<EmployeeCompanyAccess> CompanyAccess => _companyAccess.AsReadOnly();
+
+    /// <summary>
+    /// All departments this employee has access to.
+    /// Denormalized copy from Personnel module's EmployeeAssignments.
+    /// </summary>
+    public IReadOnlyCollection<EmployeeDepartmentAccess> DepartmentAccess => _departmentAccess.AsReadOnly();
+
+    /// <summary>
+    /// All positions this employee has access to.
+    /// Denormalized copy from Personnel module's EmployeeAssignments.
+    /// </summary>
+    public IReadOnlyCollection<EmployeePositionAccess> PositionAccess => _positionAccess.AsReadOnly();
 
     // Private constructor for EF
     private EmployeeProfile() { }
@@ -98,7 +112,9 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
         Guid? primaryCompanyId = null,
         Guid? primaryDepartmentId = null,
         Guid? primaryPositionId = null,
-        IReadOnlyList<Guid>? companyIds = null)
+        IReadOnlyList<Guid>? companyIds = null,
+        IReadOnlyList<Guid>? departmentIds = null,
+        IReadOnlyList<Guid>? positionIds = null)
     {
         if (tenantId == Guid.Empty)
             throw new ArgumentException("TenantId is required.", nameof(tenantId));
@@ -119,14 +135,33 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
         if (companyIds != null)
         {
             foreach (var companyId in companyIds.Distinct())
-            {
                 profile._companyAccess.Add(EmployeeCompanyAccess.Create(companyId));
-            }
         }
         else if (primaryCompanyId.HasValue)
         {
-            // Default: at least the primary company
             profile._companyAccess.Add(EmployeeCompanyAccess.Create(primaryCompanyId.Value));
+        }
+
+        // Initialize department access list
+        if (departmentIds != null)
+        {
+            foreach (var departmentId in departmentIds.Distinct())
+                profile._departmentAccess.Add(EmployeeDepartmentAccess.Create(departmentId));
+        }
+        else if (primaryDepartmentId.HasValue)
+        {
+            profile._departmentAccess.Add(EmployeeDepartmentAccess.Create(primaryDepartmentId.Value));
+        }
+
+        // Initialize position access list
+        if (positionIds != null)
+        {
+            foreach (var positionId in positionIds.Distinct())
+                profile._positionAccess.Add(EmployeePositionAccess.Create(positionId));
+        }
+        else if (primaryPositionId.HasValue)
+        {
+            profile._positionAccess.Add(EmployeePositionAccess.Create(primaryPositionId.Value));
         }
 
         profile.AddDomainEvent(new EmployeeProfileCreatedDomainEvent(
@@ -180,6 +215,58 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
         {
             _companyAccess.Add(EmployeeCompanyAccess.Create(companyId));
         }
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Sync department access list.
+    /// Replaces current list with the provided department IDs.
+    /// </summary>
+    public void SyncDepartmentAccess(IReadOnlyList<Guid> departmentIds)
+    {
+        _departmentAccess.Clear();
+        foreach (var departmentId in departmentIds.Distinct())
+        {
+            _departmentAccess.Add(EmployeeDepartmentAccess.Create(departmentId));
+        }
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Sync position access list.
+    /// Replaces current list with the provided position IDs.
+    /// </summary>
+    public void SyncPositionAccess(IReadOnlyList<Guid> positionIds)
+    {
+        _positionAccess.Clear();
+        foreach (var positionId in positionIds.Distinct())
+        {
+            _positionAccess.Add(EmployeePositionAccess.Create(positionId));
+        }
+        MarkAsModified();
+    }
+
+    /// <summary>
+    /// Sync all access dimensions at once.
+    /// Used by integration event handler when assignments change.
+    /// </summary>
+    public void SyncAllAccess(
+        IReadOnlyList<Guid> companyIds,
+        IReadOnlyList<Guid> departmentIds,
+        IReadOnlyList<Guid> positionIds)
+    {
+        _companyAccess.Clear();
+        foreach (var companyId in companyIds.Distinct())
+            _companyAccess.Add(EmployeeCompanyAccess.Create(companyId));
+
+        _departmentAccess.Clear();
+        foreach (var departmentId in departmentIds.Distinct())
+            _departmentAccess.Add(EmployeeDepartmentAccess.Create(departmentId));
+
+        _positionAccess.Clear();
+        foreach (var positionId in positionIds.Distinct())
+            _positionAccess.Add(EmployeePositionAccess.Create(positionId));
+
         MarkAsModified();
     }
 

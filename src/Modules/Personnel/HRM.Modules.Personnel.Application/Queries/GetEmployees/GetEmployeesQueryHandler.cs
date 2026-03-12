@@ -50,11 +50,15 @@ public sealed class GetEmployeesQueryHandler
         var rule = await _dataScopeService.GetScopeRuleAsync(
             _executionContext.UserId, PersonnelPermissions.Employee.View, cancellationToken);
 
-        query = ApplyScopeRule(query, rule);
+        query = ApplyScopeRule(query, rule, _context);
 
-        // System accounts (Global): optionally filter by requested CompanyId
+        // System accounts (Global): optionally filter by requested CompanyId (via assignments)
         if (rule.Level == DataScopeLevel.Global && request.CompanyId.HasValue)
-            query = query.Where(e => e.PrimaryCompanyId == request.CompanyId.Value);
+        {
+            var companyId = request.CompanyId.Value;
+            query = query.Where(e => e.Assignments.Any(a =>
+                a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && a.CompanyId == companyId));
+        }
 
         // Layer 2: Search filter
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -73,10 +77,12 @@ public sealed class GetEmployeesQueryHandler
             query = query.Where(e => e.Status == request.Status.Value);
         }
 
-        // Layer 2: Department filter
+        // Layer 2: Department filter (via assignments, not primary only)
         if (request.DepartmentId.HasValue)
         {
-            query = query.Where(e => e.PrimaryDepartmentId == request.DepartmentId.Value);
+            var departmentId = request.DepartmentId.Value;
+            query = query.Where(e => e.Assignments.Any(a =>
+                a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && a.DepartmentId == departmentId));
         }
 
         // Layer 2: Manager filter
@@ -120,23 +126,53 @@ public sealed class GetEmployeesQueryHandler
         };
     }
 
-    private static IQueryable<Employee> ApplyScopeRule(IQueryable<Employee> query, DataScopeRule rule)
+    /// <summary>
+    /// Apply scope rule using Assignments table for dimension-based filtering.
+    /// Employees are visible if they have ANY active assignment matching the scope dimensions.
+    /// </summary>
+    private static IQueryable<Employee> ApplyScopeRule(
+        IQueryable<Employee> query, DataScopeRule rule, IPersonnelQueryContext context)
     {
         return rule.Level switch
         {
             DataScopeLevel.Global => query,
             DataScopeLevel.None => query.Where(_ => false),
             DataScopeLevel.Self => query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
+            DataScopeLevel.DirectReports => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
             DataScopeLevel.EmployeeSet => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
-            DataScopeLevel.Company => BuildCompanyFilter(query, rule.DimensionIds),
+            DataScopeLevel.Company => BuildDimensionFilter(query, context, rule.DimensionIds, DataScopeLevel.Company),
+            DataScopeLevel.Department => BuildDimensionFilter(query, context, rule.DimensionIds, DataScopeLevel.Department),
+            DataScopeLevel.Position => BuildDimensionFilter(query, context, rule.DimensionIds, DataScopeLevel.Position),
             _ => query.Where(_ => false)
         };
     }
 
-    private static IQueryable<Employee> BuildCompanyFilter(
+    /// <summary>
+    /// Filter employees via JOIN on active assignments matching dimension IDs.
+    /// </summary>
+    private static IQueryable<Employee> BuildDimensionFilter(
         IQueryable<Employee> query,
-        IReadOnlyCollection<Guid> companyIds)
+        IPersonnelQueryContext context,
+        IReadOnlyCollection<Guid> dimensionIds,
+        DataScopeLevel level)
     {
-        return query.Where(e => e.PrimaryCompanyId != null && companyIds.Contains(e.PrimaryCompanyId.Value));
+        var ids = dimensionIds.ToList();
+
+        // Employees who have at least one active assignment matching the dimension
+        var employeeIdsWithAccess = level switch
+        {
+            DataScopeLevel.Company => context.EmployeeAssignments
+                .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.CompanyId))
+                .Select(a => a.EmployeeId),
+            DataScopeLevel.Department => context.EmployeeAssignments
+                .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.DepartmentId))
+                .Select(a => a.EmployeeId),
+            DataScopeLevel.Position => context.EmployeeAssignments
+                .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.PositionId))
+                .Select(a => a.EmployeeId),
+            _ => throw new ArgumentOutOfRangeException(nameof(level))
+        };
+
+        return query.Where(e => employeeIdsWithAccess.Contains(e.Id));
     }
 }
