@@ -90,6 +90,7 @@ public sealed class EmployeeDetailViewModel
     public IReadOnlyList<CompanyResponse> AvailableCompanies { get; set; } = [];
     public IReadOnlyList<DepartmentResponse> AvailableDepartments { get; set; } = [];
     public IReadOnlyList<PositionResponse> AvailablePositions { get; set; } = [];
+    public IReadOnlyList<EmployeeSummaryResponse> DirectReports { get; set; } = [];
 }
 
 /// <summary>

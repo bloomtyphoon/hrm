@@ -139,6 +139,11 @@ public class EmployeeController : Controller
             viewModel.Assignments = displayItems;
         }
 
+        // Load direct reports
+        var directReportsResponse = await _personnelClient.GetDirectReportsAsync(emp.Id, pageSize: 100, cancellationToken: cancellationToken);
+        if (directReportsResponse.IsSuccess && directReportsResponse.Data != null)
+            viewModel.DirectReports = directReportsResponse.Data.Items;
+
         // Load available options for assignment/manager forms
         if (emp.Status != "Terminated")
         {

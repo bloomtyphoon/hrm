@@ -25,6 +25,7 @@ public interface IPersonnelApiClient
         DateOnly hireDate,
         string? phone,
         DateOnly? dateOfBirth,
+        Guid? managerId = null,
         CancellationToken cancellationToken = default);
 
     Task<ApiResponse<object>> UpdateEmployeeAsync(
@@ -50,6 +51,12 @@ public interface IPersonnelApiClient
 
     Task<ApiResponse<object>> RemoveManagerAsync(
         Guid employeeId,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PagedResult<EmployeeSummaryResponse>>> GetDirectReportsAsync(
+        Guid managerId,
+        int pageNumber = 1,
+        int pageSize = 20,
         CancellationToken cancellationToken = default);
 
     // ─── Assignments ──────────────────────────────────────────────────────

@@ -48,6 +48,7 @@ public sealed class PersonnelApiClient(
     public Task<ApiResponse<EmployeeDetailResponse>> CreateEmployeeAsync(
         string employeeCode, string firstName, string lastName, string email,
         DateOnly hireDate, string? phone, DateOnly? dateOfBirth,
+        Guid? managerId = null,
         CancellationToken cancellationToken = default)
         => PostAsync<EmployeeDetailResponse>("/api/personnel/employees",
             new
@@ -58,7 +59,8 @@ public sealed class PersonnelApiClient(
                 Email = email,
                 HireDate = hireDate,
                 Phone = phone,
-                DateOfBirth = dateOfBirth
+                DateOfBirth = dateOfBirth,
+                ManagerId = managerId
             },
             "Failed to create employee", cancellationToken);
 
@@ -91,6 +93,24 @@ public sealed class PersonnelApiClient(
         CancellationToken cancellationToken = default)
         => DeleteAsync<object>($"/api/personnel/employees/{employeeId}/manager",
             "Failed to remove manager", cancellationToken);
+
+    public async Task<ApiResponse<PagedResult<EmployeeSummaryResponse>>> GetDirectReportsAsync(
+        Guid managerId, int pageNumber = 1, int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"/api/personnel/employees/{managerId}/direct-reports?pageNumber={pageNumber}&pageSize={pageSize}";
+        var response = await HttpClient.GetAsync(url, cancellationToken);
+        if (response.IsSuccessStatusCode)
+        {
+            var data = await response.Content.ReadFromJsonAsync<PagedResult<EmployeeSummaryResponse>>(JsonOptions, cancellationToken);
+            return new ApiResponse<PagedResult<EmployeeSummaryResponse>>
+            {
+                IsSuccess = true,
+                Data = data ?? new PagedResult<EmployeeSummaryResponse>()
+            };
+        }
+        return await HandleErrorResponseAsync<PagedResult<EmployeeSummaryResponse>>(response, "Failed to retrieve direct reports", cancellationToken);
+    }
 
     // ─── Assignments ──────────────────────────────────────────────────────
 
