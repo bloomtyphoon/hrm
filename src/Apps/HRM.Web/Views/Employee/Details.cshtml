@@ -126,6 +126,51 @@
             </div>
         </div>
 
+        <!-- Direct Reports -->
+        @if (Model.DirectReports.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-people me-1"></i>Direct Reports (@Model.DirectReports.Count)
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Code</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var dr in Model.DirectReports)
+                                {
+                                    <tr>
+                                        <td><a asp-action="Details" asp-route-id="@dr.Id">@dr.FullName</a></td>
+                                        <td><code>@dr.EmployeeCode</code></td>
+                                        <td>@dr.Email</td>
+                                        <td>
+                                            @{
+                                                var drBadge = dr.Status switch
+                                                {
+                                                    "Active" => "bg-success",
+                                                    "Terminated" => "bg-danger",
+                                                    _ => "bg-secondary"
+                                                };
+                                            }
+                                            <span class="badge @drBadge">@dr.Status</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Organization (Primary) Summary -->
         <div class="card mb-4">
             <div class="card-header">

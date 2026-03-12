@@ -172,6 +172,19 @@ public sealed class OrganizationApiClient(
         return await HandleErrorResponseAsync<IReadOnlyList<PositionResponse>>(response, "Failed to retrieve positions", cancellationToken);
     }
 
+    public async Task<ApiResponse<IReadOnlyList<PositionResponse>>> GetPositionsByDepartmentAsync(
+        Guid departmentId, CancellationToken cancellationToken = default)
+    {
+        var response = await HttpClient.GetAsync(
+            $"/api/organization/positions/by-department/{departmentId}", cancellationToken);
+        if (response.IsSuccessStatusCode)
+        {
+            var data = await response.Content.ReadFromJsonAsync<List<PositionResponse>>(JsonOptions, cancellationToken);
+            return new ApiResponse<IReadOnlyList<PositionResponse>> { IsSuccess = true, Data = data ?? [] };
+        }
+        return await HandleErrorResponseAsync<IReadOnlyList<PositionResponse>>(response, "Failed to retrieve positions by department", cancellationToken);
+    }
+
     public Task<ApiResponse<PositionResponse>> GetPositionByIdAsync(
         Guid id, CancellationToken cancellationToken = default)
         => GetAsync<PositionResponse>($"/api/organization/positions/{id}", "Failed to retrieve position", cancellationToken);

@@ -209,13 +209,39 @@ public sealed class IdentityApiClient(
         => DeleteAsync<object>($"/api/identity/roles/{roleId}", "Failed to delete role", cancellationToken);
 
     /// <inheritdoc />
-    public Task<ApiResponse<RoleDetailResponse>> AssignPermissionsToRoleAsync(
+    public async Task<ApiResponse<RoleDetailResponse>> AssignPermissionsToRoleAsync(
         Guid roleId,
         AssignPermissionsRequest request,
         CancellationToken cancellationToken = default)
-        => PostAsync<RoleDetailResponse>(
-            $"/api/identity/roles/{roleId}/permissions", request,
+    {
+        // Backend has no dedicated permissions endpoint.
+        // Permissions are managed via PUT /api/identity/roles/{id} (UpdateRole).
+        var roleResponse = await GetRoleByIdAsync(roleId, cancellationToken);
+        if (!roleResponse.IsSuccess || roleResponse.Data == null)
+            return new ApiResponse<RoleDetailResponse>
+            {
+                IsSuccess = false,
+                ErrorMessage = roleResponse.ErrorMessage ?? "Failed to retrieve role for permission update"
+            };
+
+        var role = roleResponse.Data;
+        var updatePayload = new
+        {
+            Name = role.Name,
+            Description = role.Description,
+            IsActive = role.IsActive,
+            Permissions = request.Permissions.Select(p => new
+            {
+                p.Module,
+                p.Entity,
+                p.Action,
+                p.Scope
+            }).ToList()
+        };
+
+        return await PutAsync<RoleDetailResponse>($"/api/identity/roles/{roleId}", updatePayload,
             "Failed to assign permissions", cancellationToken);
+    }
 
     #endregion
 
@@ -247,6 +273,22 @@ public sealed class IdentityApiClient(
         => PostAsync<AccountResponse>(
             $"/api/identity/accounts/{accountId}/roles", request,
             "Failed to assign roles", cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<ApiResponse<object>> RemoveRolesFromAccountAsync(
+        Guid accountId,
+        AssignRolesToAccountRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/identity/accounts/{accountId}/roles")
+        {
+            Content = JsonContent.Create(request, options: JsonOptions)
+        };
+        var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
+        if (response.IsSuccessStatusCode)
+            return new ApiResponse<object> { IsSuccess = true };
+        return await HandleErrorResponseAsync<object>(response, "Failed to remove roles", cancellationToken);
+    }
 
     #endregion
 

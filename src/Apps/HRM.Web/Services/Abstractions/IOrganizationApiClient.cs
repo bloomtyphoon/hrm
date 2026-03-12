@@ -122,6 +122,10 @@ public interface IOrganizationApiClient
         Guid companyId,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResponse<IReadOnlyList<PositionResponse>>> GetPositionsByDepartmentAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResponse<PositionResponse>> GetPositionByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);

@@ -140,6 +140,14 @@ public interface IIdentityApiClient
         AssignRolesToAccountRequest request,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Remove roles from an account.
+    /// </summary>
+    Task<ApiResponse<object>> RemoveRolesFromAccountAsync(
+        Guid accountId,
+        AssignRolesToAccountRequest request,
+        CancellationToken cancellationToken = default);
+
     #endregion
 
     #region Permission Catalog

@@ -182,6 +182,7 @@ public class EmployeeController : Controller
             model.HireDate,
             model.Phone,
             model.DateOfBirth,
+            model.ManagerId,
             cancellationToken);
 
         if (response.IsSuccess && response.Data != null)

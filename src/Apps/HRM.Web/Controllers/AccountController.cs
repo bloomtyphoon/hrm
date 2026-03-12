@@ -214,6 +214,26 @@ public class AccountController : Controller
     #region Password & Profile
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeMyPassword(
+        Guid id, string currentPassword, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var request = new ChangeMyPasswordRequest
+        {
+            CurrentPassword = currentPassword,
+            NewPassword = newPassword
+        };
+
+        var response = await _identityClient.ChangeMyPasswordAsync(id, request, cancellationToken);
+
+        if (response.IsSuccess)
+            TempData["SuccessMessage"] = "Password changed successfully.";
+        else
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to change password.";
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetPassword(
         Guid id, string newPassword, CancellationToken cancellationToken = default)
     {
@@ -267,6 +287,21 @@ public class AccountController : Controller
             TempData["SuccessMessage"] = "Roles updated successfully.";
         else
             TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to update roles.";
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveRoles(
+        Guid id, List<Guid> roleIds, CancellationToken cancellationToken = default)
+    {
+        var request = new AssignRolesToAccountRequest { RoleIds = roleIds ?? [] };
+        var response = await _identityClient.RemoveRolesFromAccountAsync(id, request, cancellationToken);
+
+        if (response.IsSuccess)
+            TempData["SuccessMessage"] = "Roles removed successfully.";
+        else
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to remove roles.";
 
         return RedirectToAction(nameof(Detail), new { id });
     }

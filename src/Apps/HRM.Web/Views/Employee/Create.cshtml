@@ -56,6 +56,13 @@
                 </div>
             </div>
 
+            <div class="mb-3">
+                <label asp-for="ManagerId" class="form-label"></label>
+                <input asp-for="ManagerId" class="form-control" placeholder="Manager ID (optional GUID)" />
+                <span asp-validation-for="ManagerId" class="text-danger"></span>
+                <div class="form-text">Optional. Enter the GUID of the employee's manager.</div>
+            </div>
+
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i class="bi bi-person-plus me-1"></i>Create Employee

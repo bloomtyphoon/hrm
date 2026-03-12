@@ -482,7 +482,17 @@
                                                 <br /><small class="text-muted">@role.Description</small>
                                             }
                                         </div>
-                                        <span class="badge bg-light text-dark">@role.PermissionCount permissions</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-light text-dark">@role.PermissionCount permissions</span>
+                                            <form asp-action="RemoveRoles" asp-route-id="@Model.Account.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="roleIds" value="@role.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Remove role \'@role.Name\' from this account?')">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 }
                             </div>

@@ -144,6 +144,9 @@ public sealed class CreateEmployeeFormModel
 
     [Display(Name = "Date of Birth")]
     public DateOnly? DateOfBirth { get; set; }
+
+    [Display(Name = "Manager")]
+    public Guid? ManagerId { get; set; }
 }
 
 /// <summary>
