@@ -101,7 +101,6 @@ public sealed class GetAccountsQueryHandler
 
     /// <summary>
     /// Translates a DataScopeRule into an EF WHERE clause for the accounts query.
-    /// Replaces the former IAccountVisibilityFilter HashSet approach with a composable subquery.
     /// </summary>
     private IQueryable<Domain.Entities.Account> ApplyDataScopeRule(
         IQueryable<Domain.Entities.Account> query,

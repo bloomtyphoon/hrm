@@ -1,30 +1,39 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
-using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
 using System.Security.Cryptography;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Application.Abstractions.Data;
+using HRM.Modules.Identity.Application.Security;
 
 namespace HRM.Modules.Identity.Application.Commands.EnableTwoFactor;
 
 internal sealed class EnableTwoFactorCommandHandler : ICommandHandler<EnableTwoFactorCommand, EnableTwoFactorResponse>
 {
     private readonly IAccountRepository _accountRepository;
-    private readonly IAccountVisibilityFilter _visibilityFilter;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IIdentityQueryContext _queryContext;
 
     public EnableTwoFactorCommandHandler(
         IAccountRepository accountRepository,
-        IAccountVisibilityFilter visibilityFilter)
+        IDataScopeService dataScopeService,
+        ICurrentUserService currentUser,
+        IIdentityQueryContext queryContext)
     {
         _accountRepository = accountRepository;
-        _visibilityFilter = visibilityFilter;
+        _dataScopeService = dataScopeService;
+        _currentUser = currentUser;
+        _queryContext = queryContext;
     }
 
     public async Task<Result<EnableTwoFactorResponse>> Handle(EnableTwoFactorCommand request, CancellationToken cancellationToken)
     {
-        // Visibility check
-        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
-        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _currentUser.UserId, IdentityPermissions.Account.View, cancellationToken);
+        if (!await AccountScopeFilter.IsAccessibleAsync(rule, _currentUser.UserId, request.AccountId, _queryContext, cancellationToken))
         {
             return Result.Failure<EnableTwoFactorResponse>(AccountErrors.NotFound(request.AccountId));
         }

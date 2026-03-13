@@ -10,7 +10,6 @@ using HRM.BuildingBlocks.Infrastructure.Security;
 using HRM.Modules.Identity.Infrastructure.Configuration;
 using HRM.Modules.Identity.Application;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
-using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Application.Configuration;
 using HRM.Modules.Identity.Domain.Repositories;
@@ -208,9 +207,6 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IScopeGrantProvider, ScopeGrantProvider>();
 
         // IDataScopeService is registered in BuildingBlocks.Infrastructure (shared for all modules)
-
-        // IAccountVisibilityFilter: Single-account access checks based on data scope
-        services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();
 
         // 7. Register Route Security Map Source
         // Register Identity module's RouteSecurityMap.xml to be loaded at startup

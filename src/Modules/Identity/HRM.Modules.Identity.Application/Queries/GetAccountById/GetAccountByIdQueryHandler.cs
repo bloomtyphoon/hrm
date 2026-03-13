@@ -1,9 +1,11 @@
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
-using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Domain.Errors;
 using Microsoft.EntityFrameworkCore;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Application.Security;
 
 namespace HRM.Modules.Identity.Application.Queries.GetAccountById;
 
@@ -16,23 +18,26 @@ public sealed class GetAccountByIdQueryHandler
     : IQueryHandler<GetAccountByIdQuery, Result<AccountDetailDto>>
 {
     private readonly IIdentityQueryContext _context;
-    private readonly IAccountVisibilityFilter _visibilityFilter;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly ICurrentUserService _currentUser;
 
     public GetAccountByIdQueryHandler(
         IIdentityQueryContext context,
-        IAccountVisibilityFilter visibilityFilter)
+        IDataScopeService dataScopeService,
+        ICurrentUserService currentUser)
     {
         _context = context;
-        _visibilityFilter = visibilityFilter;
+        _dataScopeService = dataScopeService;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<AccountDetailDto>> Handle(
         GetAccountByIdQuery request,
         CancellationToken cancellationToken)
     {
-        // Visibility check: ensure the requested account is in the visible set
-        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
-        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _currentUser.UserId, IdentityPermissions.Account.View, cancellationToken);
+        if (!await AccountScopeFilter.IsAccessibleAsync(rule, _currentUser.UserId, request.AccountId, _context, cancellationToken))
         {
             return Result.Failure<AccountDetailDto>(AccountErrors.NotFound(request.AccountId));
         }

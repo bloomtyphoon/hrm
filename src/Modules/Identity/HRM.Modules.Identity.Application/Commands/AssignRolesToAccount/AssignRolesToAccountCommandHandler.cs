@@ -1,11 +1,13 @@
-using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
-using HRM.Modules.Identity.Application.Abstractions.Authorization;
 using HRM.Modules.Identity.Domain.Enums;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Entities;
 using HRM.Modules.Identity.Domain.Repositories;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.Modules.Identity.Application.Abstractions.Authentication;
+using HRM.Modules.Identity.Application.Abstractions.Data;
+using HRM.Modules.Identity.Application.Security;
 
 namespace HRM.Modules.Identity.Application.Commands.AssignRolesToAccount;
 
@@ -14,28 +16,31 @@ internal sealed class AssignRolesToAccountCommandHandler : ICommandHandler<Assig
     private readonly IAccountRepository _accountRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IAccountRoleRepository _accountRoleRepository;
-    private readonly IExecutionContext _executionContext;
-    private readonly IAccountVisibilityFilter _visibilityFilter;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IIdentityQueryContext _queryContext;
 
     public AssignRolesToAccountCommandHandler(
         IAccountRepository accountRepository,
         IRoleRepository roleRepository,
         IAccountRoleRepository accountRoleRepository,
-        IExecutionContext executionContext,
-        IAccountVisibilityFilter visibilityFilter)
+        IDataScopeService dataScopeService,
+        ICurrentUserService currentUser,
+        IIdentityQueryContext queryContext)
     {
         _accountRepository = accountRepository;
         _roleRepository = roleRepository;
         _accountRoleRepository = accountRoleRepository;
-        _executionContext = executionContext;
-        _visibilityFilter = visibilityFilter;
+        _dataScopeService = dataScopeService;
+        _currentUser = currentUser;
+        _queryContext = queryContext;
     }
 
     public async Task<Result> Handle(AssignRolesToAccountCommand request, CancellationToken cancellationToken)
     {
-        // Visibility check
-        var visibleAccountIds = await _visibilityFilter.GetVisibleAccountIdsAsync(cancellationToken);
-        if (visibleAccountIds != null && !visibleAccountIds.Contains(request.AccountId))
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _currentUser.UserId, IdentityPermissions.Account.View, cancellationToken);
+        if (!await AccountScopeFilter.IsAccessibleAsync(rule, _currentUser.UserId, request.AccountId, _queryContext, cancellationToken))
         {
             return Result.Failure(AccountErrors.NotFound(request.AccountId));
         }
@@ -73,7 +78,7 @@ internal sealed class AssignRolesToAccountCommandHandler : ICommandHandler<Assig
                 continue;
             }
 
-            var assignedById = _executionContext.IsAuthenticated ? _executionContext.UserId : (Guid?)null;
+            var assignedById = _currentUser.IsAuthenticated ? _currentUser.UserId : (Guid?)null;
             var accountRole = AccountRole.Create(request.AccountId, roleId, assignedById);
             _accountRoleRepository.Add(accountRole);
         }
