@@ -49,7 +49,7 @@ public sealed class GetAccountsQueryHandler
         // Layer 1: Data scope security boundary
         var rule = await _dataScopeService.GetScopeRuleAsync(
             userId, IdentityPermissions.Account.View, cancellationToken);
-        query = ApplyDataScopeRule(query, rule, userId);
+        query = AccountScopeFilter.ApplyScope(query, rule, userId, _context);
 
         // Layer 2: Company filter — different rules per account type
         query = rule.Level == DataScopeLevel.Global
@@ -97,53 +97,6 @@ public sealed class GetAccountsQueryHandler
             PageNumber = request.PageNumber,
             PageSize = request.PageSize
         };
-    }
-
-    /// <summary>
-    /// Translates a DataScopeRule into an EF WHERE clause for the accounts query.
-    /// </summary>
-    private IQueryable<Domain.Entities.Account> ApplyDataScopeRule(
-        IQueryable<Domain.Entities.Account> query,
-        DataScopeRule rule,
-        Guid userId)
-    {
-        return rule.Level switch
-        {
-            DataScopeLevel.Global => query, // System account — no restriction
-            DataScopeLevel.None   => query.Where(_ => false), // Explicit deny
-            DataScopeLevel.Self   => query.Where(a => a.Id == userId), // Own account only
-            DataScopeLevel.Company or DataScopeLevel.Department or DataScopeLevel.Position =>
-                ApplyDimensionScopeRule(query, rule),
-            _ => query.Where(_ => false)
-        };
-    }
-
-    /// <summary>
-    /// For Company/Department/Position scopes, filter accounts via EmployeeProfile subquery
-    /// (EF translates to WHERE EXISTS / WHERE IN — no HashSet materialized in memory).
-    /// </summary>
-    private IQueryable<Domain.Entities.Account> ApplyDimensionScopeRule(
-        IQueryable<Domain.Entities.Account> query,
-        DataScopeRule rule)
-    {
-        var allowedAccountIds = rule.Level switch
-        {
-            DataScopeLevel.Company => _context.EmployeeProfiles
-                .AsNoTracking()
-                .Where(ep => ep.CompanyAccess.Any(ca => rule.DimensionIds.Contains(ca.CompanyId)))
-                .Select(ep => ep.AccountId),
-            DataScopeLevel.Department => _context.EmployeeProfiles
-                .AsNoTracking()
-                .Where(ep => ep.DepartmentAccess.Any(da => rule.DimensionIds.Contains(da.DepartmentId)))
-                .Select(ep => ep.AccountId),
-            DataScopeLevel.Position => _context.EmployeeProfiles
-                .AsNoTracking()
-                .Where(ep => ep.PositionAccess.Any(pa => rule.DimensionIds.Contains(pa.PositionId)))
-                .Select(ep => ep.AccountId),
-            _ => _context.EmployeeProfiles.AsNoTracking().Where(_ => false).Select(ep => ep.AccountId)
-        };
-
-        return query.Where(a => allowedAccountIds.Contains(a.Id));
     }
 
     /// <summary>
