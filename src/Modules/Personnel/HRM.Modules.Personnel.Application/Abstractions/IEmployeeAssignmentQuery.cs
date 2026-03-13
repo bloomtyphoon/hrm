@@ -1,8 +1,10 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+
 namespace HRM.Modules.Personnel.Application.Abstractions;
 
 /// <summary>
 /// Query interface for employee assignments.
-/// Used for scope resolution - getting employee's companies, departments, positions.
+/// Used for scope resolution — getting employee's companies, departments, positions.
 /// </summary>
 public interface IEmployeeAssignmentQuery
 {
@@ -44,52 +46,9 @@ public interface IEmployeeAssignmentQuery
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get scope dimension IDs for an employee at a specific level.
+    /// Get all scope dimension IDs for an employee in a single query.
     /// </summary>
     Task<ScopeDimensionIds> GetScopeDimensionIdsAsync(
         Guid employeeId,
         CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Aggregated scope dimension IDs for an employee.
-/// </summary>
-public sealed record ScopeDimensionIds
-{
-    /// <summary>
-    /// All company IDs the employee is assigned to.
-    /// </summary>
-    public required IReadOnlyCollection<Guid> CompanyIds { get; init; }
-
-    /// <summary>
-    /// All department IDs the employee is assigned to.
-    /// </summary>
-    public required IReadOnlyCollection<Guid> DepartmentIds { get; init; }
-
-    /// <summary>
-    /// All position IDs the employee is assigned to.
-    /// </summary>
-    public required IReadOnlyCollection<Guid> PositionIds { get; init; }
-
-    /// <summary>
-    /// Country ID (0 or 1 item) from Employee.CountryId.
-    /// </summary>
-    public IReadOnlyCollection<Guid> CountryIds { get; init; } = Array.Empty<Guid>();
-
-    /// <summary>
-    /// Region ID (0 or 1 item) from Employee.RegionId.
-    /// </summary>
-    public IReadOnlyCollection<Guid> RegionIds { get; init; } = Array.Empty<Guid>();
-
-    /// <summary>
-    /// Empty dimension IDs.
-    /// </summary>
-    public static ScopeDimensionIds Empty => new()
-    {
-        CompanyIds = Array.Empty<Guid>(),
-        DepartmentIds = Array.Empty<Guid>(),
-        PositionIds = Array.Empty<Guid>(),
-        CountryIds = Array.Empty<Guid>(),
-        RegionIds = Array.Empty<Guid>()
-    };
 }

@@ -5,11 +5,11 @@ namespace HRM.Modules.Identity.Application.Abstractions.Data;
 
 /// <summary>
 /// [DEPRECATED] Service for applying data scoping filters based on user's scope level.
-/// Use IDataScopeRuleProvider + SqlScopeWhereBuilder instead.
+/// Use IDataScopeService + EfScopeExpressionBuilder instead.
 ///
 /// Lives in Identity module — uses Identity-specific vocabulary (AccountType, DataScopeLevel).
 /// </summary>
-[Obsolete("Use IDataScopeRuleProvider + SqlScopeWhereBuilder instead")]
+[Obsolete("Use IDataScopeService + EfScopeExpressionBuilder instead")]
 public interface IDataScopingService
 {
     Task<DataScopeContext> GetCurrentScopeAsync(CancellationToken cancellationToken = default);
@@ -23,7 +23,7 @@ public interface IDataScopingService
 /// <summary>
 /// [DEPRECATED] Contains data scope information for the current user.
 /// </summary>
-[Obsolete("Use DataScopeContext from Identity.Application.Abstractions.Authorization instead")]
+[Obsolete("Use IDataScopeService + DataScopeRule instead")]
 public sealed class DataScopeContext
 {
     public required AccountType AccountType { get; init; }

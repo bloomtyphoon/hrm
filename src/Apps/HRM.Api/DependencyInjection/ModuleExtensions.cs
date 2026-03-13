@@ -102,11 +102,10 @@ public static class ModuleExtensions
         services.AddPersonnelApplication();
 
         // 8. Personnel Module Infrastructure Layer
-        // NOTE: Registers IDataScopeService and IPersonnelQuery — must come BEFORE Attendance
+        // NOTE: Registers IEmployeeScopeDimensionProvider and IPersonnelQuery — must come BEFORE Attendance
         services.AddPersonnelModule(configuration);
 
         // 9. Attendance Module Application Layer
-        // NOTE: Must come AFTER Personnel (depends on IDataScopeService and IPersonnelQuery)
         services.AddAttendanceApplication();
 
         // 10. Attendance Module Infrastructure Layer

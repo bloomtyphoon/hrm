@@ -44,7 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IPersonnelQueryContext>(sp => sp.GetRequiredService<PersonnelDbContext>());
 
         // Scope Services
-        services.AddScoped<IDataScopeService, DataScopeService>();
+        // IDataScopeService is registered in BuildingBlocks.Infrastructure (shared for all modules)
         services.AddScoped<IHierarchyScopeResolver, HierarchyScopeResolver>();
         services.AddScoped<DataScopePolicyService>();
 
@@ -58,8 +58,9 @@ public static class DependencyInjection
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IEmployeeAssignmentQuery, EmployeeAssignmentQuery>();
 
-        // Cross-module query (consumed by Organization and other modules)
+        // Cross-module contracts (consumed by BuildingBlocks DataScopeService and Organization module)
         services.AddScoped<IPersonnelQuery, PersonnelQueryService>();
+        services.AddScoped<IEmployeeScopeDimensionProvider, PersonnelQueryService>();
 
         // Outbox Processor (background service for reliable integration event publishing)
         services.AddHostedService<PersonnelOutboxProcessor>();

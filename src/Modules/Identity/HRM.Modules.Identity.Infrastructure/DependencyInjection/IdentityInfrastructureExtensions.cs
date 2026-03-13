@@ -203,15 +203,11 @@ public static class IdentityInfrastructureExtensions
         // Scoped: Uses scoped repositories for database access
         services.AddScoped<IPermissionService, PermissionService>();
 
-        // IDataScopeRuleProvider: Single source of truth for data scope rules in Identity
-        services.AddScoped<IDataScopeRuleProvider, DataScopeRuleProvider>();
-
         // IScopeGrantProvider: Resolves user scope level for a permission
-        // Consumed by Personnel and Organization modules to determine data access scope
+        // Consumed by shared DataScopeService (BuildingBlocks.Infrastructure)
         services.AddScoped<IScopeGrantProvider, ScopeGrantProvider>();
 
-        // IDataScopeService: Translates scope grant into a DataScopeRule for EF query filtering
-        services.AddScoped<IDataScopeService, IdentityDataScopeService>();
+        // IDataScopeService is registered in BuildingBlocks.Infrastructure (shared for all modules)
 
         // IAccountVisibilityFilter: Single-account access checks based on data scope
         services.AddScoped<IAccountVisibilityFilter, AccountVisibilityFilter>();

@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;

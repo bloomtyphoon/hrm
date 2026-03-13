@@ -152,6 +152,10 @@ public static class InfrastructureServiceExtensions
         // Used for data-level security filtering based on user's permission scope
         services.AddScoped<IPermissionFilterService, PermissionFilterService>();
 
+        // Shared DataScopeService: single implementation for all modules.
+        // Resolves scope from IScopeGrantProvider (Identity) + IEmployeeScopeDimensionProvider (Personnel).
+        services.AddScoped<IDataScopeService, DataScopeService>();
+
         return services;
     }
 

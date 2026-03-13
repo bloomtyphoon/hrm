@@ -9,11 +9,11 @@ namespace HRM.Modules.Identity.Infrastructure.Authorization;
 
 /// <summary>
 /// [DEPRECATED] Implementation of IDataScopingService.
-/// Use IDataScopeRuleProvider + SqlScopeWhereBuilder instead.
+/// Use IDataScopeService + EfScopeExpressionBuilder instead.
 ///
 /// Lives in Identity.Infrastructure — uses Identity-specific vocabulary.
 /// </summary>
-[Obsolete("Use IDataScopeRuleProvider + SqlScopeWhereBuilder instead. See Scope Specification Pattern.")]
+[Obsolete("Use IDataScopeService + EfScopeExpressionBuilder instead.")]
 public sealed class DataScopingService : IDataScopingService
 {
     private readonly ICurrentUserService _currentUserService;
@@ -67,7 +67,7 @@ public sealed class DataScopingService : IDataScopingService
 
         // ScopeLevel removed from ICurrentUserService (not an Identity concern).
         // This deprecated service defaults to Self scope.
-        // Use IDataScopeService + DataScopeRuleProvider instead.
+        // Use IDataScopeService + DataScopeRule instead.
         var scopeLevel = DataScopeLevel.Self;
 
         var assignments = await LoadActiveAssignmentsAsync(employeeId.Value, cancellationToken);

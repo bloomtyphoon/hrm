@@ -1,17 +1,19 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Personnel;
 using HRM.Modules.Personnel.Application.Abstractions;
 
 namespace HRM.Modules.Personnel.Infrastructure.Services;
 
 /// <summary>
-/// Implementation of IPersonnelQuery for cross-module consumption.
+/// Implementation of cross-module query contracts for Personnel data.
 ///
-/// Exposes Personnel data (employee company assignments) to other modules
-/// via the BuildingBlocks contract — no direct module-to-module dependency.
+/// Implements:
+/// - IPersonnelQuery: company IDs for Organization module
+/// - IEmployeeScopeDimensionProvider: all dimension IDs for shared DataScopeService
 ///
-/// Consumed by: Organization module (for DataScopeService company filtering)
+/// Both delegate to IEmployeeAssignmentQuery (Personnel-internal).
 /// </summary>
-internal sealed class PersonnelQueryService : IPersonnelQuery
+internal sealed class PersonnelQueryService : IPersonnelQuery, IEmployeeScopeDimensionProvider
 {
     private readonly IEmployeeAssignmentQuery _assignmentQuery;
 
@@ -27,5 +29,22 @@ internal sealed class PersonnelQueryService : IPersonnelQuery
     {
         var companyIds = await _assignmentQuery.GetEmployeeCompanyIdsAsync(employeeId, cancellationToken);
         return companyIds.ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<ScopeDimensionIds> GetScopeDimensionIdsAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken = default)
+    {
+        var dimensions = await _assignmentQuery.GetScopeDimensionIdsAsync(employeeId, cancellationToken);
+
+        return new ScopeDimensionIds
+        {
+            CompanyIds = dimensions.CompanyIds,
+            DepartmentIds = dimensions.DepartmentIds,
+            PositionIds = dimensions.PositionIds,
+            CountryIds = dimensions.CountryIds,
+            RegionIds = dimensions.RegionIds
+        };
     }
 }

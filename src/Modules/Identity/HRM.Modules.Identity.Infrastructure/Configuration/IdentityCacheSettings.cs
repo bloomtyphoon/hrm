@@ -20,9 +20,4 @@ public sealed class IdentityCacheSettings
     /// </summary>
     public int CatalogCacheDurationMinutes { get; set; } = 60;
 
-    /// <summary>
-    /// Cache duration for data scope rules / employee assignments (in minutes).
-    /// Default: 5 minutes.
-    /// </summary>
-    public int DataScopeRuleCacheDurationMinutes { get; set; } = 5;
 }
