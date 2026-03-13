@@ -1,7 +1,11 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Security;
 using HRM.Modules.Personnel.Domain.Entities;
 using HRM.Modules.Personnel.Domain.Errors;
 
@@ -11,17 +15,33 @@ internal sealed class CreateEmployeeCommandHandler : ICommandHandler<CreateEmplo
 {
     private readonly IEmployeeRepository _employeeRepository;
     private readonly ITenantContext _tenantContext;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly IExecutionContext _executionContext;
 
     public CreateEmployeeCommandHandler(
         IEmployeeRepository employeeRepository,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        IDataScopeService dataScopeService,
+        IExecutionContext executionContext)
     {
         _employeeRepository = employeeRepository;
         _tenantContext = tenantContext;
+        _dataScopeService = dataScopeService;
+        _executionContext = executionContext;
     }
 
     public async Task<Result<Guid>> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
     {
+        // Scope check: creating an employee requires at least some scope
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, PersonnelPermissions.Employee.Create, cancellationToken);
+
+        if (rule.Level == DataScopeLevel.None)
+        {
+            return Result.Failure<Guid>(new ForbiddenError(
+                "Employee.AccessDenied", "You do not have permission to create employees."));
+        }
+
         // 1. Check employee code uniqueness
         var existingByCode = await _employeeRepository.GetByCodeAsync(request.EmployeeCode, cancellationToken);
         if (existingByCode is not null)

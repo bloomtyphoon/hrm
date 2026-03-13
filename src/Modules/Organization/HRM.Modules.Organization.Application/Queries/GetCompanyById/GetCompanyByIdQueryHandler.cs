@@ -34,7 +34,7 @@ internal sealed class GetCompanyByIdQueryHandler : IQueryHandler<GetCompanyByIdQ
 
     public async Task<CompanyDto?> Handle(GetCompanyByIdQuery request, CancellationToken cancellationToken)
     {
-        var rule = await _dataScopeService.GetScopeRuleAsync(
+        var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
             _executionContext.UserId, OrganizationPermissions.Company.View, cancellationToken);
 
         if (!CanAccessCompany(request.CompanyId, rule))

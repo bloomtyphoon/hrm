@@ -1,5 +1,9 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
+using HRM.Modules.Organization.Application.Security;
 using HRM.Modules.Organization.Domain.Entities;
 using HRM.Modules.Organization.Domain.Errors;
 using HRM.Modules.Organization.Domain.Repositories;
@@ -11,19 +15,35 @@ internal sealed class CreatePositionCommandHandler : ICommandHandler<CreatePosit
     private readonly IPositionRepository _positionRepository;
     private readonly ICompanyRepository _companyRepository;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly IExecutionContext _executionContext;
 
     public CreatePositionCommandHandler(
         IPositionRepository positionRepository,
         ICompanyRepository companyRepository,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        IDataScopeService dataScopeService,
+        IExecutionContext executionContext)
     {
         _positionRepository = positionRepository;
         _companyRepository = companyRepository;
         _departmentRepository = departmentRepository;
+        _dataScopeService = dataScopeService;
+        _executionContext = executionContext;
     }
 
     public async Task<Result<Guid>> Handle(CreatePositionCommand request, CancellationToken cancellationToken)
     {
+        // Scope check
+        var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
+            _executionContext.UserId, OrganizationPermissions.Position.Create, cancellationToken);
+
+        if (!CanAccessCompany(request.CompanyId, rule))
+        {
+            return Result.Failure<Guid>(new ForbiddenError(
+                "Position.AccessDenied", "You do not have permission to create positions in this company."));
+        }
+
         // 1. Verify company exists
         var company = await _companyRepository.GetByIdAsync(request.CompanyId, cancellationToken);
         if (company is null)
@@ -69,4 +89,11 @@ internal sealed class CreatePositionCommandHandler : ICommandHandler<CreatePosit
 
         return Result.Success(position.Id);
     }
+
+    private static bool CanAccessCompany(Guid companyId, DataScopeRule rule) => rule.Level switch
+    {
+        DataScopeLevel.Global => true,
+        DataScopeLevel.Company => rule.DimensionIds.Contains(companyId),
+        _ => false
+    };
 }

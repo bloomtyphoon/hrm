@@ -1,6 +1,10 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Security;
 using HRM.Modules.Personnel.Domain.Entities;
 using HRM.Modules.Personnel.Domain.Errors;
 
@@ -9,10 +13,17 @@ namespace HRM.Modules.Personnel.Application.Commands.TerminateEmployee;
 internal sealed class TerminateEmployeeCommandHandler : ICommandHandler<TerminateEmployeeCommand>
 {
     private readonly IEmployeeRepository _employeeRepository;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly IExecutionContext _executionContext;
 
-    public TerminateEmployeeCommandHandler(IEmployeeRepository employeeRepository)
+    public TerminateEmployeeCommandHandler(
+        IEmployeeRepository employeeRepository,
+        IDataScopeService dataScopeService,
+        IExecutionContext executionContext)
     {
         _employeeRepository = employeeRepository;
+        _dataScopeService = dataScopeService;
+        _executionContext = executionContext;
     }
 
     public async Task<Result> Handle(TerminateEmployeeCommand request, CancellationToken cancellationToken)
@@ -21,6 +32,15 @@ internal sealed class TerminateEmployeeCommandHandler : ICommandHandler<Terminat
         if (employee is null)
         {
             return Result.Failure(EmployeeErrors.NotFound(request.EmployeeId));
+        }
+
+        var rule = await _dataScopeService.GetScopeRuleAsync(
+            _executionContext.UserId, PersonnelPermissions.Employee.Terminate, cancellationToken);
+
+        if (!CanAccessEmployee(employee, rule))
+        {
+            return Result.Failure(new ForbiddenError(
+                "Employee.AccessDenied", "You do not have permission to terminate this employee."));
         }
 
         if (employee.Status == EmploymentStatus.Terminated)
@@ -33,4 +53,19 @@ internal sealed class TerminateEmployeeCommandHandler : ICommandHandler<Terminat
 
         return Result.Success();
     }
+
+    private static bool CanAccessEmployee(Employee employee, DataScopeRule rule) => rule.Level switch
+    {
+        DataScopeLevel.Global => true,
+        DataScopeLevel.Self => employee.Id == rule.SelfEmployeeId,
+        DataScopeLevel.DirectReports or DataScopeLevel.EmployeeSet =>
+            rule.EmployeeIds.Contains(employee.Id),
+        DataScopeLevel.Company =>
+            employee.PrimaryCompanyId.HasValue && rule.DimensionIds.Contains(employee.PrimaryCompanyId.Value),
+        DataScopeLevel.Department =>
+            employee.PrimaryDepartmentId.HasValue && rule.DimensionIds.Contains(employee.PrimaryDepartmentId.Value),
+        DataScopeLevel.Position =>
+            employee.PrimaryPositionId.HasValue && rule.DimensionIds.Contains(employee.PrimaryPositionId.Value),
+        _ => false
+    };
 }

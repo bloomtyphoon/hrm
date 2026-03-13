@@ -37,7 +37,7 @@ internal sealed class GetPositionsByCompanyQueryHandler
         GetPositionsByCompanyQuery request,
         CancellationToken cancellationToken)
     {
-        var rule = await _dataScopeService.GetScopeRuleAsync(
+        var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
             _executionContext.UserId, OrganizationPermissions.Company.View, cancellationToken);
 
         if (!CanAccessCompany(request.CompanyId, rule))

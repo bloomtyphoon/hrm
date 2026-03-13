@@ -1,5 +1,9 @@
+using HRM.BuildingBlocks.Application.Abstractions.Authentication;
+using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Queries;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Organization.Application.DTOs;
+using HRM.Modules.Organization.Application.Security;
 using HRM.Modules.Organization.Domain.Repositories;
 
 namespace HRM.Modules.Organization.Application.Queries.GetPositionById;
@@ -7,10 +11,17 @@ namespace HRM.Modules.Organization.Application.Queries.GetPositionById;
 internal sealed class GetPositionByIdQueryHandler : IQueryHandler<GetPositionByIdQuery, PositionDto?>
 {
     private readonly IPositionRepository _positionRepository;
+    private readonly IDataScopeService _dataScopeService;
+    private readonly IExecutionContext _executionContext;
 
-    public GetPositionByIdQueryHandler(IPositionRepository positionRepository)
+    public GetPositionByIdQueryHandler(
+        IPositionRepository positionRepository,
+        IDataScopeService dataScopeService,
+        IExecutionContext executionContext)
     {
         _positionRepository = positionRepository;
+        _dataScopeService = dataScopeService;
+        _executionContext = executionContext;
     }
 
     public async Task<PositionDto?> Handle(GetPositionByIdQuery request, CancellationToken cancellationToken)
@@ -18,6 +29,12 @@ internal sealed class GetPositionByIdQueryHandler : IQueryHandler<GetPositionByI
         var position = await _positionRepository.GetByIdAsync(request.PositionId, cancellationToken);
 
         if (position is null)
+            return null;
+
+        var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
+            _executionContext.UserId, OrganizationPermissions.Position.View, cancellationToken);
+
+        if (!CanAccessCompany(position.CompanyId, rule))
             return null;
 
         return new PositionDto(
@@ -35,4 +52,11 @@ internal sealed class GetPositionByIdQueryHandler : IQueryHandler<GetPositionByI
             ModifiedAtUtc: position.ModifiedAtUtc
         );
     }
+
+    private static bool CanAccessCompany(Guid companyId, DataScopeRule rule) => rule.Level switch
+    {
+        DataScopeLevel.Global => true,
+        DataScopeLevel.Company => rule.DimensionIds.Contains(companyId),
+        _ => false
+    };
 }

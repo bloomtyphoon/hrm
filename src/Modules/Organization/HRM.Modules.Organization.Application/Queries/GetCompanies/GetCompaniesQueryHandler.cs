@@ -35,7 +35,7 @@ internal sealed class GetCompaniesQueryHandler : IQueryHandler<GetCompaniesQuery
 
     public async Task<IReadOnlyList<CompanyDto>> Handle(GetCompaniesQuery request, CancellationToken cancellationToken)
     {
-        var rule = await _dataScopeService.GetScopeRuleAsync(
+        var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
             _executionContext.UserId, OrganizationPermissions.Company.View, cancellationToken);
 
         return rule.Level switch

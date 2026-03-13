@@ -35,4 +35,17 @@ public interface IDataScopeService
         Guid userId,
         PermissionDescriptor permission,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the company-level scope rule for the current user and permission.
+    /// Always resolves to Company scope regardless of the granted level.
+    ///
+    /// Use this for Organization module queries where entities (Company, Department, Position)
+    /// are always scoped by company membership. For narrower scopes (Department, Position, Self, etc.),
+    /// the user's assigned company IDs are resolved from their employee assignments.
+    /// </summary>
+    Task<DataScopeRule> GetCompanyScopeRuleAsync(
+        Guid userId,
+        PermissionDescriptor permission,
+        CancellationToken cancellationToken = default);
 }

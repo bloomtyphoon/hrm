@@ -85,4 +85,28 @@ public sealed class DataScopeService : IDataScopeService
             _ => DataScopeRule.None()
         };
     }
+
+    /// <inheritdoc />
+    public async Task<DataScopeRule> GetCompanyScopeRuleAsync(
+        Guid userId,
+        PermissionDescriptor permission,
+        CancellationToken cancellationToken = default)
+    {
+        var grant = await _grantProvider.GetGrantAsync(userId, permission, cancellationToken);
+
+        if (grant.IsSystemAccount || grant.Level == DataScopeLevel.Global)
+            return DataScopeRule.Global();
+
+        if (grant.Level == DataScopeLevel.None || !grant.EmployeeId.HasValue)
+            return DataScopeRule.None();
+
+        // Always resolve to Company scope regardless of granted level.
+        // For Organization queries, entities are scoped by company membership.
+        var dimensions = await _dimensionProvider.GetScopeDimensionIdsAsync(
+            grant.EmployeeId.Value, cancellationToken);
+
+        return dimensions.CompanyIds.Count > 0
+            ? DataScopeRule.Company(dimensions.CompanyIds)
+            : DataScopeRule.None();
+    }
 }
