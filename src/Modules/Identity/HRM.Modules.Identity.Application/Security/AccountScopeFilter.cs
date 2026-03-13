@@ -40,6 +40,14 @@ public static class AccountScopeFilter
             case DataScopeLevel.Self:
                 return targetAccountId == currentUserId;
 
+            case DataScopeLevel.DirectReports:
+            case DataScopeLevel.EmployeeSet:
+                return targetAccountId == currentUserId
+                    || await context.EmployeeProfiles
+                        .AsNoTracking()
+                        .Where(ep => rule.EmployeeIds.Contains(ep.EmployeeId))
+                        .AnyAsync(ep => ep.AccountId == targetAccountId, cancellationToken);
+
             case DataScopeLevel.Company:
                 return targetAccountId == currentUserId
                     || await context.EmployeeProfiles
@@ -62,7 +70,7 @@ public static class AccountScopeFilter
                         .AnyAsync(ep => ep.AccountId == targetAccountId, cancellationToken);
 
             default:
-                return targetAccountId == currentUserId;
+                return false;
         }
     }
 
@@ -81,10 +89,25 @@ public static class AccountScopeFilter
             DataScopeLevel.Global => query,
             DataScopeLevel.None => query.Where(_ => false),
             DataScopeLevel.Self => query.Where(a => a.Id == currentUserId),
+            DataScopeLevel.DirectReports or DataScopeLevel.EmployeeSet =>
+                ApplyEmployeeSetScope(query, rule, context),
             DataScopeLevel.Company or DataScopeLevel.Department or DataScopeLevel.Position =>
                 ApplyDimensionScope(query, rule, context),
             _ => query.Where(_ => false)
         };
+    }
+
+    private static IQueryable<Domain.Entities.Account> ApplyEmployeeSetScope(
+        IQueryable<Domain.Entities.Account> query,
+        DataScopeRule rule,
+        IIdentityQueryContext context)
+    {
+        var allowedAccountIds = context.EmployeeProfiles
+            .AsNoTracking()
+            .Where(ep => rule.EmployeeIds.Contains(ep.EmployeeId))
+            .Select(ep => ep.AccountId);
+
+        return query.Where(a => allowedAccountIds.Contains(a.Id));
     }
 
     private static IQueryable<Domain.Entities.Account> ApplyDimensionScope(

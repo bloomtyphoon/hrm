@@ -12,10 +12,11 @@ namespace HRM.Modules.Personnel.Application.Queries.GetEmployeeAssignments;
 /// <summary>
 /// Handler for GetEmployeeAssignmentsQuery.
 ///
-/// Access rules (resolved via IDataScopeService):
-/// - Global (System): sees all assignments for the given employee.
-/// - Company scope: sees only assignments in the employee's accessible companies (multi-company support).
-/// - None: no results.
+/// Two-layer access control:
+/// 1. Employee-level: Can the user access this employee at all? (via EmployeeScopeFilter)
+/// 2. Assignment-level: For dimension scopes, further filter which assignments are visible.
+///    - Company scope: only assignments in accessible companies.
+///    - Department/Position scope: only assignments in accessible departments/positions.
 /// </summary>
 public sealed class GetEmployeeAssignmentsQueryHandler
     : IQueryHandler<GetEmployeeAssignmentsQuery, List<AssignmentDto>>
@@ -41,11 +42,28 @@ public sealed class GetEmployeeAssignmentsQueryHandler
         var rule = await _dataScopeService.GetScopeRuleAsync(
             _executionContext.UserId, PersonnelPermissions.Employee.View, cancellationToken);
 
+        // Layer 1: Check if the user can access this employee at all
+        if (!await EmployeeScopeFilter.IsAccessibleAsync(rule, request.EmployeeId, _context, cancellationToken))
+        {
+            return [];
+        }
+
         var query = _context.EmployeeAssignments
             .AsNoTracking()
             .Where(a => a.EmployeeId == request.EmployeeId);
 
-        query = ApplyScopeRule(query, rule);
+        // Layer 2: For dimension scopes, further filter which assignments are visible
+        if (rule.IsDimensionBased)
+        {
+            var ids = rule.DimensionIds.ToList();
+            query = rule.Level switch
+            {
+                DataScopeLevel.Company => query.Where(a => ids.Contains(a.CompanyId)),
+                DataScopeLevel.Department => query.Where(a => ids.Contains(a.DepartmentId)),
+                DataScopeLevel.Position => query.Where(a => ids.Contains(a.PositionId)),
+                _ => query
+            };
+        }
 
         if (request.Status.HasValue)
         {
@@ -68,28 +86,5 @@ public sealed class GetEmployeeAssignmentsQueryHandler
                 Status = a.Status
             })
             .ToListAsync(cancellationToken);
-    }
-
-    private static IQueryable<EmployeeAssignment> ApplyScopeRule(
-        IQueryable<EmployeeAssignment> query,
-        DataScopeRule rule)
-    {
-        return rule.Level switch
-        {
-            DataScopeLevel.Global => query,
-            DataScopeLevel.None => query.Where(_ => false),
-            DataScopeLevel.Company => BuildCompanyFilter(query, rule.DimensionIds),
-            // Self/EmployeeSet: assignment visibility matches employee ownership (EmployeeId filter above)
-            DataScopeLevel.Self or DataScopeLevel.EmployeeSet => query,
-            _ => query.Where(_ => false)
-        };
-    }
-
-    private static IQueryable<EmployeeAssignment> BuildCompanyFilter(
-        IQueryable<EmployeeAssignment> query,
-        IReadOnlyCollection<Guid> companyIds)
-    {
-        var ids = companyIds.ToList();
-        return query.Where(a => ids.Contains(a.CompanyId));
     }
 }
