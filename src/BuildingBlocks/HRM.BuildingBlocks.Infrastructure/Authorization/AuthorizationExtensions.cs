@@ -17,7 +17,7 @@ namespace HRM.BuildingBlocks.Infrastructure.Authorization;
 ///
 /// Authorization Layers:
 /// - Endpoint protection: RouteSecurityMap.xml (Single Source of Truth)
-/// - Data filtering: IPermissionFilterService
+/// - Data filtering: IDataScopeService
 /// - Role → Permission mapping: Identity module (database)
 /// </summary>
 public static class AuthorizationExtensions

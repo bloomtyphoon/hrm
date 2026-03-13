@@ -11,7 +11,6 @@ using HRM.Modules.Personnel.Infrastructure.BackgroundServices;
 using HRM.Modules.Personnel.Infrastructure.Configuration;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
-using HRM.Modules.Personnel.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,8 +45,6 @@ public static class DependencyInjection
         // Scope Services
         // IDataScopeService is registered in BuildingBlocks.Infrastructure (shared for all modules)
         services.AddScoped<IHierarchyScopeResolver, HierarchyScopeResolver>();
-        services.AddScoped<DataScopePolicyService>();
-
         // MediatR handlers in Infrastructure (domain event handlers)
         services.AddMediatR(config =>
         {

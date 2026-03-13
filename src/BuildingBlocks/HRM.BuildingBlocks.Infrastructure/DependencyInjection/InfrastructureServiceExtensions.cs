@@ -71,7 +71,6 @@ public static class InfrastructureServiceExtensions
     /// - Claims transformation (RolesClaimsTransformation)
     ///
     /// Services NOT Registered (Module Responsibility):
-    /// - IDataScopingService: Requires IDbConnection which is module-specific
     /// - IDbConnection: Each module must register with own connection string
     /// - IPasswordHasher/ITokenService: Moved to Identity module (authentication-specific)
     /// </summary>
@@ -127,13 +126,6 @@ public static class InfrastructureServiceExtensions
         // into standard ClaimTypes.Role claims for native ASP.NET Core authorization support
         services.AddScoped<IClaimsTransformation, RolesClaimsTransformation>();
 
-        // Authorization Services
-        // NOTE: DataScopingService requires IDbConnection which must be registered at module level
-        // Each module should register its own DataScopingService with module-specific IDbConnection:
-        // services.AddScoped<IDataScopingService, DataScopingService>();
-        // services.AddScoped<IDbConnection>(sp =>
-        //     new SqlConnection(configuration.GetConnectionString("ModuleDb")));
-
         // EF Core Interceptors
         // NOTE: AuditInterceptor is Scoped because it depends on IExecutionContext (Scoped)
         services.AddScoped<AuditInterceptor>();
@@ -147,10 +139,6 @@ public static class InfrastructureServiceExtensions
         // Runs after DI container is built, avoiding BuildServiceProvider anti-pattern
         // Modules register sources via: services.Configure<RouteSecurityOptions>(o => o.Sources.Add(...))
         services.AddHostedService<RouteSecurityLoaderService>();
-
-        // Scoped: PermissionFilterService resolves IPermissionQueryFilter<T> from DI
-        // Used for data-level security filtering based on user's permission scope
-        services.AddScoped<IPermissionFilterService, PermissionFilterService>();
 
         // Shared DataScopeService: single implementation for all modules.
         // Resolves scope from IScopeGrantProvider (Identity) + IEmployeeScopeDimensionProvider (Personnel).

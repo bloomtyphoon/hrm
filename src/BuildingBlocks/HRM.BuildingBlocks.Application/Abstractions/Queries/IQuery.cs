@@ -92,7 +92,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// 
 /// Data Scoping:
 /// Queries MUST respect ScopeLevel when executed by Users:
-/// - Apply IDataScopingService.ApplyScopingAsync()
+/// - Apply IDataScopeService.GetScopeRuleAsync()
 /// - Filters data based on User's assignments
 /// - System accounts see all data (no scoping)
 /// 

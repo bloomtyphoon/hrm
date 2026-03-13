@@ -4,6 +4,7 @@ using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions;
+using HRM.Modules.Personnel.Application.Abstractions.Data;
 using HRM.Modules.Personnel.Application.Security;
 using HRM.Modules.Personnel.Domain.Entities;
 using HRM.Modules.Personnel.Domain.Errors;
@@ -15,15 +16,18 @@ internal sealed class TerminateEmployeeCommandHandler : ICommandHandler<Terminat
     private readonly IEmployeeRepository _employeeRepository;
     private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
+    private readonly IPersonnelQueryContext _queryContext;
 
     public TerminateEmployeeCommandHandler(
         IEmployeeRepository employeeRepository,
         IDataScopeService dataScopeService,
-        IExecutionContext executionContext)
+        IExecutionContext executionContext,
+        IPersonnelQueryContext queryContext)
     {
         _employeeRepository = employeeRepository;
         _dataScopeService = dataScopeService;
         _executionContext = executionContext;
+        _queryContext = queryContext;
     }
 
     public async Task<Result> Handle(TerminateEmployeeCommand request, CancellationToken cancellationToken)
@@ -37,7 +41,7 @@ internal sealed class TerminateEmployeeCommandHandler : ICommandHandler<Terminat
         var rule = await _dataScopeService.GetScopeRuleAsync(
             _executionContext.UserId, PersonnelPermissions.Employee.Terminate, cancellationToken);
 
-        if (!CanAccessEmployee(employee, rule))
+        if (!await EmployeeScopeFilter.IsAccessibleAsync(rule, employee.Id, _queryContext, cancellationToken))
         {
             return Result.Failure(new ForbiddenError(
                 "Employee.AccessDenied", "You do not have permission to terminate this employee."));
@@ -54,18 +58,4 @@ internal sealed class TerminateEmployeeCommandHandler : ICommandHandler<Terminat
         return Result.Success();
     }
 
-    private static bool CanAccessEmployee(Employee employee, DataScopeRule rule) => rule.Level switch
-    {
-        DataScopeLevel.Global => true,
-        DataScopeLevel.Self => employee.Id == rule.SelfEmployeeId,
-        DataScopeLevel.DirectReports or DataScopeLevel.EmployeeSet =>
-            rule.EmployeeIds.Contains(employee.Id),
-        DataScopeLevel.Company =>
-            employee.PrimaryCompanyId.HasValue && rule.DimensionIds.Contains(employee.PrimaryCompanyId.Value),
-        DataScopeLevel.Department =>
-            employee.PrimaryDepartmentId.HasValue && rule.DimensionIds.Contains(employee.PrimaryDepartmentId.Value),
-        DataScopeLevel.Position =>
-            employee.PrimaryPositionId.HasValue && rule.DimensionIds.Contains(employee.PrimaryPositionId.Value),
-        _ => false
-    };
 }

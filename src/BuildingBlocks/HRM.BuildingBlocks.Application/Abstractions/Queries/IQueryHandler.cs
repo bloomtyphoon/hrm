@@ -8,7 +8,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 /// 
 /// Handler Responsibilities:
 /// 1. Query database efficiently (use Dapper for complex queries)
-/// 2. Apply data scoping for User requests (IDataScopingService)
+/// 2. Apply data scoping for User requests (IDataScopeService)
 /// 3. Project to DTOs (don't return domain entities)
 /// 4. Handle not found scenarios gracefully (return null or empty)
 /// 5. Return data directly to caller
@@ -70,7 +70,7 @@ namespace HRM.BuildingBlocks.Application.Abstractions.Queries;
 ///     : IQueryHandler&lt;SearchEmployeesQuery, List&lt;EmployeeDto&gt;&gt;
 /// {
 ///     private readonly IDbConnection _connection;
-///     private readonly IDataScopingService _scopingService;
+///     private readonly IDataScopeService _dataScopeService;
 ///     
 ///     public async Task&lt;List&lt;EmployeeDto&gt;&gt; Handle(
 ///         SearchEmployeesQuery query,

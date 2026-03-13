@@ -45,7 +45,7 @@ public sealed class GetEmployeeByIdQueryHandler
             .AsNoTracking()
             .Where(e => e.Id == request.EmployeeId);
 
-        query = ApplyScopeRule(query, rule);
+        query = EmployeeScopeFilter.ApplyScope(query, rule, _context);
 
         return await query
             .Select(e => new EmployeeDetailDto
@@ -71,43 +71,4 @@ public sealed class GetEmployeeByIdQueryHandler
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    private IQueryable<Employee> ApplyScopeRule(IQueryable<Employee> query, DataScopeRule rule)
-    {
-        return rule.Level switch
-        {
-            DataScopeLevel.Global => query,
-            DataScopeLevel.None => query.Where(_ => false),
-            DataScopeLevel.Self => query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
-            DataScopeLevel.DirectReports => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
-            DataScopeLevel.EmployeeSet => query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
-            DataScopeLevel.Company => BuildDimensionFilter(query, rule.DimensionIds, DataScopeLevel.Company),
-            DataScopeLevel.Department => BuildDimensionFilter(query, rule.DimensionIds, DataScopeLevel.Department),
-            DataScopeLevel.Position => BuildDimensionFilter(query, rule.DimensionIds, DataScopeLevel.Position),
-            _ => query.Where(_ => false)
-        };
-    }
-
-    private IQueryable<Employee> BuildDimensionFilter(
-        IQueryable<Employee> query,
-        IReadOnlyCollection<Guid> dimensionIds,
-        DataScopeLevel level)
-    {
-        var ids = dimensionIds.ToList();
-
-        var employeeIdsWithAccess = level switch
-        {
-            DataScopeLevel.Company => _context.EmployeeAssignments
-                .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.CompanyId))
-                .Select(a => a.EmployeeId),
-            DataScopeLevel.Department => _context.EmployeeAssignments
-                .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.DepartmentId))
-                .Select(a => a.EmployeeId),
-            DataScopeLevel.Position => _context.EmployeeAssignments
-                .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.PositionId))
-                .Select(a => a.EmployeeId),
-            _ => throw new ArgumentOutOfRangeException(nameof(level))
-        };
-
-        return query.Where(e => employeeIdsWithAccess.Contains(e.Id));
-    }
 }
