@@ -70,6 +70,11 @@ public sealed class IdentityDbContext : ModuleDbContext, IIdentityQueryContext
     public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
 
     /// <summary>
+    /// Tenant scope overrides for per-tenant permission scope configuration.
+    /// </summary>
+    public DbSet<TenantScopeOverride> TenantScopeOverrides => Set<TenantScopeOverride>();
+
+    /// <summary>
     /// Configure entity mappings.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

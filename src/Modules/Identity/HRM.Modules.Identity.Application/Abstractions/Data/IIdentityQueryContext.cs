@@ -56,4 +56,9 @@ public interface IIdentityQueryContext
     /// Employee profiles table (read-only access).
     /// </summary>
     DbSet<EmployeeProfile> EmployeeProfiles { get; }
+
+    /// <summary>
+    /// Tenant scope overrides table (read-only access).
+    /// </summary>
+    DbSet<TenantScopeOverride> TenantScopeOverrides { get; }
 }

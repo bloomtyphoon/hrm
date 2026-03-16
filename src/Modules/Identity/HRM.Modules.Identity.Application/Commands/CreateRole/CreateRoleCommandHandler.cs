@@ -5,6 +5,7 @@ using HRM.Modules.Identity.Application.Abstractions.Data;
 using HRM.Modules.Identity.Domain.Entities;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
+using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,15 +16,18 @@ internal sealed class CreateRoleCommandHandler : ICommandHandler<CreateRoleComma
     private readonly IRoleRepository _roleRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IIdentityQueryContext _context;
+    private readonly IPermissionCatalogService _catalogService;
 
     public CreateRoleCommandHandler(
         IRoleRepository roleRepository,
         ICurrentUserService currentUser,
-        IIdentityQueryContext context)
+        IIdentityQueryContext context,
+        IPermissionCatalogService catalogService)
     {
         _roleRepository = roleRepository;
         _currentUser = currentUser;
         _context = context;
+        _catalogService = catalogService;
     }
 
     public async Task<Result<Guid>> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
@@ -56,24 +60,56 @@ internal sealed class CreateRoleCommandHandler : ICommandHandler<CreateRoleComma
             return Result.Failure<Guid>(RoleErrors.NameAlreadyExists(request.Name));
         }
 
-        // 3. Create Role aggregate
+        // 3. Resolve tenant and validate permissions against tenant-aware catalog
         var tenantId = _currentUser.TenantId
             ?? throw new InvalidOperationException("TenantId is required to create a role.");
+
+        var validationError = await ValidatePermissionsAsync(tenantId, request.Permissions);
+        if (validationError is not null)
+        {
+            return Result.Failure<Guid>(validationError);
+        }
+
+        // 4. Create Role aggregate
         var role = Role.Create(tenantId, request.Name, request.Description, request.IsSystemRole, request.CompanyId);
 
-        // 4. Add permissions
+        // 5. Add permissions
         var permissions = request.Permissions
             .Select(p => RolePermission.Create(p.Module, p.Entity, p.Action, p.Scope))
             .ToList();
 
         role.AddPermissions(permissions);
 
-        // 5. Finalize creation (raises domain event)
+        // 6. Finalize creation (raises domain event)
         role.FinalizeCreation();
 
-        // 6. Persist
+        // 7. Persist
         _roleRepository.Add(role);
 
         return Result.Success(role.Id);
+    }
+
+    private async Task<DomainError?> ValidatePermissionsAsync(Guid tenantId, List<PermissionDto> permissions)
+    {
+        foreach (var p in permissions)
+        {
+            if (!await _catalogService.ExistsAsync(p.Module, p.Entity, p.Action))
+            {
+                return RoleErrors.PermissionNotInCatalog(p.Module, p.Entity, p.Action);
+            }
+
+            if (p.Scope.HasValue)
+            {
+                var action = await _catalogService.GetActionAsync(tenantId, p.Module, p.Entity, p.Action);
+                if (action is not null && action.HasScopes() && !action.AllowsScope(p.Scope.Value))
+                {
+                    return RoleErrors.ScopeNotAllowed(
+                        $"{p.Module}.{p.Entity}.{p.Action}",
+                        p.Scope.Value.ToString());
+                }
+            }
+        }
+
+        return null;
     }
 }

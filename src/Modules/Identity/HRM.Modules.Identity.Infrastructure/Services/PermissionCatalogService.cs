@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using HRM.BuildingBlocks.Application.Abstractions.Caching;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
+using HRM.Modules.Identity.Domain.Entities;
 using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
 using HRM.Modules.Identity.Infrastructure.Configuration;
@@ -10,46 +11,44 @@ using Microsoft.Extensions.Options;
 namespace HRM.Modules.Identity.Infrastructure.Services;
 
 /// <summary>
-/// Implementation of IPermissionCatalogService
-/// Aggregates permission catalogs from multiple sources (modules)
+/// Implementation of IPermissionCatalogService.
 ///
-/// Design Philosophy:
-/// - Each module provides its own IPermissionCatalogSource
-/// - This service collects and aggregates all sources
-/// - Uses in-memory caching to avoid repeated parsing
-/// - Catalog is read-only, loaded once at startup
+/// Two-tier catalog architecture:
+/// - Base catalog (XML): Loaded from embedded resources, cached globally
+/// - Tenant catalog: Base catalog merged with tenant scope overrides from DB, cached per tenant
 ///
-/// Factory Pattern:
-/// - Modules use IPermissionCatalogSourceFactory to create sources
-/// - Sources are registered in DI as IPermissionCatalogSource
-/// - This service receives IEnumerable&lt;IPermissionCatalogSource&gt;
+/// Design:
+/// - Each module provides its own IPermissionCatalogSource (XML)
+/// - ITenantScopeOverrideProvider loads tenant overrides from DB
+/// - Tenant overrides can only restrict scopes (subset of base catalog)
+/// - Cache keys: "identity:catalog:permissions" (base), "identity:catalog:permissions:{tenantId}" (tenant)
 /// </summary>
 public sealed class PermissionCatalogService : IPermissionCatalogService
 {
-    private const string CatalogCacheKey = "identity:catalog:permissions";
+    private const string BaseCatalogCacheKey = "identity:catalog:permissions";
+    private const string TenantCatalogCacheKeyPrefix = "identity:catalog:permissions:";
     private readonly IEnumerable<IPermissionCatalogSource> _sources;
+    private readonly ITenantScopeOverrideProvider _overrideProvider;
     private readonly ICache _cache;
     private readonly TimeSpan _cacheDuration;
 
     public PermissionCatalogService(
         IEnumerable<IPermissionCatalogSource> sources,
+        ITenantScopeOverrideProvider overrideProvider,
         ICache cache,
         IOptions<IdentityCacheSettings> cacheSettings)
     {
         _sources = sources ?? throw new ArgumentNullException(nameof(sources));
+        _overrideProvider = overrideProvider ?? throw new ArgumentNullException(nameof(overrideProvider));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _cacheDuration = TimeSpan.FromMinutes(cacheSettings.Value.CatalogCacheDurationMinutes);
     }
 
-    /// <summary>
-    /// Load all available permissions from all catalog sources.
-    /// Uses ICache to avoid repeated parsing across requests.
-    /// The catalog is global (not tenant-specific) — it's the schema definition only.
-    /// </summary>
-    public async Task<List<PermissionModule>> LoadCatalogAsync()
+    /// <inheritdoc />
+    public async Task<List<PermissionModule>> LoadBaseCatalogAsync()
     {
         return await _cache.GetOrCreateAsync(
-            CatalogCacheKey,
+            BaseCatalogCacheKey,
             async () =>
             {
                 var allModules = new List<PermissionModule>();
@@ -87,36 +86,63 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
             _cacheDuration);
     }
 
-    /// <summary>
-    /// Get specific module from catalog by name
-    /// </summary>
+    /// <inheritdoc />
+    public async Task<List<PermissionModule>> LoadCatalogAsync(Guid tenantId)
+    {
+        var cacheKey = $"{TenantCatalogCacheKeyPrefix}{tenantId}";
+
+        return await _cache.GetOrCreateAsync(
+            cacheKey,
+            async () =>
+            {
+                var baseModules = await LoadBaseCatalogAsync();
+                var overrides = await _overrideProvider.GetOverridesAsync(tenantId);
+
+                if (overrides.Count == 0)
+                    return baseModules;
+
+                return MergeCatalogWithOverrides(baseModules, overrides);
+            },
+            _cacheDuration);
+    }
+
+    /// <inheritdoc />
+    public Task<List<PermissionModule>> LoadCatalogAsync()
+    {
+        return LoadBaseCatalogAsync();
+    }
+
+    /// <inheritdoc />
     public async Task<PermissionModule?> GetModuleAsync(string moduleName)
     {
-        var modules = await LoadCatalogAsync();
+        var modules = await LoadBaseCatalogAsync();
         return modules.FirstOrDefault(m => m.Name.Equals(moduleName, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>
-    /// Get specific entity from catalog
-    /// </summary>
+    /// <inheritdoc />
     public async Task<PermissionEntity?> GetEntityAsync(string moduleName, string entityName)
     {
         var module = await GetModuleAsync(moduleName);
         return module?.GetEntity(entityName);
     }
 
-    /// <summary>
-    /// Get specific action from catalog
-    /// </summary>
+    /// <inheritdoc />
     public async Task<PermissionAction?> GetActionAsync(string moduleName, string entityName, string actionName)
     {
         var entity = await GetEntityAsync(moduleName, entityName);
         return entity?.GetAction(actionName);
     }
 
-    /// <summary>
-    /// Check if permission exists in catalog
-    /// </summary>
+    /// <inheritdoc />
+    public async Task<PermissionAction?> GetActionAsync(Guid tenantId, string moduleName, string entityName, string actionName)
+    {
+        var modules = await LoadCatalogAsync(tenantId);
+        var module = modules.FirstOrDefault(m => m.Name.Equals(moduleName, StringComparison.OrdinalIgnoreCase));
+        var entity = module?.GetEntity(entityName);
+        return entity?.GetAction(actionName);
+    }
+
+    /// <inheritdoc />
     public async Task<bool> ExistsAsync(string moduleName, string entityName, string actionName)
     {
         var action = await GetActionAsync(moduleName, entityName, actionName);
@@ -126,7 +152,71 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
     #region Private Helper Methods
 
     /// <summary>
-    /// Parse catalog XML content to permission modules
+    /// Merge base catalog with tenant scope overrides.
+    /// Creates deep copies of modules/entities/actions that have overrides applied.
+    /// </summary>
+    private static List<PermissionModule> MergeCatalogWithOverrides(
+        List<PermissionModule> baseModules,
+        List<TenantScopeOverride> overrides)
+    {
+        // Index overrides by "Module.Entity.Action" key for fast lookup
+        var overrideMap = overrides.ToDictionary(
+            o => $"{o.Module}.{o.Entity}.{o.Action}",
+            StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<PermissionModule>();
+
+        foreach (var baseModule in baseModules)
+        {
+            var entities = new List<PermissionEntity>();
+
+            foreach (var baseEntity in baseModule.Entities)
+            {
+                var actions = new List<PermissionAction>();
+
+                foreach (var baseAction in baseEntity.Actions)
+                {
+                    var key = $"{baseModule.Name}.{baseEntity.Name}.{baseAction.Name}";
+
+                    if (overrideMap.TryGetValue(key, out var scopeOverride))
+                    {
+                        // Apply override: replace scopes with tenant-specific ones
+                        var overriddenScopes = scopeOverride.AllowedScopes
+                            .Select(level =>
+                            {
+                                // Try to preserve displayName from base catalog
+                                var baseScope = baseAction.GetScope(level);
+                                return baseScope ?? new PermissionScope(level, level.ToString());
+                            })
+                            .ToList();
+
+                        var defaultScope = scopeOverride.DefaultScope?.ToString() ?? baseAction.DefaultScope;
+
+                        actions.Add(new PermissionAction(
+                            baseAction.Name,
+                            baseAction.DisplayName,
+                            overriddenScopes,
+                            baseAction.Constraints,
+                            defaultScope));
+                    }
+                    else
+                    {
+                        // No override - use base catalog as-is
+                        actions.Add(baseAction);
+                    }
+                }
+
+                entities.Add(new PermissionEntity(baseEntity.Name, baseEntity.DisplayName, actions));
+            }
+
+            result.Add(new PermissionModule(baseModule.Name, baseModule.DisplayName, entities));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Parse catalog XML content to permission modules.
     /// </summary>
     private List<PermissionModule> ParseCatalog(string xmlContent)
     {
@@ -153,9 +243,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
         }
     }
 
-    /// <summary>
-    /// Parse Permissions/Module elements
-    /// </summary>
     private List<PermissionModule> ParseModules(XElement permissionsElement, XNamespace ns)
     {
         var modules = new List<PermissionModule>();
@@ -176,9 +263,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
         return modules;
     }
 
-    /// <summary>
-    /// Parse Module/Entity elements
-    /// </summary>
     private List<PermissionEntity> ParseEntities(XElement moduleElement, XNamespace ns)
     {
         var entities = new List<PermissionEntity>();
@@ -199,9 +283,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
         return entities;
     }
 
-    /// <summary>
-    /// Parse Entity/Action elements
-    /// </summary>
     private List<PermissionAction> ParseActions(XElement entityElement, XNamespace ns)
     {
         var actions = new List<PermissionAction>();
@@ -216,7 +297,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
 
             var defaultScope = actionElement.Attribute("defaultScope")?.Value;
 
-            // Parse scopes (optional)
             var scopes = new List<PermissionScope>();
             var scopesElement = actionElement.Element(ns + "Scopes");
             if (scopesElement != null)
@@ -224,7 +304,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
                 scopes = ParseScopes(scopesElement, ns);
             }
 
-            // Parse constraints (optional)
             var constraints = new List<PermissionConstraint>();
             var constraintsElement = actionElement.Element(ns + "Constraints");
             if (constraintsElement != null)
@@ -244,9 +323,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
         return actions;
     }
 
-    /// <summary>
-    /// Parse Action/Scopes/Scope elements
-    /// </summary>
     private List<PermissionScope> ParseScopes(XElement scopesElement, XNamespace ns)
     {
         var scopes = new List<PermissionScope>();
@@ -280,9 +356,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
         return scopes;
     }
 
-    /// <summary>
-    /// Parse Action/Constraints/Constraint elements
-    /// </summary>
     private List<PermissionConstraint> ParseConstraints(XElement constraintsElement, XNamespace ns)
     {
         var constraints = new List<PermissionConstraint>();
@@ -297,7 +370,6 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
                 throw new InvalidOperationException($"Invalid constraint type: {constraintTypeStr}");
             }
 
-            // Parse parameters (optional)
             var parameters = new Dictionary<string, string>();
             var parametersElement = constraintElement.Element(ns + "Parameters");
             if (parametersElement != null)

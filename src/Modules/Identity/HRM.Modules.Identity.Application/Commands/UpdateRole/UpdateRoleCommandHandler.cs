@@ -2,8 +2,10 @@ using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
 using HRM.Modules.Identity.Application.Abstractions.Authentication;
 using HRM.Modules.Identity.Application.Abstractions.Data;
+using HRM.Modules.Identity.Application.Commands.CreateRole;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
+using HRM.Modules.Identity.Domain.Services;
 using HRM.Modules.Identity.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,15 +16,18 @@ internal sealed class UpdateRoleCommandHandler : ICommandHandler<UpdateRoleComma
     private readonly IRoleRepository _roleRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly IIdentityQueryContext _context;
+    private readonly IPermissionCatalogService _catalogService;
 
     public UpdateRoleCommandHandler(
         IRoleRepository roleRepository,
         ICurrentUserService currentUser,
-        IIdentityQueryContext context)
+        IIdentityQueryContext context,
+        IPermissionCatalogService catalogService)
     {
         _roleRepository = roleRepository;
         _currentUser = currentUser;
         _context = context;
+        _catalogService = catalogService;
     }
 
     public async Task<Result> Handle(UpdateRoleCommand request, CancellationToken cancellationToken)
@@ -62,10 +67,20 @@ internal sealed class UpdateRoleCommandHandler : ICommandHandler<UpdateRoleComma
             return Result.Failure(RoleErrors.NameAlreadyExists(request.Name));
         }
 
-        // 4. Update name and description
+        // 4. Validate permissions against tenant-aware catalog
+        var tenantId = _currentUser.TenantId
+            ?? throw new InvalidOperationException("TenantId is required to update a role.");
+
+        var validationError = await ValidatePermissionsAsync(tenantId, request.Permissions);
+        if (validationError is not null)
+        {
+            return Result.Failure(validationError);
+        }
+
+        // 5. Update name and description
         role.Update(request.Name, request.Description);
 
-        // 5. Replace permissions
+        // 6. Replace permissions
         var permissions = request.Permissions
             .Select(p => RolePermission.Create(p.Module, p.Entity, p.Action, p.Scope))
             .ToList();
@@ -73,5 +88,29 @@ internal sealed class UpdateRoleCommandHandler : ICommandHandler<UpdateRoleComma
         role.SetPermissions(permissions);
 
         return Result.Success();
+    }
+
+    private async Task<DomainError?> ValidatePermissionsAsync(Guid tenantId, List<PermissionDto> permissions)
+    {
+        foreach (var p in permissions)
+        {
+            if (!await _catalogService.ExistsAsync(p.Module, p.Entity, p.Action))
+            {
+                return RoleErrors.PermissionNotInCatalog(p.Module, p.Entity, p.Action);
+            }
+
+            if (p.Scope.HasValue)
+            {
+                var action = await _catalogService.GetActionAsync(tenantId, p.Module, p.Entity, p.Action);
+                if (action is not null && action.HasScopes() && !action.AllowsScope(p.Scope.Value))
+                {
+                    return RoleErrors.ScopeNotAllowed(
+                        $"{p.Module}.{p.Entity}.{p.Action}",
+                        p.Scope.Value.ToString());
+                }
+            }
+        }
+
+        return null;
     }
 }

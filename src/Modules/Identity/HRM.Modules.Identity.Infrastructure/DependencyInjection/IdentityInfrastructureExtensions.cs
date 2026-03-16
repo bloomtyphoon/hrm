@@ -144,6 +144,7 @@ public static class IdentityInfrastructureExtensions
         services.AddScoped<IAccountRoleRepository, AccountRoleRepository>();
         services.AddScoped<ISystemProfileRepository, SystemProfileRepository>();
         services.AddScoped<IEmployeeProfileRepository, EmployeeProfileRepository>();
+        services.AddScoped<ITenantScopeOverrideRepository, TenantScopeOverrideRepository>();
 
         // Singleton: Dapper-based repository for permission queries (uses connection string directly)
         services.AddSingleton<IAccountPermissionRepository, AccountPermissionRepository>();
@@ -182,8 +183,9 @@ public static class IdentityInfrastructureExtensions
         // ICache is registered by BuildingBlocks (Memory or Redis based on CacheSettings.Provider)
 
         // Factory: Creates IPermissionCatalogSource instances for modules
-        // Service: Aggregates all sources and provides catalog access
+        // Service: Aggregates all sources and provides catalog access (tenant-aware)
         services.AddSingleton<IPermissionCatalogSourceFactory, PermissionCatalogSourceFactory>();
+        services.AddSingleton<ITenantScopeOverrideProvider, TenantScopeOverrideProvider>();
         services.AddSingleton<IPermissionCatalogService, PermissionCatalogService>();
 
         // Register Identity module's catalog source (from embedded resource)
