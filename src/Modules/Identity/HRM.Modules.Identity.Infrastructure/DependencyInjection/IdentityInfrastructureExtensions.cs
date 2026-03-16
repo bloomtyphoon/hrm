@@ -20,7 +20,6 @@ using HRM.Modules.Identity.Infrastructure.BackgroundServices;
 using HRM.Modules.Identity.Infrastructure.IntegrationEventHandlers;
 using HRM.Modules.Identity.Infrastructure.Persistence;
 using HRM.Modules.Identity.Infrastructure.Persistence.Repositories;
-using HRM.Modules.Identity.Infrastructure.Security;
 using HRM.Modules.Identity.Infrastructure.Services;
 using HRM.Modules.Personnel.IntegrationEvents;
 using Microsoft.EntityFrameworkCore;

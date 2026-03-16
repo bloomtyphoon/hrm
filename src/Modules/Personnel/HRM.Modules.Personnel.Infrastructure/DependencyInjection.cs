@@ -11,6 +11,7 @@ using HRM.Modules.Personnel.Infrastructure.BackgroundServices;
 using HRM.Modules.Personnel.Infrastructure.Configuration;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.Infrastructure.Persistence.Repositories;
+using HRM.Modules.Personnel.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
