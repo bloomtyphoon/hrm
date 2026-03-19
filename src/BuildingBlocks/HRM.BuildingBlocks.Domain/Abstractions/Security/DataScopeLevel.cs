@@ -71,28 +71,28 @@ public sealed class DataScopeLevel : IEquatable<DataScopeLevel>, IComparable<Dat
     public static readonly DataScopeLevel None = Register(new(0, "None", ScopeCategory.None, 0));
 
     /// <summary>Self scope — user sees only their own data.</summary>
-    public static readonly DataScopeLevel Self = Register(new(1, "Self", ScopeCategory.Set, 1, resolutionKey: "Self"));
+    public static readonly DataScopeLevel Self = Register(new(1, "Self", ScopeCategory.Set, 1, resolutionKey: ResolutionKeys.Self));
 
     /// <summary>Direct-reports scope — self + immediate subordinates (depth = 1).</summary>
-    public static readonly DataScopeLevel DirectReports = Register(new(2, "DirectReports", ScopeCategory.Set, 2, resolutionKey: "DirectReports"));
+    public static readonly DataScopeLevel DirectReports = Register(new(2, "DirectReports", ScopeCategory.Set, 2, resolutionKey: ResolutionKeys.DirectReports));
 
     /// <summary>Full-hierarchy scope — self + all recursive subordinates (depth = infinite).</summary>
-    public static readonly DataScopeLevel EmployeeSet = Register(new(3, "EmployeeSet", ScopeCategory.Set, 3, resolutionKey: "AllSubordinates"));
+    public static readonly DataScopeLevel EmployeeSet = Register(new(3, "EmployeeSet", ScopeCategory.Set, 3, resolutionKey: ResolutionKeys.AllSubordinates));
 
     /// <summary>Position scope — filter by position dimension.</summary>
-    public static readonly DataScopeLevel Position = Register(new(4, "Position", ScopeCategory.Dimension, 4, dimensionKey: "Position"));
+    public static readonly DataScopeLevel Position = Register(new(4, "Position", ScopeCategory.Dimension, 4, dimensionKey: DimensionKeys.Position));
 
     /// <summary>Department scope — filter by department dimension.</summary>
-    public static readonly DataScopeLevel Department = Register(new(5, "Department", ScopeCategory.Dimension, 5, dimensionKey: "Department"));
+    public static readonly DataScopeLevel Department = Register(new(5, "Department", ScopeCategory.Dimension, 5, dimensionKey: DimensionKeys.Department));
 
     /// <summary>Company scope — filter by company dimension.</summary>
-    public static readonly DataScopeLevel Company = Register(new(6, "Company", ScopeCategory.Dimension, 6, dimensionKey: "Company"));
+    public static readonly DataScopeLevel Company = Register(new(6, "Company", ScopeCategory.Dimension, 6, dimensionKey: DimensionKeys.Company));
 
     /// <summary>Country scope — filter by country dimension.</summary>
-    public static readonly DataScopeLevel Country = Register(new(7, "Country", ScopeCategory.Dimension, 7, dimensionKey: "Country"));
+    public static readonly DataScopeLevel Country = Register(new(7, "Country", ScopeCategory.Dimension, 7, dimensionKey: DimensionKeys.Country));
 
     /// <summary>Region scope — filter by geographic region dimension.</summary>
-    public static readonly DataScopeLevel Region = Register(new(8, "Region", ScopeCategory.Dimension, 8, dimensionKey: "Region"));
+    public static readonly DataScopeLevel Region = Register(new(8, "Region", ScopeCategory.Dimension, 8, dimensionKey: DimensionKeys.Region));
 
     /// <summary>Global scope — no filtering, full tenant access.</summary>
     public static readonly DataScopeLevel Global = Register(new(9, "Global", ScopeCategory.Global, 9));

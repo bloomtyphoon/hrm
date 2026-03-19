@@ -1,3 +1,5 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
+
 namespace HRM.BuildingBlocks.Application.Abstractions.Authorization;
 
 /// <summary>
@@ -47,11 +49,11 @@ public sealed class ScopeDimensionIds
     public IReadOnlyCollection<string> DimensionKeys => _dimensions.Keys;
 
     // Backward-compatible convenience properties
-    public IReadOnlyCollection<Guid> CompanyIds => GetIds("Company");
-    public IReadOnlyCollection<Guid> DepartmentIds => GetIds("Department");
-    public IReadOnlyCollection<Guid> PositionIds => GetIds("Position");
-    public IReadOnlyCollection<Guid> CountryIds => GetIds("Country");
-    public IReadOnlyCollection<Guid> RegionIds => GetIds("Region");
+    public IReadOnlyCollection<Guid> CompanyIds => GetIds(DimensionKeys.Company);
+    public IReadOnlyCollection<Guid> DepartmentIds => GetIds(DimensionKeys.Department);
+    public IReadOnlyCollection<Guid> PositionIds => GetIds(DimensionKeys.Position);
+    public IReadOnlyCollection<Guid> CountryIds => GetIds(DimensionKeys.Country);
+    public IReadOnlyCollection<Guid> RegionIds => GetIds(DimensionKeys.Region);
 
     public static ScopeDimensionIds Empty => new(new Dictionary<string, IReadOnlyCollection<Guid>>());
 

@@ -93,8 +93,8 @@ public sealed class DataScopeService : IDataScopeService
         // Resolve employee IDs based on resolution strategy
         var ids = level.ResolutionKey switch
         {
-            "DirectReports" => await _hierarchyResolver.ResolveDirectSubordinatesAsync(employeeId, cancellationToken),
-            "AllSubordinates" => await _hierarchyResolver.ResolveAllSubordinatesAsync(employeeId, cancellationToken),
+            ResolutionKeys.DirectReports => await _hierarchyResolver.ResolveDirectSubordinatesAsync(employeeId, cancellationToken),
+            ResolutionKeys.AllSubordinates => await _hierarchyResolver.ResolveAllSubordinatesAsync(employeeId, cancellationToken),
             _ => (IReadOnlySet<Guid>)new HashSet<Guid> { employeeId } // Unknown strategy: fallback to self
         };
 

@@ -45,7 +45,7 @@ public class Company : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantEn
     /// Company self-reference for scope filtering.
     /// Entities with this CompanyId are visible to users with Company scope.
     /// </summary>
-    [ScopeDimension("Company")]
+    [ScopeDimension(DimensionKeys.Company)]
     public Guid CompanyId => Id;
 
     /// <summary>

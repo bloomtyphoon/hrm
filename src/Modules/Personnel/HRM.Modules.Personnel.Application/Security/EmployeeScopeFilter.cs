@@ -80,11 +80,11 @@ public static class EmployeeScopeFilter
         // Use DimensionKey to determine which assignment column to check
         return rule.Level.DimensionKey switch
         {
-            "Company" =>
+            DimensionKeys.Company =>
                 await assignmentQuery.AnyAsync(a => ids.Contains(a.CompanyId), cancellationToken),
-            "Department" =>
+            DimensionKeys.Department =>
                 await assignmentQuery.AnyAsync(a => ids.Contains(a.DepartmentId), cancellationToken),
-            "Position" =>
+            DimensionKeys.Position =>
                 await assignmentQuery.AnyAsync(a => ids.Contains(a.PositionId), cancellationToken),
             _ => false
         };
@@ -100,13 +100,13 @@ public static class EmployeeScopeFilter
         // Use DimensionKey to determine which assignment column to filter
         var employeeIdsWithAccess = rule.Level.DimensionKey switch
         {
-            "Company" => context.EmployeeAssignments
+            DimensionKeys.Company => context.EmployeeAssignments
                 .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.CompanyId))
                 .Select(a => a.EmployeeId),
-            "Department" => context.EmployeeAssignments
+            DimensionKeys.Department => context.EmployeeAssignments
                 .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.DepartmentId))
                 .Select(a => a.EmployeeId),
-            "Position" => context.EmployeeAssignments
+            DimensionKeys.Position => context.EmployeeAssignments
                 .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.PositionId))
                 .Select(a => a.EmployeeId),
             _ => context.EmployeeAssignments.Where(_ => false).Select(a => a.EmployeeId)

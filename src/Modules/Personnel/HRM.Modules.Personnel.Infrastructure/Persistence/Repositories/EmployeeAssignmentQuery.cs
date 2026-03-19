@@ -1,4 +1,5 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Personnel.Application.Abstractions;
 using HRM.Modules.Personnel.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -85,11 +86,11 @@ internal sealed class EmployeeAssignmentQuery : IEmployeeAssignmentQuery
             return ScopeDimensionIds.Empty;
 
         return new ScopeDimensionIds.Builder()
-            .Add("Company", activeAssignments.Select(a => a.CompanyId).Distinct().ToList())
-            .Add("Department", activeAssignments.Select(a => a.DepartmentId).Distinct().ToList())
-            .Add("Position", activeAssignments.Select(a => a.PositionId).Distinct().ToList())
-            .Add("Country", employee?.CountryId is { } cid ? new[] { cid } : Array.Empty<Guid>())
-            .Add("Region", employee?.RegionId is { } rid ? new[] { rid } : Array.Empty<Guid>())
+            .Add(DimensionKeys.Company, activeAssignments.Select(a => a.CompanyId).Distinct().ToList())
+            .Add(DimensionKeys.Department, activeAssignments.Select(a => a.DepartmentId).Distinct().ToList())
+            .Add(DimensionKeys.Position, activeAssignments.Select(a => a.PositionId).Distinct().ToList())
+            .Add(DimensionKeys.Country, employee?.CountryId is { } cid ? new[] { cid } : Array.Empty<Guid>())
+            .Add(DimensionKeys.Region, employee?.RegionId is { } rid ? new[] { rid } : Array.Empty<Guid>())
             .Build();
     }
 }

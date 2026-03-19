@@ -81,15 +81,15 @@ public static class AccountScopeFilter
         // Use DimensionKey to determine which access collection to check
         return rule.Level.DimensionKey switch
         {
-            "Company" => await context.EmployeeProfiles
+            DimensionKeys.Company => await context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.CompanyAccess.Any(ca => rule.DimensionIds.Contains(ca.CompanyId)))
                 .AnyAsync(ep => ep.AccountId == targetAccountId, cancellationToken),
-            "Department" => await context.EmployeeProfiles
+            DimensionKeys.Department => await context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.DepartmentAccess.Any(da => rule.DimensionIds.Contains(da.DepartmentId)))
                 .AnyAsync(ep => ep.AccountId == targetAccountId, cancellationToken),
-            "Position" => await context.EmployeeProfiles
+            DimensionKeys.Position => await context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.PositionAccess.Any(pa => rule.DimensionIds.Contains(pa.PositionId)))
                 .AnyAsync(ep => ep.AccountId == targetAccountId, cancellationToken),
@@ -117,15 +117,15 @@ public static class AccountScopeFilter
     {
         var allowedAccountIds = rule.Level.DimensionKey switch
         {
-            "Company" => context.EmployeeProfiles
+            DimensionKeys.Company => context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.CompanyAccess.Any(ca => rule.DimensionIds.Contains(ca.CompanyId)))
                 .Select(ep => ep.AccountId),
-            "Department" => context.EmployeeProfiles
+            DimensionKeys.Department => context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.DepartmentAccess.Any(da => rule.DimensionIds.Contains(da.DepartmentId)))
                 .Select(ep => ep.AccountId),
-            "Position" => context.EmployeeProfiles
+            DimensionKeys.Position => context.EmployeeProfiles
                 .AsNoTracking()
                 .Where(ep => ep.PositionAccess.Any(pa => rule.DimensionIds.Contains(pa.PositionId)))
                 .Select(ep => ep.AccountId),

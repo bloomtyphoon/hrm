@@ -94,21 +94,21 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
     /// Primary company ID (weak reference to Organization.Company).
     /// Used for Company scope filtering.
     /// </summary>
-    [ScopeDimension("Company")]
+    [ScopeDimension(DimensionKeys.Company)]
     public Guid? PrimaryCompanyId { get; private set; }
 
     /// <summary>
     /// Primary department ID (weak reference to Organization.Department).
     /// Used for Department scope filtering.
     /// </summary>
-    [ScopeDimension("Department")]
+    [ScopeDimension(DimensionKeys.Department)]
     public Guid? PrimaryDepartmentId { get; private set; }
 
     /// <summary>
     /// Primary position ID (weak reference to Organization.Position).
     /// Used for Position scope filtering.
     /// </summary>
-    [ScopeDimension("Position")]
+    [ScopeDimension(DimensionKeys.Position)]
     public Guid? PrimaryPositionId { get; private set; }
 
     #endregion
@@ -120,7 +120,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
     /// Used for Country scope filtering.
     /// Populated via SetGeographicScope or integration events from Organization module.
     /// </summary>
-    [ScopeDimension("Country")]
+    [ScopeDimension(DimensionKeys.Country)]
     public Guid? CountryId { get; private set; }
 
     /// <summary>
@@ -128,7 +128,7 @@ public class Employee : AuditableEntity, IAggregateRoot, IScopedEntity, ITenantE
     /// Used for Region scope filtering.
     /// Populated via SetGeographicScope or integration events from Organization module.
     /// </summary>
-    [ScopeDimension("Region")]
+    [ScopeDimension(DimensionKeys.Region)]
     public Guid? RegionId { get; private set; }
 
     #endregion

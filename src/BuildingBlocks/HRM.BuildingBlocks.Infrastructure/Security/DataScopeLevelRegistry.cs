@@ -62,6 +62,65 @@ public sealed class DataScopeLevelRegistry : IDataScopeLevelRegistry
         _logger.LogInformation(
             "DataScopeLevelRegistry initialized with {Count} scope levels from DB ({Active} active)",
             levels.Count, levels.Count(l => _allLevels.Any(a => a.Id == l.Id)));
+
+        ValidateDimensionKeys(levels);
+        ValidateResolutionKeys(levels);
+    }
+
+    /// <summary>
+    /// Validate that all DB-defined dimension keys match known constants.
+    /// Logs warnings for unknown keys — these will cause silent deny at runtime.
+    /// </summary>
+    private void ValidateDimensionKeys(List<DataScopeLevel> levels)
+    {
+        var dimensionLevels = levels
+            .Where(l => l.Category == ScopeCategory.Dimension && l.DimensionKey is not null);
+
+        foreach (var level in dimensionLevels)
+        {
+            if (!DimensionKeys.IsKnown(level.DimensionKey!))
+            {
+                _logger.LogWarning(
+                    "DataScopeLevel '{Name}' (Id={Id}) has DimensionKey '{DimensionKey}' " +
+                    "which is NOT in DimensionKeys constants. " +
+                    "No entity has [ScopeDimension(\"{DimensionKey}\")] — this scope will silently deny access. " +
+                    "Add the key to DimensionKeys and [ScopeDimension] attributes, or fix the DB value.",
+                    level.Name, level.Id, level.DimensionKey, level.DimensionKey);
+            }
+        }
+
+        // Check dimension levels that are missing DimensionKey
+        var missingKey = levels
+            .Where(l => l.Category == ScopeCategory.Dimension && l.DimensionKey is null);
+
+        foreach (var level in missingKey)
+        {
+            _logger.LogWarning(
+                "DataScopeLevel '{Name}' (Id={Id}) has Category=Dimension but DimensionKey is NULL. " +
+                "This scope will silently deny access. Set DimensionKey in the DB.",
+                level.Name, level.Id);
+        }
+    }
+
+    /// <summary>
+    /// Validate that all DB-defined resolution keys match known constants.
+    /// </summary>
+    private void ValidateResolutionKeys(List<DataScopeLevel> levels)
+    {
+        var setLevels = levels
+            .Where(l => l.Category == ScopeCategory.Set && l.ResolutionKey is not null);
+
+        foreach (var level in setLevels)
+        {
+            if (!ResolutionKeys.IsKnown(level.ResolutionKey!))
+            {
+                _logger.LogWarning(
+                    "DataScopeLevel '{Name}' (Id={Id}) has ResolutionKey '{ResolutionKey}' " +
+                    "which is NOT in ResolutionKeys constants. " +
+                    "DataScopeService will fallback to Self resolution for this scope.",
+                    level.Name, level.Id, level.ResolutionKey);
+            }
+        }
     }
 
     public IReadOnlyList<DataScopeLevel> GetAll()

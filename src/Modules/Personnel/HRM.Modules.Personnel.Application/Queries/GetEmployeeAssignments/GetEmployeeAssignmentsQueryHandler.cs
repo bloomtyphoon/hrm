@@ -58,9 +58,9 @@ public sealed class GetEmployeeAssignmentsQueryHandler
             var ids = rule.DimensionIds.ToList();
             query = rule.Level.DimensionKey switch
             {
-                "Company" => query.Where(a => ids.Contains(a.CompanyId)),
-                "Department" => query.Where(a => ids.Contains(a.DepartmentId)),
-                "Position" => query.Where(a => ids.Contains(a.PositionId)),
+                DimensionKeys.Company => query.Where(a => ids.Contains(a.CompanyId)),
+                DimensionKeys.Department => query.Where(a => ids.Contains(a.DepartmentId)),
+                DimensionKeys.Position => query.Where(a => ids.Contains(a.PositionId)),
                 _ => query
             };
         }
