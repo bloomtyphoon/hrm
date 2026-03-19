@@ -3,67 +3,33 @@ using HRM.BuildingBlocks.Domain.Abstractions.Security;
 namespace HRM.Modules.Identity.Domain.ValueObjects;
 
 /// <summary>
-/// Value object representing a permission assigned to a role
+/// Value object representing a permission assigned to a role.
 ///
 /// Structure:
 /// - Module.Entity.Action format (e.g., "Personnel.Employee.View")
-/// - Optional Scope for data visibility (Company, Department, Position, Self)
+/// - Optional Scope for data visibility
 /// - Immutable once created
-///
-/// Validation:
-/// - Module, Entity, Action are required
-/// - Scope is optional (for actions without scopes or operator roles)
-/// - Format must match catalog structure
-///
-/// Examples:
-/// - Personnel.Employee.View with Department scope
-/// - Attendance.Timesheet.Approve with Company scope
-/// - System.Configuration.Update (no scope - operator only)
-///
-/// Comparison:
-/// Two RolePermissions are equal if they have the same Module, Entity, Action, and Scope.
-/// This is used for duplicate detection (fail-fast validation).
 /// </summary>
 public sealed record RolePermission
 {
-    /// <summary>
-    /// Module name from Permission Catalog (e.g., "Personnel", "Attendance")
-    /// </summary>
+    /// <summary>Module name from Permission Catalog.</summary>
     public string Module { get; }
 
-    /// <summary>
-    /// Entity name from Permission Catalog (e.g., "Employee", "Timesheet")
-    /// </summary>
+    /// <summary>Entity name from Permission Catalog.</summary>
     public string Entity { get; }
 
-    /// <summary>
-    /// Action name from Permission Catalog (e.g., "View", "Create", "Approve")
-    /// </summary>
+    /// <summary>Action name from Permission Catalog.</summary>
     public string Action { get; }
 
     /// <summary>
-    /// Optional scope for data visibility
-    /// NULL = No scope restriction (for operators or actions without scopes)
-    ///
-    /// User scopes:
-    /// - Company: All data in assigned companies
-    /// - Department: All data in assigned departments
-    /// - Position: Team members with same position
-    /// - Self: Only own data
+    /// Optional scope for data visibility.
+    /// NULL = No scope restriction (for operators or actions without scopes).
     /// </summary>
     public DataScopeLevel? Scope { get; }
 
-    /// <summary>
-    /// Full permission identifier in format "Module.Entity.Action"
-    /// Used for permission checks and display
-    /// Example: "Personnel.Employee.View"
-    /// </summary>
+    /// <summary>Full permission identifier: "Module.Entity.Action".</summary>
     public string PermissionKey => $"{Module}.{Entity}.{Action}";
 
-    /// <summary>
-    /// Private constructor for creating RolePermission instances
-    /// Use static factory methods for validation
-    /// </summary>
     private RolePermission(string module, string entity, string action, DataScopeLevel? scope)
     {
         Module = module;
@@ -72,62 +38,30 @@ public sealed record RolePermission
         Scope = scope;
     }
 
-    /// <summary>
-    /// Factory method to create a RolePermission with validation
-    ///
-    /// Validation Rules:
-    /// - Module, Entity, Action cannot be null or empty
-    /// - Names should match catalog structure (validated at application layer)
-    ///
-    /// Fail-fast Strategy:
-    /// - Throws ArgumentException immediately if validation fails
-    /// - No silent failures or default values
-    /// </summary>
-    /// <param name="module">Module name from catalog</param>
-    /// <param name="entity">Entity name from catalog</param>
-    /// <param name="action">Action name from catalog</param>
-    /// <param name="scope">Optional scope level</param>
-    /// <returns>Valid RolePermission instance</returns>
-    /// <exception cref="ArgumentException">If module, entity, or action is null/empty</exception>
+    /// <summary>Factory method to create a RolePermission with validation.</summary>
     public static RolePermission Create(string module, string entity, string action, DataScopeLevel? scope = null)
     {
         if (string.IsNullOrWhiteSpace(module))
             throw new ArgumentException("Module cannot be null or empty", nameof(module));
-
         if (string.IsNullOrWhiteSpace(entity))
             throw new ArgumentException("Entity cannot be null or empty", nameof(entity));
-
         if (string.IsNullOrWhiteSpace(action))
             throw new ArgumentException("Action cannot be null or empty", nameof(action));
 
         return new RolePermission(module, entity, action, scope);
     }
 
-    /// <summary>
-    /// Check if this permission has a scope restriction
-    /// </summary>
-    public bool HasScope() => Scope.HasValue;
+    /// <summary>Check if this permission has a scope restriction.</summary>
+    public bool HasScope() => Scope is not null;
 
-    /// <summary>
-    /// Get scope display name for UI
-    /// </summary>
-    public string GetScopeDisplay() => Scope switch
+    /// <summary>Get scope display name for UI.</summary>
+    public string GetScopeDisplay()
     {
-        DataScopeLevel.Global => "Global",
-        DataScopeLevel.Company => "Company",
-        DataScopeLevel.Department => "Department",
-        DataScopeLevel.Position => "Position",
-        DataScopeLevel.EmployeeSet => "Team",
-        DataScopeLevel.Self => "Self",
-        DataScopeLevel.None => "No Access",
-        null => "No Scope",
-        _ => "Unknown"
-    };
+        if (Scope is null) return "No Scope";
+        return Scope.Name;
+    }
 
-    /// <summary>
-    /// Format permission for display: "Module.Entity.Action (Scope)"
-    /// Example: "Personnel.Employee.View (Department)"
-    /// </summary>
+    /// <summary>Format permission for display: "Module.Entity.Action (Scope)".</summary>
     public override string ToString()
     {
         return HasScope() ? $"{PermissionKey} ({GetScopeDisplay()})" : PermissionKey;

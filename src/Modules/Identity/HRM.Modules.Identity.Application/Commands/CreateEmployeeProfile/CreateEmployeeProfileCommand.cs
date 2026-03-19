@@ -9,7 +9,7 @@ namespace HRM.Modules.Identity.Application.Commands.CreateEmployeeProfile;
 public sealed record CreateEmployeeProfileCommand(
     Guid AccountId,
     Guid EmployeeId,
-    DataScopeLevel DefaultScopeLevel = DataScopeLevel.Self,
+    DataScopeLevel? DefaultScopeLevel = null,
     Guid? PrimaryCompanyId = null,
     Guid? PrimaryDepartmentId = null,
     Guid? PrimaryPositionId = null,

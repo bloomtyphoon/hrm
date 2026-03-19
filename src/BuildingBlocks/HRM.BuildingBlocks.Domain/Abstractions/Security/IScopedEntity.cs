@@ -14,13 +14,13 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 /// <code>
 /// public class Employee : Entity, IScopedEntity
 /// {
-///     [ScopeDimension(DataScopeLevel.Company)]
+///     [ScopeDimension("Company")]
 ///     public Guid? CompanyId { get; private set; }
 ///
-///     [ScopeDimension(DataScopeLevel.Department)]
+///     [ScopeDimension("Department")]
 ///     public Guid? DepartmentId { get; private set; }
 ///
-///     [ScopeDimension(DataScopeLevel.Position)]
+///     [ScopeDimension("Position")]
 ///     public Guid? PositionId { get; private set; }
 ///
 ///     public Guid OwnerId => Id;

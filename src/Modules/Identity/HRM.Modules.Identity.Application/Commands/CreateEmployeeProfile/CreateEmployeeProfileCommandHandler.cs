@@ -1,5 +1,6 @@
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Entities;
 using HRM.Modules.Identity.Domain.Errors;
 using HRM.Modules.Identity.Domain.Repositories;
@@ -64,7 +65,7 @@ internal sealed class CreateEmployeeProfileCommandHandler : ICommandHandler<Crea
             tenantId: account.TenantId,
             accountId: request.AccountId,
             employeeId: request.EmployeeId,
-            defaultScopeLevel: request.DefaultScopeLevel,
+            defaultScopeLevel: request.DefaultScopeLevel ?? DataScopeLevel.Self,
             primaryCompanyId: request.PrimaryCompanyId,
             primaryDepartmentId: request.PrimaryDepartmentId,
             primaryPositionId: request.PrimaryPositionId,

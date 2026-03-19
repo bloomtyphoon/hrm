@@ -36,19 +36,19 @@ public class EmployeeAssignment : Entity, IScopedEntity
     /// <summary>
     /// Company ID (weak reference to Organization.Company).
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Company)]
+    [ScopeDimension("Company")]
     public Guid CompanyId { get; private set; }
 
     /// <summary>
     /// Department ID (weak reference to Organization.Department).
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Department)]
+    [ScopeDimension("Department")]
     public Guid DepartmentId { get; private set; }
 
     /// <summary>
     /// Position ID (weak reference to Organization.Position).
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Position)]
+    [ScopeDimension("Position")]
     public Guid PositionId { get; private set; }
 
     /// <summary>

@@ -7,8 +7,7 @@ namespace HRM.BuildingBlocks.Infrastructure.Security;
 /// Shared implementation of IDataScopeService for all modules.
 ///
 /// All modules resolve data scope from the same source: employee assignments.
-/// This eliminates per-module duplication (Personnel, Identity, Organization
-/// each had their own IDataScopeService implementation with identical logic).
+/// Uses category-based dispatch for dynamic scope level support.
 ///
 /// Flow:
 ///   1. IScopeGrantProvider (Identity) → scope LEVEL + employeeId
@@ -40,10 +39,10 @@ public sealed class DataScopeService : IDataScopeService
     {
         var grant = await _grantProvider.GetGrantAsync(userId, permission, cancellationToken);
 
-        if (grant.IsSystemAccount || grant.Level == DataScopeLevel.Global)
+        if (grant.IsSystemAccount || grant.Level.IsGlobal)
             return DataScopeRule.Global();
 
-        if (grant.Level == DataScopeLevel.None)
+        if (grant.Level.IsNone)
             return DataScopeRule.None();
 
         if (!grant.EmployeeId.HasValue)
@@ -51,37 +50,11 @@ public sealed class DataScopeService : IDataScopeService
 
         var employeeId = grant.EmployeeId.Value;
 
-        // Set-based scopes: resolve from hierarchy
-        if (grant.Level == DataScopeLevel.Self)
-            return DataScopeRule.Self(employeeId);
-
-        if (grant.Level == DataScopeLevel.DirectReports)
+        // Category-based dispatch
+        return grant.Level.Category switch
         {
-            var ids = await _hierarchyResolver.ResolveDirectSubordinatesAsync(employeeId, cancellationToken);
-            return DataScopeRule.DirectReports(ids);
-        }
-
-        if (grant.Level == DataScopeLevel.EmployeeSet)
-        {
-            var ids = await _hierarchyResolver.ResolveAllSubordinatesAsync(employeeId, cancellationToken);
-            return DataScopeRule.EmployeeSet(ids);
-        }
-
-        // Dimension-based scopes: resolve from employee assignments
-        var dimensions = await _dimensionProvider.GetScopeDimensionIdsAsync(employeeId, cancellationToken);
-
-        return grant.Level switch
-        {
-            DataScopeLevel.Position when dimensions.PositionIds.Count > 0 =>
-                DataScopeRule.Position(dimensions.PositionIds),
-            DataScopeLevel.Department when dimensions.DepartmentIds.Count > 0 =>
-                DataScopeRule.Department(dimensions.DepartmentIds),
-            DataScopeLevel.Company when dimensions.CompanyIds.Count > 0 =>
-                DataScopeRule.Company(dimensions.CompanyIds),
-            DataScopeLevel.Country when dimensions.CountryIds.Count > 0 =>
-                DataScopeRule.Country(dimensions.CountryIds),
-            DataScopeLevel.Region when dimensions.RegionIds.Count > 0 =>
-                DataScopeRule.Region(dimensions.RegionIds),
+            ScopeCategory.Set => await ResolveSetScopeAsync(grant.Level, employeeId, cancellationToken),
+            ScopeCategory.Dimension => await ResolveDimensionScopeAsync(grant.Level, employeeId, cancellationToken),
             _ => DataScopeRule.None()
         };
     }
@@ -94,10 +67,10 @@ public sealed class DataScopeService : IDataScopeService
     {
         var grant = await _grantProvider.GetGrantAsync(userId, permission, cancellationToken);
 
-        if (grant.IsSystemAccount || grant.Level == DataScopeLevel.Global)
+        if (grant.IsSystemAccount || grant.Level.IsGlobal)
             return DataScopeRule.Global();
 
-        if (grant.Level == DataScopeLevel.None || !grant.EmployeeId.HasValue)
+        if (grant.Level.IsNone || !grant.EmployeeId.HasValue)
             return DataScopeRule.None();
 
         // Always resolve to Company scope regardless of granted level.
@@ -107,6 +80,39 @@ public sealed class DataScopeService : IDataScopeService
 
         return dimensions.CompanyIds.Count > 0
             ? DataScopeRule.Company(dimensions.CompanyIds)
+            : DataScopeRule.None();
+    }
+
+    private async Task<DataScopeRule> ResolveSetScopeAsync(
+        DataScopeLevel level, Guid employeeId, CancellationToken cancellationToken)
+    {
+        // Self is a special set scope: just the employee's own ID
+        if (level == DataScopeLevel.Self)
+            return DataScopeRule.Self(employeeId);
+
+        // Resolve employee IDs based on resolution strategy
+        var ids = level.ResolutionKey switch
+        {
+            "DirectReports" => await _hierarchyResolver.ResolveDirectSubordinatesAsync(employeeId, cancellationToken),
+            "AllSubordinates" => await _hierarchyResolver.ResolveAllSubordinatesAsync(employeeId, cancellationToken),
+            _ => (IReadOnlySet<Guid>)new HashSet<Guid> { employeeId } // Unknown strategy: fallback to self
+        };
+
+        return DataScopeRule.ForSet(level, ids);
+    }
+
+    private async Task<DataScopeRule> ResolveDimensionScopeAsync(
+        DataScopeLevel level, Guid employeeId, CancellationToken cancellationToken)
+    {
+        var dimensions = await _dimensionProvider.GetScopeDimensionIdsAsync(employeeId, cancellationToken);
+
+        if (level.DimensionKey is null)
+            return DataScopeRule.None();
+
+        var ids = dimensions.GetIds(level.DimensionKey);
+
+        return ids.Count > 0
+            ? DataScopeRule.ForDimension(level, ids)
             : DataScopeRule.None();
     }
 }

@@ -68,10 +68,10 @@ internal sealed class RecordManualAttendanceCommandHandler
     // ManualRecord permission only supports Company and Global scopes (per PermissionCatalog.xml).
     // For Company scope: CompanyId must be provided and fall within the user's allowed companies.
     private static bool IsEmployeeInScope(DataScopeRule rule, RecordManualAttendanceCommand request)
-        => rule.Level switch
+        => rule.Level.Category switch
         {
-            DataScopeLevel.Global => true,
-            DataScopeLevel.Company => request.CompanyId.HasValue
+            ScopeCategory.Global => true,
+            ScopeCategory.Dimension => request.CompanyId.HasValue
                 && rule.DimensionIds.Contains(request.CompanyId.Value),
             _ => false
         };

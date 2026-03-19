@@ -338,17 +338,8 @@ public sealed class PermissionCatalogService : IPermissionCatalogService
             var readOnlyStr = scopeElement.Attribute("readOnly")?.Value;
             var readOnly = bool.TryParse(readOnlyStr, out var readOnlyValue) && readOnlyValue;
 
-            DataScopeLevel scopeLevel = scopeValue switch
-            {
-                "None" => DataScopeLevel.None,
-                "Self" => DataScopeLevel.Self,
-                "EmployeeSet" => DataScopeLevel.EmployeeSet,
-                "Position" => DataScopeLevel.Position,
-                "Department" => DataScopeLevel.Department,
-                "Company" => DataScopeLevel.Company,
-                "Global" => DataScopeLevel.Global,
-                _ => throw new InvalidOperationException($"Invalid scope value: {scopeValue}")
-            };
+            var scopeLevel = DataScopeLevel.TryFromName(scopeValue)
+                ?? throw new InvalidOperationException($"Invalid scope value: {scopeValue}. Ensure the scope level is registered in DataScopeLevels table.");
 
             scopes.Add(new PermissionScope(scopeLevel, scopeDisplayName, readOnly));
         }

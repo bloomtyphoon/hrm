@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -35,7 +36,9 @@ internal sealed class EmployeeProfileConfiguration : IEntityTypeConfiguration<Em
 
         builder.Property(ep => ep.DefaultScopeLevel)
             .IsRequired()
-            .HasConversion<int>();
+            .HasConversion(
+                v => v.Id,
+                v => DataScopeLevel.FromId(v));
 
         builder.Property(ep => ep.CanAccessAllAssignedCompanies)
             .IsRequired()

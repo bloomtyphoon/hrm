@@ -7,6 +7,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 /// - Exactly ONE dimension/set per rule (no ambiguous multi-state)
 /// - Factory methods enforce valid construction (illegal states are unrepresentable)
 /// - No identity info (UserId) — only filter-relevant data
+/// - Category-based dispatch: switch on Level.Category, not specific levels
 ///
 /// Rule types:
 /// 1. Set-based: Self, DirectReports, EmployeeSet — filter by OwnerId IN (ids)
@@ -14,7 +15,7 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 ///    — filter by [ScopeDimension] property IN (DimensionIds)
 ///
 /// Architecture layers:
-///   Personnel module → resolves scope logic → produces DataScopeRule
+///   DataScopeService → resolves scope logic → produces DataScopeRule
 ///   EfScopeExpressionBuilder → translates rule to EF Expression
 ///   SqlScopeWhereBuilder → translates rule to SQL WHERE clause
 /// </summary>
@@ -24,8 +25,8 @@ public sealed class DataScopeRule
     public DataScopeLevel Level { get; }
 
     /// <summary>
-    /// IDs for dimension-based scopes (Position, Department, Company, Country, Region).
-    /// Empty for set-based levels.
+    /// IDs for dimension-based scopes.
+    /// Empty for non-dimension levels.
     /// </summary>
     public IReadOnlyCollection<Guid> DimensionIds { get; }
 
@@ -40,19 +41,13 @@ public sealed class DataScopeRule
     public IReadOnlyCollection<Guid> EmployeeIds { get; }
 
     /// <summary>Whether this rule grants any data access.</summary>
-    public bool HasAccess => Level != DataScopeLevel.None;
+    public bool HasAccess => !Level.IsNone;
 
     /// <summary>Whether this is a dimension-based rule.</summary>
-    public bool IsDimensionBased => Level is DataScopeLevel.Company
-        or DataScopeLevel.Department
-        or DataScopeLevel.Position
-        or DataScopeLevel.Country
-        or DataScopeLevel.Region;
+    public bool IsDimensionBased => Level.IsDimensionBased;
 
     /// <summary>Whether this is a set-based rule (filters by OwnerId).</summary>
-    public bool IsSetBased => Level is DataScopeLevel.Self
-        or DataScopeLevel.DirectReports
-        or DataScopeLevel.EmployeeSet;
+    public bool IsSetBased => Level.IsSetBased;
 
     private DataScopeRule(
         DataScopeLevel level,
@@ -62,9 +57,9 @@ public sealed class DataScopeRule
     {
         Level = level;
 
-        switch (level)
+        switch (level.Category)
         {
-            case DataScopeLevel.Self:
+            case ScopeCategory.Set when level == DataScopeLevel.Self:
                 if (selfEmployeeId is null)
                     throw new ArgumentException("Self scope requires selfEmployeeId.", nameof(selfEmployeeId));
                 SelfEmployeeId = selfEmployeeId;
@@ -72,24 +67,19 @@ public sealed class DataScopeRule
                 EmployeeIds = Array.Empty<Guid>();
                 break;
 
-            case DataScopeLevel.DirectReports:
-            case DataScopeLevel.EmployeeSet:
+            case ScopeCategory.Set:
                 var empIds = employeeIds?.ToArray() ?? [];
                 if (empIds.Length == 0)
-                    throw new ArgumentException($"{level} scope requires at least one employee ID.", nameof(employeeIds));
+                    throw new ArgumentException($"{level.Name} scope requires at least one employee ID.", nameof(employeeIds));
                 EmployeeIds = empIds;
                 DimensionIds = Array.Empty<Guid>();
                 SelfEmployeeId = null;
                 break;
 
-            case DataScopeLevel.Company:
-            case DataScopeLevel.Department:
-            case DataScopeLevel.Position:
-            case DataScopeLevel.Country:
-            case DataScopeLevel.Region:
+            case ScopeCategory.Dimension:
                 var dimIds = dimensionIds?.ToArray() ?? [];
                 if (dimIds.Length == 0)
-                    throw new ArgumentException($"{level} scope requires at least one dimension ID.", nameof(dimensionIds));
+                    throw new ArgumentException($"{level.Name} scope requires at least one dimension ID.", nameof(dimensionIds));
                 DimensionIds = dimIds;
                 EmployeeIds = Array.Empty<Guid>();
                 SelfEmployeeId = null;
@@ -103,7 +93,7 @@ public sealed class DataScopeRule
         }
     }
 
-    #region Factory Methods
+    #region Generic Factory Methods
 
     /// <summary>Global access — no filtering.</summary>
     public static DataScopeRule Global() => new(DataScopeLevel.Global);
@@ -122,8 +112,7 @@ public sealed class DataScopeRule
         => new(DataScopeLevel.DirectReports, employeeIds: employeeIds);
 
     /// <summary>
-    /// Full-hierarchy scope — filter to self + all recursive subordinates (depth = ∞).
-    /// Backed by closure table; falls back to recursive CTE.
+    /// Full-hierarchy scope — filter to self + all recursive subordinates (depth = infinite).
     /// </summary>
     public static DataScopeRule EmployeeSet(IEnumerable<Guid> employeeIds)
         => new(DataScopeLevel.EmployeeSet, employeeIds: employeeIds);
@@ -147,6 +136,33 @@ public sealed class DataScopeRule
     /// <summary>Region scope — filter by geographic region dimension.</summary>
     public static DataScopeRule Region(IEnumerable<Guid> regionIds)
         => new(DataScopeLevel.Region, regionIds);
+
+    /// <summary>
+    /// Create a set-based scope rule for any set-based level.
+    /// Use for dynamically-defined set scopes loaded from DB.
+    /// </summary>
+    public static DataScopeRule ForSet(DataScopeLevel level, IEnumerable<Guid> employeeIds, Guid? selfEmployeeId = null)
+    {
+        if (!level.IsSetBased)
+            throw new ArgumentException($"Level '{level.Name}' is not set-based.", nameof(level));
+
+        if (level == DataScopeLevel.Self && selfEmployeeId.HasValue)
+            return new DataScopeRule(level, selfEmployeeId: selfEmployeeId);
+
+        return new DataScopeRule(level, employeeIds: employeeIds);
+    }
+
+    /// <summary>
+    /// Create a dimension-based scope rule for any dimension level.
+    /// Use for dynamically-defined dimension scopes loaded from DB.
+    /// </summary>
+    public static DataScopeRule ForDimension(DataScopeLevel level, IEnumerable<Guid> dimensionIds)
+    {
+        if (!level.IsDimensionBased)
+            throw new ArgumentException($"Level '{level.Name}' is not dimension-based.", nameof(level));
+
+        return new DataScopeRule(level, dimensionIds);
+    }
 
     #endregion
 }

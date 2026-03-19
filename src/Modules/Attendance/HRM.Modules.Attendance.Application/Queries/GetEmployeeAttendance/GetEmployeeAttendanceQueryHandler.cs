@@ -82,13 +82,16 @@ public sealed class GetEmployeeAttendanceQueryHandler
         IQueryable<AttendanceRecord> query, DataScopeRule rule)
     {
         var companyIds = rule.DimensionIds.ToList();
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global      => query,
-            DataScopeLevel.None        => query.Where(_ => false),
-            DataScopeLevel.Self        => query.Where(r => r.EmployeeId == rule.SelfEmployeeId!.Value),
-            DataScopeLevel.EmployeeSet => query.Where(r => rule.EmployeeIds.Contains(r.EmployeeId)),
-            DataScopeLevel.Company     => query.Where(r => r.CompanyId != null && companyIds.Contains(r.CompanyId.Value)),
+            ScopeCategory.Global => query,
+            ScopeCategory.None => query.Where(_ => false),
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self =>
+                query.Where(r => r.EmployeeId == rule.SelfEmployeeId!.Value),
+            ScopeCategory.Set =>
+                query.Where(r => rule.EmployeeIds.Contains(r.EmployeeId)),
+            ScopeCategory.Dimension =>
+                query.Where(r => r.CompanyId != null && companyIds.Contains(r.CompanyId.Value)),
             _ => query.Where(_ => false)
         };
     }

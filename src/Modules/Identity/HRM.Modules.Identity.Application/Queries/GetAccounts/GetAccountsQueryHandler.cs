@@ -52,7 +52,7 @@ public sealed class GetAccountsQueryHandler
         query = AccountScopeFilter.ApplyScope(query, rule, userId, _context);
 
         // Layer 2: Company filter — different rules per account type
-        query = rule.Level == DataScopeLevel.Global
+        query = rule.Level.Category == ScopeCategory.Global
             ? ApplySystemCompanyFilter(query, request)
             : await ApplyEmployeeCompanyFilterAsync(query, request.CompanyId, cancellationToken);
 

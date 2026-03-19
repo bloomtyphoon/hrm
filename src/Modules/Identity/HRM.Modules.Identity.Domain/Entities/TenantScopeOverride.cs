@@ -10,9 +10,6 @@ namespace HRM.Modules.Identity.Domain.Entities;
 /// The base permission catalog (XML) defines default available scopes for each action.
 /// Tenants can override which scopes are allowed for their users via this entity.
 ///
-/// Example: Tenant A wants to restrict Employee.View to only Company and Self scopes,
-/// removing Department scope that the base catalog allows.
-///
 /// Design:
 /// - One row per (Tenant, Module, Entity, Action) combination
 /// - AllowedScopes replaces the XML-defined scopes entirely
@@ -22,24 +19,18 @@ public class TenantScopeOverride : AuditableEntity, ITenantEntity
 {
     public Guid TenantId { get; private set; }
 
-    /// <summary>
-    /// Permission module name (e.g., "Personnel", "Identity")
-    /// </summary>
+    /// <summary>Permission module name.</summary>
     public string Module { get; private set; } = default!;
 
-    /// <summary>
-    /// Permission entity name (e.g., "Employee", "Account")
-    /// </summary>
+    /// <summary>Permission entity name.</summary>
     public string Entity { get; private set; } = default!;
 
-    /// <summary>
-    /// Permission action name (e.g., "View", "Create", "Update")
-    /// </summary>
+    /// <summary>Permission action name.</summary>
     public string Action { get; private set; } = default!;
 
     /// <summary>
     /// Allowed scope levels for this action (replaces XML catalog scopes).
-    /// Stored as JSON array of DataScopeLevel values.
+    /// Stored as JSON array of DataScopeLevel IDs.
     /// </summary>
     public List<DataScopeLevel> AllowedScopes { get; private set; } = new();
 
@@ -51,9 +42,7 @@ public class TenantScopeOverride : AuditableEntity, ITenantEntity
 
     private TenantScopeOverride() { }
 
-    /// <summary>
-    /// Create a new tenant scope override.
-    /// </summary>
+    /// <summary>Create a new tenant scope override.</summary>
     public static TenantScopeOverride Create(
         Guid tenantId,
         string module,
@@ -72,7 +61,7 @@ public class TenantScopeOverride : AuditableEntity, ITenantEntity
             throw new ArgumentException("Action is required.", nameof(action));
         if (allowedScopes is null || allowedScopes.Count == 0)
             throw new ArgumentException("At least one allowed scope is required.", nameof(allowedScopes));
-        if (defaultScope.HasValue && !allowedScopes.Contains(defaultScope.Value))
+        if (defaultScope is not null && !allowedScopes.Contains(defaultScope))
             throw new ArgumentException("Default scope must be one of the allowed scopes.", nameof(defaultScope));
 
         return new TenantScopeOverride
@@ -86,14 +75,12 @@ public class TenantScopeOverride : AuditableEntity, ITenantEntity
         };
     }
 
-    /// <summary>
-    /// Update the allowed scopes and default scope.
-    /// </summary>
+    /// <summary>Update the allowed scopes and default scope.</summary>
     public void Update(List<DataScopeLevel> allowedScopes, DataScopeLevel? defaultScope = null)
     {
         if (allowedScopes is null || allowedScopes.Count == 0)
             throw new ArgumentException("At least one allowed scope is required.", nameof(allowedScopes));
-        if (defaultScope.HasValue && !allowedScopes.Contains(defaultScope.Value))
+        if (defaultScope is not null && !allowedScopes.Contains(defaultScope))
             throw new ArgumentException("Default scope must be one of the allowed scopes.", nameof(defaultScope));
 
         AllowedScopes = new List<DataScopeLevel>(allowedScopes);
@@ -101,8 +88,6 @@ public class TenantScopeOverride : AuditableEntity, ITenantEntity
         MarkAsModified();
     }
 
-    /// <summary>
-    /// Permission key in "Module.Entity.Action" format.
-    /// </summary>
+    /// <summary>Permission key in "Module.Entity.Action" format.</summary>
     public string PermissionKey => $"{Module}.{Entity}.{Action}";
 }

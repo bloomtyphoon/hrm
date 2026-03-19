@@ -35,7 +35,7 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity, ITenan
     /// <summary>
     /// Parent company ID.
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Company)]
+    [ScopeDimension("Company")]
     public Guid CompanyId { get; private set; }
 
     /// <summary>
@@ -64,7 +64,7 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity, ITenan
     /// <summary>
     /// Department self-reference for scope filtering.
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Department)]
+    [ScopeDimension("Department")]
     public Guid DepartmentId => Id;
 
     /// <summary>

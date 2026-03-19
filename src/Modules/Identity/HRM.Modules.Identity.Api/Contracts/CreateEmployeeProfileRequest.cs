@@ -7,7 +7,7 @@ namespace HRM.Modules.Identity.Api.Contracts;
 /// </summary>
 public sealed record CreateEmployeeProfileRequest(
     Guid EmployeeId,
-    DataScopeLevel DefaultScopeLevel = DataScopeLevel.Self,
+    DataScopeLevel? DefaultScopeLevel = null,
     Guid? PrimaryCompanyId = null,
     Guid? PrimaryDepartmentId = null,
     Guid? PrimaryPositionId = null,

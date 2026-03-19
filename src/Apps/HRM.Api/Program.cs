@@ -19,6 +19,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.Converters.Add(new DataScopeLevelJsonConverter());
 });
 
 // Configure OpenAPI (.NET 10 Native - Minimal Approach)

@@ -54,10 +54,10 @@ internal sealed class UpdatePositionCommandHandler : ICommandHandler<UpdatePosit
         return Result.Success();
     }
 
-    private static bool CanAccessCompany(Guid companyId, DataScopeRule rule) => rule.Level switch
+    private static bool CanAccessCompany(Guid companyId, DataScopeRule rule) => rule.Level.Category switch
     {
-        DataScopeLevel.Global => true,
-        DataScopeLevel.Company => rule.DimensionIds.Contains(companyId),
+        ScopeCategory.Global => true,
+        ScopeCategory.Dimension => rule.DimensionIds.Contains(companyId),
         _ => false
     };
 }

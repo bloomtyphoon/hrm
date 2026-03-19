@@ -36,7 +36,7 @@ internal sealed class CreateEmployeeCommandHandler : ICommandHandler<CreateEmplo
         var rule = await _dataScopeService.GetScopeRuleAsync(
             _executionContext.UserId, PersonnelPermissions.Employee.Create, cancellationToken);
 
-        if (rule.Level == DataScopeLevel.None)
+        if (rule.Level.Category == ScopeCategory.None)
         {
             return Result.Failure<Guid>(new ForbiddenError(
                 "Employee.AccessDenied", "You do not have permission to create employees."));

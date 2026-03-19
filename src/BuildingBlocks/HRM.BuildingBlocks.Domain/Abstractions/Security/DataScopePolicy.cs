@@ -16,35 +16,13 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 /// Combination logic:
 /// - Different roles (expand access) → OR
 /// - Same role constraints (restrict access) → AND
-///
-/// Usage:
-/// <code>
-/// // Multiple roles - OR
-/// var policy = DataScopePolicy.Or(
-///     DataScopeRule.Department([D1]),
-///     DataScopeRule.Position([P9])
-/// );
-///
-/// // With constraint - AND
-/// var policy = DataScopePolicy.And(
-///     DataScopeRule.EmployeeSet(subordinateIds),
-///     DataScopeRule.Department([D1])
-/// );
-///
-/// // Single rule (backward compatible)
-/// var policy = DataScopePolicy.Single(DataScopeRule.Company([C1]));
-/// </code>
 /// </summary>
 public sealed class DataScopePolicy
 {
-    /// <summary>
-    /// The rules to combine.
-    /// </summary>
+    /// <summary>The rules to combine.</summary>
     public IReadOnlyList<DataScopeRule> Rules { get; }
 
-    /// <summary>
-    /// How to combine the rules.
-    /// </summary>
+    /// <summary>How to combine the rules.</summary>
     public PolicyCombinator Combinator { get; }
 
     /// <summary>
@@ -59,21 +37,14 @@ public sealed class DataScopePolicy
         _ => false
     };
 
-    /// <summary>
-    /// Whether this is a single-rule policy (no combination needed).
-    /// </summary>
+    /// <summary>Whether this is a single-rule policy (no combination needed).</summary>
     public bool IsSingleRule => Rules.Count == 1;
 
-    /// <summary>
-    /// Get the single rule if this is a single-rule policy.
-    /// </summary>
+    /// <summary>Get the single rule if this is a single-rule policy.</summary>
     public DataScopeRule? SingleRule => IsSingleRule ? Rules[0] : null;
 
-    /// <summary>
-    /// Whether any rule grants global access.
-    /// If true, the entire policy can be simplified to Global.
-    /// </summary>
-    public bool HasGlobalAccess => Rules.Any(r => r.Level == DataScopeLevel.Global);
+    /// <summary>Whether any rule grants global access.</summary>
+    public bool HasGlobalAccess => Rules.Any(r => r.Level.IsGlobal);
 
     private DataScopePolicy(IEnumerable<DataScopeRule> rules, PolicyCombinator combinator)
     {
@@ -88,47 +59,31 @@ public sealed class DataScopePolicy
 
     #region Factory Methods
 
-    /// <summary>
-    /// Create a policy that ORs multiple rules (expands access).
-    /// Use when combining grants from different roles.
-    /// </summary>
+    /// <summary>Create a policy that ORs multiple rules (expands access).</summary>
     public static DataScopePolicy Or(params DataScopeRule[] rules)
         => new(rules, PolicyCombinator.Or);
 
-    /// <summary>
-    /// Create a policy that ORs multiple rules (expands access).
-    /// </summary>
+    /// <summary>Create a policy that ORs multiple rules (expands access).</summary>
     public static DataScopePolicy Or(IEnumerable<DataScopeRule> rules)
         => new(rules, PolicyCombinator.Or);
 
-    /// <summary>
-    /// Create a policy that ANDs multiple rules (restricts access).
-    /// Use when applying constraints within same context.
-    /// </summary>
+    /// <summary>Create a policy that ANDs multiple rules (restricts access).</summary>
     public static DataScopePolicy And(params DataScopeRule[] rules)
         => new(rules, PolicyCombinator.And);
 
-    /// <summary>
-    /// Create a policy that ANDs multiple rules (restricts access).
-    /// </summary>
+    /// <summary>Create a policy that ANDs multiple rules (restricts access).</summary>
     public static DataScopePolicy And(IEnumerable<DataScopeRule> rules)
         => new(rules, PolicyCombinator.And);
 
-    /// <summary>
-    /// Create a single-rule policy (backward compatible).
-    /// </summary>
+    /// <summary>Create a single-rule policy (backward compatible).</summary>
     public static DataScopePolicy Single(DataScopeRule rule)
         => new([rule], PolicyCombinator.Or);
 
-    /// <summary>
-    /// Create a policy that denies all access.
-    /// </summary>
+    /// <summary>Create a policy that denies all access.</summary>
     public static DataScopePolicy None()
         => Single(DataScopeRule.None());
 
-    /// <summary>
-    /// Create a policy that grants global access.
-    /// </summary>
+    /// <summary>Create a policy that grants global access.</summary>
     public static DataScopePolicy Global()
         => Single(DataScopeRule.Global());
 
@@ -156,13 +111,13 @@ public sealed class DataScopePolicy
             return Global();
 
         // AND with None = None
-        if (Combinator == PolicyCombinator.And && Rules.Any(r => r.Level == DataScopeLevel.None))
+        if (Combinator == PolicyCombinator.And && Rules.Any(r => r.Level.IsNone))
             return None();
 
         var simplified = Rules
             .Where(r => Combinator == PolicyCombinator.Or
-                ? r.Level != DataScopeLevel.None  // Remove None from OR
-                : r.Level != DataScopeLevel.Global) // Remove Global from AND
+                ? !r.Level.IsNone   // Remove None from OR
+                : !r.Level.IsGlobal) // Remove Global from AND
             .ToList();
 
         if (simplified.Count == 0)
@@ -171,29 +126,18 @@ public sealed class DataScopePolicy
         if (simplified.Count == 1)
             return Single(simplified[0]);
 
-        // TODO: Merge same-level dimension rules
-        // e.g., Department([D1]) OR Department([D2]) → Department([D1, D2])
-
         return new DataScopePolicy(simplified, Combinator);
     }
 
     #endregion
 }
 
-/// <summary>
-/// How to combine rules in a policy.
-/// </summary>
+/// <summary>How to combine rules in a policy.</summary>
 public enum PolicyCombinator
 {
-    /// <summary>
-    /// OR combination — any rule grants access.
-    /// Use for combining grants from different roles.
-    /// </summary>
+    /// <summary>OR combination — any rule grants access.</summary>
     Or,
 
-    /// <summary>
-    /// AND combination — all rules must grant access.
-    /// Use for applying constraints within same context.
-    /// </summary>
+    /// <summary>AND combination — all rules must grant access.</summary>
     And
 }

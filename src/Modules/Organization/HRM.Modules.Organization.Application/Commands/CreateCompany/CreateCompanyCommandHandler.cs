@@ -36,7 +36,7 @@ internal sealed class CreateCompanyCommandHandler : ICommandHandler<CreateCompan
         var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
             _executionContext.UserId, OrganizationPermissions.Company.Create, cancellationToken);
 
-        if (rule.Level == DataScopeLevel.None)
+        if (rule.Level.Category == ScopeCategory.None)
         {
             return Result.Failure<Guid>(new ForbiddenError(
                 "Company.AccessDenied", "You do not have permission to create companies."));

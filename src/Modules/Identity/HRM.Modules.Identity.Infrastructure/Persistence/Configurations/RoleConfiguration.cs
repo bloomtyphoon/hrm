@@ -83,7 +83,9 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
                 .HasColumnType("NVARCHAR(100)");
 
             permissionBuilder.Property(p => p.Scope)
-                .HasConversion<int?>()
+                .HasConversion(
+                    v => v != null ? (int?)v.Id : null,
+                    v => v.HasValue ? DataScopeLevel.FromId(v.Value) : null)
                 .HasColumnName("Scope");
 
             permissionBuilder.HasIndex("RoleId", "Module", "Entity", "Action", "Scope")

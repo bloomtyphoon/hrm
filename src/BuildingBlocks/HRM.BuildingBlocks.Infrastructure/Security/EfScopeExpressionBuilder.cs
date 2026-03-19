@@ -10,56 +10,34 @@ namespace HRM.BuildingBlocks.Infrastructure.Security;
 ///
 /// DESIGN PRINCIPLES:
 /// - BB does NOT know about org structure (Company, Department, Position)
-/// - Uses [ScopeDimension] attribute to discover dimension properties
+/// - Uses [ScopeDimension("key")] attribute to discover dimension properties
 /// - Caches property selectors at startup for runtime performance
-/// - Supports both single rule and policy (multi-rule combination)
-///
-/// Usage:
-/// <code>
-/// // Single rule
-/// var rule = DataScopeRule.Department([D1]);
-/// var expr = EfScopeExpressionBuilder.Build&lt;Employee&gt;(rule);
-/// query.Where(expr);
-///
-/// // Policy (multi-rule)
-/// var policy = DataScopePolicy.Or(
-///     DataScopeRule.Department([D1]),
-///     DataScopeRule.Position([P9])
-/// );
-/// var expr = EfScopeExpressionBuilder.Build&lt;Employee&gt;(policy);
-/// query.Where(expr);
-/// </code>
+/// - Category-based dispatch: no switch on specific DataScopeLevel values
+/// - Supports dynamic scope levels loaded from DB
 /// </summary>
 public static class EfScopeExpressionBuilder
 {
-    // Cache: EntityType → (DataScopeLevel → PropertyInfo)
-    private static readonly ConcurrentDictionary<Type, Dictionary<DataScopeLevel, PropertyInfo>> _dimensionCache = new();
+    // Cache: EntityType → (DimensionKey → PropertyInfo)
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> _dimensionCache = new();
 
     #region Public API
 
-    /// <summary>
-    /// Build expression from a single rule.
-    /// </summary>
+    /// <summary>Build expression from a single rule.</summary>
     public static Expression<Func<T, bool>> Build<T>(DataScopeRule rule)
         where T : class, IScopedEntity
     {
         return BuildRuleExpression<T>(rule);
     }
 
-    /// <summary>
-    /// Build expression from a policy (multiple rules combined).
-    /// </summary>
+    /// <summary>Build expression from a policy (multiple rules combined).</summary>
     public static Expression<Func<T, bool>> Build<T>(DataScopePolicy policy)
         where T : class, IScopedEntity
     {
-        // Simplify first
         var simplified = policy.Simplify();
 
-        // Single rule - direct build
         if (simplified.IsSingleRule)
             return BuildRuleExpression<T>(simplified.SingleRule!);
 
-        // Multiple rules - combine with OR/AND
         var parameter = Expression.Parameter(typeof(T), "x");
         Expression? combined = null;
 
@@ -79,22 +57,19 @@ public static class EfScopeExpressionBuilder
         return Expression.Lambda<Func<T, bool>>(combined!, parameter);
     }
 
-    /// <summary>
-    /// Build expression for owned entities (Self scope only).
-    /// </summary>
+    /// <summary>Build expression for owned entities (Self scope only).</summary>
     public static Expression<Func<T, bool>> BuildOwnerScope<T>(DataScopeRule rule)
         where T : class, IOwnedEntity
     {
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => _ => true,
-            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+            ScopeCategory.Global => _ => true,
+            ScopeCategory.None => _ => false,
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self && rule.SelfEmployeeId.HasValue =>
                 x => x.OwnerId == rule.SelfEmployeeId.Value,
-            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+            ScopeCategory.Set when rule.EmployeeIds.Count > 0 =>
                 BuildOwnerContains<T>(rule.EmployeeIds),
-            DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
-                BuildOwnerContains<T>(rule.EmployeeIds),
-            _ when rule.Level > DataScopeLevel.Self => _ => true, // Wider scope = all access
+            ScopeCategory.Dimension => _ => true, // Wider scope = all access for owned entities
             _ => _ => false
         };
     }
@@ -115,25 +90,20 @@ public static class EfScopeExpressionBuilder
     private static Expression<Func<T, bool>> BuildRuleExpression<T>(DataScopeRule rule)
         where T : class, IScopedEntity
     {
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => _ => true,
-            DataScopeLevel.None => _ => false,
+            ScopeCategory.Global => _ => true,
+            ScopeCategory.None => _ => false,
 
             // Set-based scopes (filter by OwnerId IN ids)
-            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self && rule.SelfEmployeeId.HasValue =>
                 x => x.OwnerId == rule.SelfEmployeeId.Value,
-
-            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
-                BuildOwnerContains<T>(rule.EmployeeIds),
-
-            DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
+            ScopeCategory.Set when rule.EmployeeIds.Count > 0 =>
                 BuildOwnerContains<T>(rule.EmployeeIds),
 
             // Dimension-based scopes (filter by [ScopeDimension] property IN ids)
-            DataScopeLevel.Position or DataScopeLevel.Department or DataScopeLevel.Company
-            or DataScopeLevel.Country or DataScopeLevel.Region =>
-                BuildDimensionContains<T>(rule.Level, rule.DimensionIds),
+            ScopeCategory.Dimension when rule.Level.DimensionKey is not null =>
+                BuildDimensionContains<T>(rule.Level.DimensionKey, rule.DimensionIds),
 
             _ => _ => false
         };
@@ -147,16 +117,15 @@ public static class EfScopeExpressionBuilder
     }
 
     private static Expression<Func<T, bool>> BuildDimensionContains<T>(
-        DataScopeLevel level,
+        string dimensionKey,
         IReadOnlyCollection<Guid> dimensionIds)
         where T : class, IScopedEntity
     {
         var properties = GetDimensionProperties(typeof(T));
 
-        if (!properties.TryGetValue(level, out var property))
+        if (!properties.TryGetValue(dimensionKey, out var property))
         {
             // Entity doesn't have this dimension - deny access
-            // (or could return true if dimension doesn't apply)
             return _ => false;
         }
 
@@ -199,18 +168,22 @@ public static class EfScopeExpressionBuilder
         return Expression.Lambda<Func<T, bool>>(combined, parameter);
     }
 
-    private static Dictionary<DataScopeLevel, PropertyInfo> GetDimensionProperties(Type entityType)
+    /// <summary>
+    /// Discover dimension properties using [ScopeDimension("key")] attribute.
+    /// Returns: DimensionKey → PropertyInfo
+    /// </summary>
+    private static Dictionary<string, PropertyInfo> GetDimensionProperties(Type entityType)
     {
         return _dimensionCache.GetOrAdd(entityType, type =>
         {
-            var result = new Dictionary<DataScopeLevel, PropertyInfo>();
+            var result = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 var attr = property.GetCustomAttribute<ScopeDimensionAttribute>();
                 if (attr is not null)
                 {
-                    result[attr.Level] = property;
+                    result[attr.DimensionKey] = property;
                 }
             }
 

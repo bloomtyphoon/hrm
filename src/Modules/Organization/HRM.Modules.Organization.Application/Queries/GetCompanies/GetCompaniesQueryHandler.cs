@@ -38,10 +38,10 @@ internal sealed class GetCompaniesQueryHandler : IQueryHandler<GetCompaniesQuery
         var rule = await _dataScopeService.GetCompanyScopeRuleAsync(
             _executionContext.UserId, OrganizationPermissions.Company.View, cancellationToken);
 
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => await GetAllCompaniesAsync(request, cancellationToken),
-            DataScopeLevel.Company => await GetAssignedCompaniesAsync(rule.DimensionIds, cancellationToken),
+            ScopeCategory.Global => await GetAllCompaniesAsync(request, cancellationToken),
+            ScopeCategory.Dimension => await GetAssignedCompaniesAsync(rule.DimensionIds, cancellationToken),
             _ => Array.Empty<CompanyDto>()
         };
     }

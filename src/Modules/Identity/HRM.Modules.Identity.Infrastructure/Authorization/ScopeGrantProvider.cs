@@ -80,7 +80,7 @@ public sealed class ScopeGrantProvider : IScopeGrantProvider
             return ScopeGrant.NoAccess;
         }
 
-        var level = (DataScopeLevel)scopeLevelInt;
+        var level = DataScopeLevel.FromId(scopeLevelInt);
         _logger.LogDebug(
             "Account {UserId} granted {Level} scope for {Permission} (employee {EmployeeId})",
             userId, level, permission.Name, employeeId);

@@ -53,14 +53,14 @@ public sealed class GetEmployeeAssignmentsQueryHandler
             .Where(a => a.EmployeeId == request.EmployeeId);
 
         // Layer 2: For dimension scopes, further filter which assignments are visible
-        if (rule.IsDimensionBased)
+        if (rule.Level.Category == ScopeCategory.Dimension)
         {
             var ids = rule.DimensionIds.ToList();
-            query = rule.Level switch
+            query = rule.Level.DimensionKey switch
             {
-                DataScopeLevel.Company => query.Where(a => ids.Contains(a.CompanyId)),
-                DataScopeLevel.Department => query.Where(a => ids.Contains(a.DepartmentId)),
-                DataScopeLevel.Position => query.Where(a => ids.Contains(a.PositionId)),
+                "Company" => query.Where(a => ids.Contains(a.CompanyId)),
+                "Department" => query.Where(a => ids.Contains(a.DepartmentId)),
+                "Position" => query.Where(a => ids.Contains(a.PositionId)),
                 _ => query
             };
         }

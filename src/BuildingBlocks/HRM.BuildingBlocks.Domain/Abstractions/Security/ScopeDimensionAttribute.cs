@@ -3,6 +3,9 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 /// <summary>
 /// Marks a property as a scope dimension for data filtering.
 ///
+/// Uses a string key (e.g., "Company", "Department") that matches
+/// DataScopeLevel.DimensionKey from the DB-driven scope level definitions.
+///
 /// BB does NOT know what Company/Department/Position are.
 /// It only knows: "This property represents dimension X".
 ///
@@ -13,13 +16,13 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 /// <code>
 /// public class Employee : Entity, IScopedEntity
 /// {
-///     [ScopeDimension(DataScopeLevel.Company)]
+///     [ScopeDimension("Company")]
 ///     public Guid? CompanyId { get; private set; }
 ///
-///     [ScopeDimension(DataScopeLevel.Department)]
+///     [ScopeDimension("Department")]
 ///     public Guid? DepartmentId { get; private set; }
 ///
-///     [ScopeDimension(DataScopeLevel.Position)]
+///     [ScopeDimension("Position")]
 ///     public Guid? PositionId { get; private set; }
 ///
 ///     public Guid OwnerId => Id;
@@ -30,25 +33,20 @@ namespace HRM.BuildingBlocks.Domain.Abstractions.Security;
 public sealed class ScopeDimensionAttribute : Attribute
 {
     /// <summary>
-    /// The scope level this property represents.
+    /// The dimension key this property represents.
+    /// Must match DataScopeLevel.DimensionKey for the corresponding scope level.
     /// </summary>
-    public DataScopeLevel Level { get; }
+    public string DimensionKey { get; }
 
     /// <summary>
     /// Create a new scope dimension attribute.
     /// </summary>
-    /// <param name="level">The scope level (Company, Department, Position)</param>
-    public ScopeDimensionAttribute(DataScopeLevel level)
+    /// <param name="dimensionKey">The dimension key (e.g., "Company", "Department", "Position")</param>
+    public ScopeDimensionAttribute(string dimensionKey)
     {
-        // Validate: Only dimension-based levels are allowed
-        if (level is DataScopeLevel.None or DataScopeLevel.Self or DataScopeLevel.Global)
-        {
-            throw new ArgumentException(
-                $"ScopeDimension attribute only supports dimension-based levels " +
-                $"(Company, Department, Position). Got: {level}",
-                nameof(level));
-        }
+        if (string.IsNullOrWhiteSpace(dimensionKey))
+            throw new ArgumentException("Dimension key cannot be null or empty.", nameof(dimensionKey));
 
-        Level = level;
+        DimensionKey = dimensionKey;
     }
 }

@@ -6,9 +6,8 @@ namespace HRM.BuildingBlocks.Infrastructure.Security;
 /// <summary>
 /// Translates DataScopeRule/DataScopePolicy to SQL WHERE clause.
 ///
-/// NOTE: Unlike EfScopeExpressionBuilder, SQL builder requires explicit column mapping.
-/// This is OK because the module using the builder provides the mapping,
-/// BB does NOT define the org structure.
+/// Uses category-based dispatch for dynamic scope level support.
+/// Column mapping is provided by SqlScopeColumnMapping (configurable per query).
 /// </summary>
 public static class SqlScopeWhereBuilder
 {
@@ -21,35 +20,18 @@ public static class SqlScopeWhereBuilder
     /// <summary>Build SQL WHERE clause with custom column mapping.</summary>
     public static string Build(DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => string.Empty,
-            DataScopeLevel.None => "AND 1 = 0",
-
-            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+            ScopeCategory.Global => string.Empty,
+            ScopeCategory.None => "AND 1 = 0",
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self && rule.SelfEmployeeId.HasValue =>
                 BuildSelfFilter(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn),
-
-            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+            ScopeCategory.Set when rule.EmployeeIds.Count > 0 =>
                 BuildEmployeeSetFilter(rule.EmployeeIds, parameters, columns.OwnerColumn),
-
-            DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
-                BuildEmployeeSetFilter(rule.EmployeeIds, parameters, columns.OwnerColumn),
-
-            DataScopeLevel.Position =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, columns.PositionColumn, "@ScopePositionIds"),
-
-            DataScopeLevel.Department =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, columns.DepartmentColumn, "@ScopeDepartmentIds"),
-
-            DataScopeLevel.Company =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, columns.CompanyColumn, "@ScopeCompanyIds"),
-
-            DataScopeLevel.Country =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, columns.CountryColumn, "@ScopeCountryIds"),
-
-            DataScopeLevel.Region =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, columns.RegionColumn, "@ScopeRegionIds"),
-
+            ScopeCategory.Dimension when rule.Level.DimensionKey is not null =>
+                BuildDimensionFilter(rule.DimensionIds, parameters,
+                    columns.GetColumn(rule.Level.DimensionKey),
+                    $"@Scope{rule.Level.DimensionKey}Ids"),
             _ => "AND 1 = 0"
         };
     }
@@ -107,7 +89,7 @@ public static class SqlScopeWhereBuilder
 
         foreach (var rule in simplified.Rules)
         {
-            var clause = BuildRuleClauseStandalone(rule, parameters, columns, counter++);
+            var clause = BuildRuleClause(rule, parameters, columns, counter++);
             if (!string.IsNullOrEmpty(clause))
                 clauses.Add(clause);
         }
@@ -133,35 +115,28 @@ public static class SqlScopeWhereBuilder
         string employeeAlias = "e",
         string assignmentAlias = "ea")
     {
-        return rule.Level switch
+        var columns = new SqlScopeColumnMapping
         {
-            DataScopeLevel.Global => string.Empty,
-            DataScopeLevel.None => "AND 1 = 0",
+            OwnerColumn = $"{employeeAlias}.Id",
+            CompanyColumn = $"{assignmentAlias}.CompanyId",
+            DepartmentColumn = $"{assignmentAlias}.DepartmentId",
+            PositionColumn = $"{assignmentAlias}.PositionId",
+            CountryColumn = $"{employeeAlias}.CountryId",
+            RegionColumn = $"{employeeAlias}.RegionId"
+        };
 
-            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
-                BuildSelfFilter(rule.SelfEmployeeId.Value, parameters, $"{employeeAlias}.Id", "@ScopeEmployeeId"),
-
-            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
-                BuildEmployeeSetFilter(rule.EmployeeIds, parameters, $"{employeeAlias}.Id"),
-
-            DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
-                BuildEmployeeSetFilter(rule.EmployeeIds, parameters, $"{employeeAlias}.Id"),
-
-            DataScopeLevel.Position =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, $"{assignmentAlias}.PositionId", "@ScopePositionIds"),
-
-            DataScopeLevel.Department =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, $"{assignmentAlias}.DepartmentId", "@ScopeDepartmentIds"),
-
-            DataScopeLevel.Company =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, $"{assignmentAlias}.CompanyId", "@ScopeCompanyIds"),
-
-            DataScopeLevel.Country =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, $"{employeeAlias}.CountryId", "@ScopeCountryIds"),
-
-            DataScopeLevel.Region =>
-                BuildDimensionFilter(rule.DimensionIds, parameters, $"{employeeAlias}.RegionId", "@ScopeRegionIds"),
-
+        return rule.Level.Category switch
+        {
+            ScopeCategory.Global => string.Empty,
+            ScopeCategory.None => "AND 1 = 0",
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self && rule.SelfEmployeeId.HasValue =>
+                BuildSelfFilter(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn, "@ScopeEmployeeId"),
+            ScopeCategory.Set when rule.EmployeeIds.Count > 0 =>
+                BuildEmployeeSetFilter(rule.EmployeeIds, parameters, columns.OwnerColumn),
+            ScopeCategory.Dimension when rule.Level.DimensionKey is not null =>
+                BuildDimensionFilter(rule.DimensionIds, parameters,
+                    columns.GetColumn(rule.Level.DimensionKey),
+                    $"@Scope{rule.Level.DimensionKey}Ids"),
             _ => "AND 1 = 0"
         };
     }
@@ -173,35 +148,18 @@ public static class SqlScopeWhereBuilder
     /// <summary>Build standalone WHERE clause with custom column mapping.</summary>
     public static string BuildStandalone(DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns)
     {
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => "1 = 1",
-            DataScopeLevel.None => "1 = 0",
-
-            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+            ScopeCategory.Global => "1 = 1",
+            ScopeCategory.None => "1 = 0",
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self && rule.SelfEmployeeId.HasValue =>
                 BuildStandaloneSelf(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn),
-
-            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+            ScopeCategory.Set when rule.EmployeeIds.Count > 0 =>
                 BuildStandaloneEmployeeSet(rule.EmployeeIds, parameters, columns.OwnerColumn),
-
-            DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
-                BuildStandaloneEmployeeSet(rule.EmployeeIds, parameters, columns.OwnerColumn),
-
-            DataScopeLevel.Position =>
-                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.PositionColumn, "@ScopePositionIds"),
-
-            DataScopeLevel.Department =>
-                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.DepartmentColumn, "@ScopeDepartmentIds"),
-
-            DataScopeLevel.Company =>
-                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.CompanyColumn, "@ScopeCompanyIds"),
-
-            DataScopeLevel.Country =>
-                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.CountryColumn, "@ScopeCountryIds"),
-
-            DataScopeLevel.Region =>
-                BuildStandaloneDimension(rule.DimensionIds, parameters, columns.RegionColumn, "@ScopeRegionIds"),
-
+            ScopeCategory.Dimension when rule.Level.DimensionKey is not null =>
+                BuildStandaloneDimension(rule.DimensionIds, parameters,
+                    columns.GetColumn(rule.Level.DimensionKey),
+                    $"@Scope{rule.Level.DimensionKey}Ids"),
             _ => "1 = 0"
         };
     }
@@ -215,42 +173,21 @@ public static class SqlScopeWhereBuilder
     {
         var suffix = counter > 0 ? $"_{counter}" : "";
 
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => "1 = 1",
-            DataScopeLevel.None => "1 = 0",
-
-            DataScopeLevel.Self when rule.SelfEmployeeId.HasValue =>
+            ScopeCategory.Global => "1 = 1",
+            ScopeCategory.None => "1 = 0",
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self && rule.SelfEmployeeId.HasValue =>
                 BuildSelfClause(rule.SelfEmployeeId.Value, parameters, columns.OwnerColumn, $"@ScopeEmployeeId{suffix}"),
-
-            DataScopeLevel.DirectReports when rule.EmployeeIds.Count > 0 =>
+            ScopeCategory.Set when rule.EmployeeIds.Count > 0 =>
                 BuildEmployeeSetClause(rule.EmployeeIds, parameters, columns.OwnerColumn, $"@ScopeEmployeeIds{suffix}"),
-
-            DataScopeLevel.EmployeeSet when rule.EmployeeIds.Count > 0 =>
-                BuildEmployeeSetClause(rule.EmployeeIds, parameters, columns.OwnerColumn, $"@ScopeEmployeeIds{suffix}"),
-
-            DataScopeLevel.Position =>
-                BuildDimensionClause(rule.DimensionIds, parameters, columns.PositionColumn, $"@ScopePositionIds{suffix}"),
-
-            DataScopeLevel.Department =>
-                BuildDimensionClause(rule.DimensionIds, parameters, columns.DepartmentColumn, $"@ScopeDepartmentIds{suffix}"),
-
-            DataScopeLevel.Company =>
-                BuildDimensionClause(rule.DimensionIds, parameters, columns.CompanyColumn, $"@ScopeCompanyIds{suffix}"),
-
-            DataScopeLevel.Country =>
-                BuildDimensionClause(rule.DimensionIds, parameters, columns.CountryColumn, $"@ScopeCountryIds{suffix}"),
-
-            DataScopeLevel.Region =>
-                BuildDimensionClause(rule.DimensionIds, parameters, columns.RegionColumn, $"@ScopeRegionIds{suffix}"),
-
+            ScopeCategory.Dimension when rule.Level.DimensionKey is not null =>
+                BuildDimensionClause(rule.DimensionIds, parameters,
+                    columns.GetColumn(rule.Level.DimensionKey),
+                    $"@Scope{rule.Level.DimensionKey}Ids{suffix}"),
             _ => "1 = 0"
         };
     }
-
-    private static string BuildRuleClauseStandalone(
-        DataScopeRule rule, DynamicParameters parameters, SqlScopeColumnMapping columns, int counter)
-        => BuildRuleClause(rule, parameters, columns, counter);
 
     private static string BuildDimensionFilter(
         IReadOnlyCollection<Guid> ids, DynamicParameters parameters, string column, string paramName)
@@ -323,14 +260,53 @@ public static class SqlScopeWhereBuilder
 /// <summary>
 /// Column name mapping for SQL scope queries.
 /// Override defaults when table uses different column names.
+/// Supports dynamic dimension key → column name lookup.
 /// </summary>
 public sealed class SqlScopeColumnMapping
 {
-    public string CompanyColumn { get; init; } = "CompanyId";
-    public string DepartmentColumn { get; init; } = "DepartmentId";
-    public string PositionColumn { get; init; } = "PositionId";
-    public string CountryColumn { get; init; } = "CountryId";
-    public string RegionColumn { get; init; } = "RegionId";
+    private readonly Dictionary<string, string> _dimensionColumns = new(StringComparer.OrdinalIgnoreCase);
+
+    public string CompanyColumn
+    {
+        get => GetColumn("Company");
+        init => _dimensionColumns["Company"] = value;
+    }
+
+    public string DepartmentColumn
+    {
+        get => GetColumn("Department");
+        init => _dimensionColumns["Department"] = value;
+    }
+
+    public string PositionColumn
+    {
+        get => GetColumn("Position");
+        init => _dimensionColumns["Position"] = value;
+    }
+
+    public string CountryColumn
+    {
+        get => GetColumn("Country");
+        init => _dimensionColumns["Country"] = value;
+    }
+
+    public string RegionColumn
+    {
+        get => GetColumn("Region");
+        init => _dimensionColumns["Region"] = value;
+    }
+
     public string OwnerColumn { get; init; } = "OwnerId";
     public string EmployeeColumn { get; init; } = "EmployeeId";
+
+    /// <summary>
+    /// Get column name for a dimension key.
+    /// Falls back to "{DimensionKey}Id" if not explicitly mapped.
+    /// </summary>
+    public string GetColumn(string dimensionKey)
+        => _dimensionColumns.TryGetValue(dimensionKey, out var col) ? col : $"{dimensionKey}Id";
+
+    /// <summary>Set column name for a dimension key.</summary>
+    public void SetColumn(string dimensionKey, string columnName)
+        => _dimensionColumns[dimensionKey] = columnName;
 }

@@ -44,7 +44,7 @@ public class AttendanceRecord : AuditableEntity, IAggregateRoot, IScopedEntity, 
     /// Employee's primary company at check-in time (denormalized).
     /// Used for Company-scope access filtering without cross-module join.
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Company)]
+    [ScopeDimension("Company")]
     public Guid? CompanyId { get; private set; }
 
     /// <summary>IScopedEntity: employee owns their own attendance data.</summary>

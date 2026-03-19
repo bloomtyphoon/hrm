@@ -38,17 +38,23 @@ internal sealed class TenantScopeOverrideConfiguration : IEntityTypeConfiguratio
             .HasMaxLength(100)
             .HasColumnType("NVARCHAR(100)");
 
-        // Store AllowedScopes as JSON array of integers
+        // Store AllowedScopes as JSON array of DataScopeLevel IDs (integers)
         builder.Property(x => x.AllowedScopes)
             .HasConversion(
-                v => System.Text.Json.JsonSerializer.Serialize(v.Select(s => (int)s).ToList(), (System.Text.Json.JsonSerializerOptions?)null),
-                v => System.Text.Json.JsonSerializer.Deserialize<List<int>>(v, (System.Text.Json.JsonSerializerOptions?)null)!
-                    .Select(i => (DataScopeLevel)i).ToList())
+                v => System.Text.Json.JsonSerializer.Serialize(
+                    v.Select(s => s.Id).ToList(),
+                    (System.Text.Json.JsonSerializerOptions?)null),
+                v => System.Text.Json.JsonSerializer.Deserialize<List<int>>(
+                    v, (System.Text.Json.JsonSerializerOptions?)null)!
+                    .Select(i => DataScopeLevel.FromId(i)).ToList())
             .HasColumnType("NVARCHAR(500)")
             .IsRequired();
 
+        // DefaultScope stored as nullable int, converted via DataScopeLevel.FromId
         builder.Property(x => x.DefaultScope)
-            .HasConversion<int?>()
+            .HasConversion(
+                v => v != null ? (int?)v.Id : null,
+                v => v.HasValue ? DataScopeLevel.FromId(v.Value) : null)
             .IsRequired(false);
 
         // Unique constraint: one override per (tenant, module, entity, action)

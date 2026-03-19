@@ -12,8 +12,7 @@ namespace HRM.Modules.Personnel.Application.Security;
 /// by the employee's ACTIVE ASSIGNMENTS — not just the primary assignment.
 /// An employee is accessible if they have ANY active assignment matching the scope dimensions.
 ///
-/// For list queries, use ApplyScope to generate a composable EF WHERE clause.
-/// For single-entity checks (commands), use IsAccessibleAsync.
+/// Uses category-based dispatch for dynamic scope level support.
 /// </summary>
 public static class EmployeeScopeFilter
 {
@@ -27,14 +26,15 @@ public static class EmployeeScopeFilter
         IPersonnelQueryContext context,
         CancellationToken cancellationToken = default)
     {
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => true,
-            DataScopeLevel.None => false,
-            DataScopeLevel.Self => employeeId == rule.SelfEmployeeId,
-            DataScopeLevel.DirectReports or DataScopeLevel.EmployeeSet =>
+            ScopeCategory.Global => true,
+            ScopeCategory.None => false,
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self =>
+                employeeId == rule.SelfEmployeeId,
+            ScopeCategory.Set =>
                 rule.EmployeeIds.Contains(employeeId),
-            DataScopeLevel.Company or DataScopeLevel.Department or DataScopeLevel.Position =>
+            ScopeCategory.Dimension =>
                 await HasMatchingAssignmentAsync(rule, employeeId, context, cancellationToken),
             _ => false
         };
@@ -49,14 +49,15 @@ public static class EmployeeScopeFilter
         DataScopeRule rule,
         IPersonnelQueryContext context)
     {
-        return rule.Level switch
+        return rule.Level.Category switch
         {
-            DataScopeLevel.Global => query,
-            DataScopeLevel.None => query.Where(_ => false),
-            DataScopeLevel.Self => query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
-            DataScopeLevel.DirectReports or DataScopeLevel.EmployeeSet =>
+            ScopeCategory.Global => query,
+            ScopeCategory.None => query.Where(_ => false),
+            ScopeCategory.Set when rule.Level == DataScopeLevel.Self =>
+                query.Where(e => e.OwnerId == rule.SelfEmployeeId!.Value),
+            ScopeCategory.Set =>
                 query.Where(e => rule.EmployeeIds.Contains(e.OwnerId)),
-            DataScopeLevel.Company or DataScopeLevel.Department or DataScopeLevel.Position =>
+            ScopeCategory.Dimension =>
                 ApplyDimensionScope(query, rule, context),
             _ => query.Where(_ => false)
         };
@@ -76,13 +77,14 @@ public static class EmployeeScopeFilter
                 && a.Status == AssignmentStatus.Active
                 && !a.EndDate.HasValue);
 
-        return rule.Level switch
+        // Use DimensionKey to determine which assignment column to check
+        return rule.Level.DimensionKey switch
         {
-            DataScopeLevel.Company =>
+            "Company" =>
                 await assignmentQuery.AnyAsync(a => ids.Contains(a.CompanyId), cancellationToken),
-            DataScopeLevel.Department =>
+            "Department" =>
                 await assignmentQuery.AnyAsync(a => ids.Contains(a.DepartmentId), cancellationToken),
-            DataScopeLevel.Position =>
+            "Position" =>
                 await assignmentQuery.AnyAsync(a => ids.Contains(a.PositionId), cancellationToken),
             _ => false
         };
@@ -95,15 +97,16 @@ public static class EmployeeScopeFilter
     {
         var ids = rule.DimensionIds.ToList();
 
-        var employeeIdsWithAccess = rule.Level switch
+        // Use DimensionKey to determine which assignment column to filter
+        var employeeIdsWithAccess = rule.Level.DimensionKey switch
         {
-            DataScopeLevel.Company => context.EmployeeAssignments
+            "Company" => context.EmployeeAssignments
                 .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.CompanyId))
                 .Select(a => a.EmployeeId),
-            DataScopeLevel.Department => context.EmployeeAssignments
+            "Department" => context.EmployeeAssignments
                 .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.DepartmentId))
                 .Select(a => a.EmployeeId),
-            DataScopeLevel.Position => context.EmployeeAssignments
+            "Position" => context.EmployeeAssignments
                 .Where(a => a.Status == AssignmentStatus.Active && !a.EndDate.HasValue && ids.Contains(a.PositionId))
                 .Select(a => a.EmployeeId),
             _ => context.EmployeeAssignments.Where(_ => false).Select(a => a.EmployeeId)

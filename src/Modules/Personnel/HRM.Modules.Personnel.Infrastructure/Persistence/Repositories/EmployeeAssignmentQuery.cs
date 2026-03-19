@@ -84,13 +84,12 @@ internal sealed class EmployeeAssignmentQuery : IEmployeeAssignmentQuery
         if (activeAssignments.Count == 0 && employee is null)
             return ScopeDimensionIds.Empty;
 
-        return new ScopeDimensionIds
-        {
-            CompanyIds = activeAssignments.Select(a => a.CompanyId).Distinct().ToList(),
-            DepartmentIds = activeAssignments.Select(a => a.DepartmentId).Distinct().ToList(),
-            PositionIds = activeAssignments.Select(a => a.PositionId).Distinct().ToList(),
-            CountryIds = employee?.CountryId is { } cid ? [cid] : Array.Empty<Guid>(),
-            RegionIds = employee?.RegionId is { } rid ? [rid] : Array.Empty<Guid>()
-        };
+        return new ScopeDimensionIds.Builder()
+            .Add("Company", activeAssignments.Select(a => a.CompanyId).Distinct().ToList())
+            .Add("Department", activeAssignments.Select(a => a.DepartmentId).Distinct().ToList())
+            .Add("Position", activeAssignments.Select(a => a.PositionId).Distinct().ToList())
+            .Add("Country", employee?.CountryId is { } cid ? new[] { cid } : Array.Empty<Guid>())
+            .Add("Region", employee?.RegionId is { } rid ? new[] { rid } : Array.Empty<Guid>())
+            .Build();
     }
 }

@@ -36,15 +36,6 @@ internal sealed class PersonnelQueryService : IPersonnelQuery, IEmployeeScopeDim
         Guid employeeId,
         CancellationToken cancellationToken = default)
     {
-        var dimensions = await _assignmentQuery.GetScopeDimensionIdsAsync(employeeId, cancellationToken);
-
-        return new ScopeDimensionIds
-        {
-            CompanyIds = dimensions.CompanyIds,
-            DepartmentIds = dimensions.DepartmentIds,
-            PositionIds = dimensions.PositionIds,
-            CountryIds = dimensions.CountryIds,
-            RegionIds = dimensions.RegionIds
-        };
+        return await _assignmentQuery.GetScopeDimensionIdsAsync(employeeId, cancellationToken);
     }
 }

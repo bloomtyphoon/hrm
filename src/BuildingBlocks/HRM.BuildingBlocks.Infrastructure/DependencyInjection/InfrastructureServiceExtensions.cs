@@ -144,6 +144,11 @@ public static class InfrastructureServiceExtensions
         // Resolves scope from IScopeGrantProvider (Identity) + IEmployeeScopeDimensionProvider (Personnel).
         services.AddScoped<IDataScopeService, DataScopeService>();
 
+        // DataScopeLevelRegistry: loads scope level definitions from DB at startup.
+        // Registers dynamic levels into DataScopeLevel's static registry.
+        services.AddSingleton<IDataScopeLevelRegistry, DataScopeLevelRegistry>();
+        services.AddHostedService<DataScopeLevelLoaderService>();
+
         return services;
     }
 

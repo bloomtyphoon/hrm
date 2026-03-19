@@ -108,7 +108,7 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
         Guid tenantId,
         Guid accountId,
         Guid employeeId,
-        DataScopeLevel defaultScopeLevel = DataScopeLevel.Self,
+        DataScopeLevel? defaultScopeLevel = null,
         Guid? primaryCompanyId = null,
         Guid? primaryDepartmentId = null,
         Guid? primaryPositionId = null,
@@ -116,6 +116,7 @@ public class EmployeeProfile : AuditableEntity, ITenantEntity
         IReadOnlyList<Guid>? departmentIds = null,
         IReadOnlyList<Guid>? positionIds = null)
     {
+        defaultScopeLevel ??= DataScopeLevel.Self;
         if (tenantId == Guid.Empty)
             throw new ArgumentException("TenantId is required.", nameof(tenantId));
 

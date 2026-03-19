@@ -14,7 +14,7 @@ public interface IEmployeeScopeDimensionProvider
 {
     /// <summary>
     /// Get all scope dimension IDs for an employee.
-    /// Returns company, department, position, country, and region IDs
+    /// Returns dimension IDs keyed by dimension key (e.g., "Company", "Department")
     /// from the employee's active assignments.
     /// </summary>
     Task<ScopeDimensionIds> GetScopeDimensionIdsAsync(
@@ -24,22 +24,49 @@ public interface IEmployeeScopeDimensionProvider
 
 /// <summary>
 /// Aggregated scope dimension IDs for an employee.
+/// Dictionary-based: supports dynamic dimension keys from DB.
 /// Used by the shared DataScopeService to build DataScopeRule.
 /// </summary>
-public sealed record ScopeDimensionIds
+public sealed class ScopeDimensionIds
 {
-    public required IReadOnlyCollection<Guid> CompanyIds { get; init; }
-    public required IReadOnlyCollection<Guid> DepartmentIds { get; init; }
-    public required IReadOnlyCollection<Guid> PositionIds { get; init; }
-    public IReadOnlyCollection<Guid> CountryIds { get; init; } = Array.Empty<Guid>();
-    public IReadOnlyCollection<Guid> RegionIds { get; init; } = Array.Empty<Guid>();
+    private readonly Dictionary<string, IReadOnlyCollection<Guid>> _dimensions;
 
-    public static ScopeDimensionIds Empty => new()
+    public ScopeDimensionIds(Dictionary<string, IReadOnlyCollection<Guid>> dimensions)
     {
-        CompanyIds = Array.Empty<Guid>(),
-        DepartmentIds = Array.Empty<Guid>(),
-        PositionIds = Array.Empty<Guid>(),
-        CountryIds = Array.Empty<Guid>(),
-        RegionIds = Array.Empty<Guid>()
-    };
+        _dimensions = dimensions ?? throw new ArgumentNullException(nameof(dimensions));
+    }
+
+    /// <summary>
+    /// Get dimension IDs by dimension key.
+    /// Returns empty collection if dimension key not found.
+    /// </summary>
+    public IReadOnlyCollection<Guid> GetIds(string dimensionKey)
+        => _dimensions.TryGetValue(dimensionKey, out var ids) ? ids : Array.Empty<Guid>();
+
+    /// <summary>All dimension keys that have IDs.</summary>
+    public IReadOnlyCollection<string> DimensionKeys => _dimensions.Keys;
+
+    // Backward-compatible convenience properties
+    public IReadOnlyCollection<Guid> CompanyIds => GetIds("Company");
+    public IReadOnlyCollection<Guid> DepartmentIds => GetIds("Department");
+    public IReadOnlyCollection<Guid> PositionIds => GetIds("Position");
+    public IReadOnlyCollection<Guid> CountryIds => GetIds("Country");
+    public IReadOnlyCollection<Guid> RegionIds => GetIds("Region");
+
+    public static ScopeDimensionIds Empty => new(new Dictionary<string, IReadOnlyCollection<Guid>>());
+
+    /// <summary>Builder for constructing ScopeDimensionIds.</summary>
+    public sealed class Builder
+    {
+        private readonly Dictionary<string, IReadOnlyCollection<Guid>> _dimensions = new(StringComparer.OrdinalIgnoreCase);
+
+        public Builder Add(string dimensionKey, IReadOnlyCollection<Guid> ids)
+        {
+            if (ids.Count > 0)
+                _dimensions[dimensionKey] = ids;
+            return this;
+        }
+
+        public ScopeDimensionIds Build() => new(_dimensions);
+    }
 }

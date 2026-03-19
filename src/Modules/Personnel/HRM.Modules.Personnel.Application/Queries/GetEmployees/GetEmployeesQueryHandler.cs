@@ -53,7 +53,7 @@ public sealed class GetEmployeesQueryHandler
         query = EmployeeScopeFilter.ApplyScope(query, rule, _context);
 
         // System accounts (Global): optionally filter by requested CompanyId (via assignments)
-        if (rule.Level == DataScopeLevel.Global && request.CompanyId.HasValue)
+        if (rule.Level.Category == ScopeCategory.Global && request.CompanyId.HasValue)
         {
             var companyId = request.CompanyId.Value;
             query = query.Where(e => e.Assignments.Any(a =>

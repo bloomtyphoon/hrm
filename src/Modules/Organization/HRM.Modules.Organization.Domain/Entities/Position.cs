@@ -34,14 +34,14 @@ public class Position : AuditableEntity, IAggregateRoot, IScopedEntity
     /// <summary>
     /// Parent company ID.
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Company)]
+    [ScopeDimension("Company")]
     public Guid CompanyId { get; private set; }
 
     /// <summary>
     /// Department this position belongs to.
     /// Null for company-wide positions.
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Department)]
+    [ScopeDimension("Department")]
     public Guid? DepartmentId { get; private set; }
 
     /// <summary>
@@ -70,7 +70,7 @@ public class Position : AuditableEntity, IAggregateRoot, IScopedEntity
     /// <summary>
     /// Position self-reference for scope filtering.
     /// </summary>
-    [ScopeDimension(DataScopeLevel.Position)]
+    [ScopeDimension("Position")]
     public Guid PositionId => Id;
 
     /// <summary>
