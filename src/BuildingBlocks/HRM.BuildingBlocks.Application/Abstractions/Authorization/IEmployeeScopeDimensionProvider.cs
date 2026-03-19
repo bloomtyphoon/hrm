@@ -46,7 +46,7 @@ public sealed class ScopeDimensionIds
         => _dimensions.TryGetValue(dimensionKey, out var ids) ? ids : Array.Empty<Guid>();
 
     /// <summary>All dimension keys that have IDs.</summary>
-    public IReadOnlyCollection<string> DimensionKeys => _dimensions.Keys;
+    public IReadOnlyCollection<string> Keys => _dimensions.Keys;
 
     // Backward-compatible convenience properties
     public IReadOnlyCollection<Guid> CompanyIds => GetIds(DimensionKeys.Company);
