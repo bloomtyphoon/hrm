@@ -98,14 +98,14 @@ internal sealed class CreateRoleCommandHandler : ICommandHandler<CreateRoleComma
                 return RoleErrors.PermissionNotInCatalog(p.Module, p.Entity, p.Action);
             }
 
-            if (p.Scope.HasValue)
+            if (p.Scope is not null)
             {
                 var action = await _catalogService.GetActionAsync(tenantId, p.Module, p.Entity, p.Action);
-                if (action is not null && action.HasScopes() && !action.AllowsScope(p.Scope.Value))
+                if (action is not null && action.HasScopes() && !action.AllowsScope(p.Scope))
                 {
                     return RoleErrors.ScopeNotAllowed(
                         $"{p.Module}.{p.Entity}.{p.Action}",
-                        p.Scope.Value.ToString());
+                        p.Scope.ToString());
                 }
             }
         }
