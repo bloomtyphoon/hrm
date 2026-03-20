@@ -51,6 +51,9 @@ public static class DependencyInjection
         services.AddScoped<ILeaveApprovalSettingRepository, LeaveApprovalSettingRepository>();
         services.AddScoped<ILeaveApprovalStepRepository, LeaveApprovalStepRepository>();
 
+        // Approval chain resolver (Manager → DepartmentHead → CompanyLevel)
+        services.AddScoped<IApprovalChainResolver, Services.ApprovalChainResolver>();
+
         // Outbox Processor
         services.AddHostedService<AttendanceOutboxProcessor>();
         services.Configure<OutboxSettings>(configuration.GetSection(OutboxSettings.SectionName));

@@ -41,6 +41,12 @@ public interface IOrganizationQuery
     #region Department Queries
 
     /// <summary>
+    /// Get the ManagerId (employee ID) of a department.
+    /// Returns null if department not found or has no manager assigned.
+    /// </summary>
+    Task<Guid?> GetDepartmentManagerIdAsync(Guid departmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Check if department exists.
     /// </summary>
     Task<bool> DepartmentExistsAsync(Guid departmentId, CancellationToken cancellationToken = default);

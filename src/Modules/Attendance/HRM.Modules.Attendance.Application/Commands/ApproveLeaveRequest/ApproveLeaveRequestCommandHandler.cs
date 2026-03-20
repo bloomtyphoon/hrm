@@ -46,27 +46,60 @@ internal sealed class ApproveLeaveRequestCommandHandler
         if (rule.SelfEmployeeId is null)
             return Result.Failure(LeaveErrors.EmployeeNotResolved());
 
-        // Track approval step if multi-level
+        var approverEmployeeId = rule.SelfEmployeeId.Value;
+
+        // Multi-level approval flow
         if (leaveRequest.CurrentApprovalStep.HasValue)
         {
-            var step = await _stepRepository.GetByRequestAndStepOrderAsync(
+            var currentStep = await _stepRepository.GetByRequestAndStepOrderAsync(
                 request.LeaveRequestId, leaveRequest.CurrentApprovalStep.Value, cancellationToken);
 
-            if (step is not null)
-            {
-                if (request.IsApproved)
-                    step.Approve(request.Notes);
-                else
-                    step.Reject(request.Notes);
+            if (currentStep is null)
+                return Result.Failure(LeaveErrors.ApprovalStepNotFound(leaveRequest.CurrentApprovalStep.Value));
 
-                _stepRepository.Update(step);
+            // Validate that the current user is the designated approver for this step
+            if (currentStep.ApproverEmployeeId != approverEmployeeId)
+                return Result.Failure(LeaveErrors.NotCurrentApprover());
+
+            if (request.IsApproved)
+            {
+                currentStep.Approve(request.Notes);
+                _stepRepository.Update(currentStep);
+
+                // Advance to next step or finalize
+                leaveRequest.Approve(approverEmployeeId, request.Notes);
+            }
+            else
+            {
+                currentStep.Reject(request.Notes);
+                _stepRepository.Update(currentStep);
+
+                // Reject entire request immediately — skip remaining steps
+                leaveRequest.Reject(approverEmployeeId, request.Notes);
+
+                // Mark remaining pending steps as skipped
+                var allSteps = await _stepRepository.GetByLeaveRequestIdAsync(
+                    request.LeaveRequestId, cancellationToken);
+
+                foreach (var remainingStep in allSteps)
+                {
+                    if (remainingStep.Status == Domain.Entities.LeaveApprovalStepStatus.Pending
+                        && remainingStep.StepOrder > leaveRequest.CurrentApprovalStep.Value)
+                    {
+                        remainingStep.Skip("Skipped due to rejection at earlier step.");
+                        _stepRepository.Update(remainingStep);
+                    }
+                }
             }
         }
-
-        if (request.IsApproved)
-            leaveRequest.Approve(rule.SelfEmployeeId.Value, request.Notes);
         else
-            leaveRequest.Reject(rule.SelfEmployeeId.Value, request.Notes);
+        {
+            // Single-level approval (no multi-step chain)
+            if (request.IsApproved)
+                leaveRequest.Approve(approverEmployeeId, request.Notes);
+            else
+                leaveRequest.Reject(approverEmployeeId, request.Notes);
+        }
 
         _repository.Update(leaveRequest);
 

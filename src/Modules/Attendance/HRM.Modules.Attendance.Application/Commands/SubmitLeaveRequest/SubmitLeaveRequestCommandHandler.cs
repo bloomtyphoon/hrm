@@ -17,6 +17,8 @@ internal sealed class SubmitLeaveRequestCommandHandler
     private readonly ILeaveRequestRepository _leaveRequestRepository;
     private readonly ILeaveTypeRepository _leaveTypeRepository;
     private readonly ILeaveApprovalSettingRepository _approvalSettingRepository;
+    private readonly ILeaveApprovalStepRepository _stepRepository;
+    private readonly IApprovalChainResolver _approvalChainResolver;
     private readonly ITenantContext _tenantContext;
     private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
@@ -25,6 +27,8 @@ internal sealed class SubmitLeaveRequestCommandHandler
         ILeaveRequestRepository leaveRequestRepository,
         ILeaveTypeRepository leaveTypeRepository,
         ILeaveApprovalSettingRepository approvalSettingRepository,
+        ILeaveApprovalStepRepository stepRepository,
+        IApprovalChainResolver approvalChainResolver,
         ITenantContext tenantContext,
         IDataScopeService dataScopeService,
         IExecutionContext executionContext)
@@ -32,6 +36,8 @@ internal sealed class SubmitLeaveRequestCommandHandler
         _leaveRequestRepository = leaveRequestRepository;
         _leaveTypeRepository = leaveTypeRepository;
         _approvalSettingRepository = approvalSettingRepository;
+        _stepRepository = stepRepository;
+        _approvalChainResolver = approvalChainResolver;
         _tenantContext = tenantContext;
         _dataScopeService = dataScopeService;
         _executionContext = executionContext;
@@ -54,9 +60,11 @@ internal sealed class SubmitLeaveRequestCommandHandler
         var tenantId = _tenantContext.TenantId
             ?? throw new InvalidOperationException("TenantId is required.");
 
+        var employeeId = rule.SelfEmployeeId.Value;
+
         var leaveRequest = LeaveRequest.Create(
             tenantId: tenantId,
-            employeeId: rule.SelfEmployeeId.Value,
+            employeeId: employeeId,
             leaveTypeId: request.LeaveTypeId,
             startDate: request.StartDate,
             endDate: request.EndDate,
@@ -75,9 +83,30 @@ internal sealed class SubmitLeaveRequestCommandHandler
         {
             leaveRequest.AutoApprove();
         }
-        else if (settings is not null && settings.MaxApprovalLevels > 1)
+        else
         {
-            leaveRequest.InitializeApprovalChain(settings.MaxApprovalLevels);
+            // Resolve multi-level approval chain (Manager → DepartmentHead → CompanyLevel)
+            var maxLevels = settings?.MaxApprovalLevels ?? 1;
+            var chain = await _approvalChainResolver.ResolveAsync(employeeId, maxLevels, cancellationToken);
+
+            if (chain.Count == 0)
+                return Result.Failure<Guid>(LeaveErrors.NoApprovalChainResolved());
+
+            // Initialize the approval chain on the leave request
+            leaveRequest.InitializeApprovalChain(chain.Count);
+
+            // Create approval step records for each level
+            foreach (var entry in chain)
+            {
+                var step = LeaveApprovalStep.Create(
+                    tenantId: tenantId,
+                    leaveRequestId: leaveRequest.Id,
+                    stepOrder: entry.StepOrder,
+                    approverEmployeeId: entry.ApproverEmployeeId,
+                    approvalLevelName: entry.LevelName);
+
+                _stepRepository.Add(step);
+            }
         }
 
         _leaveRequestRepository.Add(leaveRequest);

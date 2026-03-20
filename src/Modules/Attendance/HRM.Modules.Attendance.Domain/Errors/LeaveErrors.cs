@@ -31,4 +31,16 @@ public static class LeaveErrors
 
     public static ForbiddenError ManageSettingsForbidden() =>
         new("LeaveApprovalSettings.Manage.Forbidden", "You don't have permission to manage leave approval settings.");
+
+    public static ForbiddenError NotCurrentApprover() =>
+        new("LeaveRequest.Approve.NotCurrentApprover",
+            "You are not the designated approver for the current approval step.");
+
+    public static ValidationError NoApprovalChainResolved() =>
+        new("LeaveRequest.NoApprovalChain",
+            "Could not resolve any approvers in the approval chain. Ensure the employee has a manager assigned.");
+
+    public static ValidationError ApprovalStepNotFound(int stepOrder) =>
+        new("LeaveRequest.ApprovalStep.NotFound",
+            $"Approval step {stepOrder} was not found for this leave request.");
 }

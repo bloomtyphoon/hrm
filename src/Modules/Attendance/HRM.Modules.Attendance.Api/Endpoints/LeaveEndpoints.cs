@@ -7,8 +7,10 @@ using HRM.Modules.Attendance.Application.Commands.CreateLeaveType;
 using HRM.Modules.Attendance.Application.Commands.SubmitLeaveRequest;
 using HRM.Modules.Attendance.Application.Commands.UpdateLeaveApprovalSettings;
 using HRM.Modules.Attendance.Application.Queries.GetLeaveApprovalSettings;
+using HRM.Modules.Attendance.Application.Queries.GetLeaveApprovalSteps;
 using HRM.Modules.Attendance.Application.Queries.GetLeaveRequests;
 using HRM.Modules.Attendance.Application.Queries.GetLeaveTypes;
+using HRM.Modules.Attendance.Application.Queries.GetPendingApprovals;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -63,6 +65,16 @@ public static class LeaveEndpoints
             .WithSummary("Cancel a leave request")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        requests.MapGet("/{id:guid}/approval-steps", GetLeaveApprovalSteps)
+            .WithName("GetLeaveApprovalSteps")
+            .WithSummary("Get approval steps for a leave request")
+            .Produces<IReadOnlyList<LeaveApprovalStepDto>>(StatusCodes.Status200OK);
+
+        requests.MapGet("/pending-approvals", GetPendingApprovals)
+            .WithName("GetPendingApprovals")
+            .WithSummary("Get leave requests pending the current user's approval")
+            .Produces<PagedResult<PendingApprovalDto>>(StatusCodes.Status200OK);
 
         // Leave Approval Settings
         var settings = app.MapGroup("/api/attendance/leave-approval-settings")
@@ -186,5 +198,30 @@ public static class LeaveEndpoints
 
         var result = await sender.Send(command, cancellationToken);
         return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetLeaveApprovalSteps(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetLeaveApprovalStepsQuery(id);
+        var result = await sender.Send(query, cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetPendingApprovals(
+        ISender sender,
+        CancellationToken cancellationToken,
+        int pageNumber = 1,
+        int pageSize = 20)
+    {
+        var query = new GetPendingApprovalsQuery
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+        var result = await sender.Send(query, cancellationToken);
+        return Results.Ok(result);
     }
 }

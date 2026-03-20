@@ -51,8 +51,8 @@ public static class DependencyInjection
         // Personnel module owns the single IDataScopeService implementation (DataScopeService)
         // and registers it after Organization. All modules share that one implementation.
 
-        // Cross-module query interface (to be implemented)
-        // services.AddScoped<IOrganizationQuery, OrganizationQuery>();
+        // Cross-module query interface (consumed by Personnel, Attendance, etc.)
+        services.AddScoped<IOrganizationQuery, Services.OrganizationQueryService>();
 
         // Outbox Processor (background service for reliable integration event publishing)
         services.AddHostedService<OrganizationOutboxProcessor>();

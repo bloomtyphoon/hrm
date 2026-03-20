@@ -18,6 +18,9 @@ public class LeaveApprovalStep : AuditableEntity, ITenantEntity
     /// <summary>The employee who is expected to approve at this step.</summary>
     public Guid ApproverEmployeeId { get; private set; }
 
+    /// <summary>Human-readable level name (e.g., "Manager", "DepartmentHead", "CompanyLevel").</summary>
+    public string ApprovalLevelName { get; private set; } = string.Empty;
+
     public LeaveApprovalStepStatus Status { get; private set; }
     public DateTime? DecisionDateUtc { get; private set; }
     public string? Notes { get; private set; }
@@ -28,7 +31,8 @@ public class LeaveApprovalStep : AuditableEntity, ITenantEntity
         Guid tenantId,
         Guid leaveRequestId,
         int stepOrder,
-        Guid approverEmployeeId)
+        Guid approverEmployeeId,
+        string approvalLevelName = "")
     {
         return new LeaveApprovalStep
         {
@@ -37,6 +41,7 @@ public class LeaveApprovalStep : AuditableEntity, ITenantEntity
             LeaveRequestId = leaveRequestId,
             StepOrder = stepOrder,
             ApproverEmployeeId = approverEmployeeId,
+            ApprovalLevelName = approvalLevelName,
             Status = LeaveApprovalStepStatus.Pending
         };
     }

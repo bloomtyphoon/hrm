@@ -91,6 +91,8 @@
     <Route Method="POST" Path="/api/attendance/leave-requests" Permission="Attendance.Leave.Request" />
     <Route Method="POST" Path="/api/attendance/leave-requests/{id}/approve" Permission="Attendance.Leave.Approve" />
     <Route Method="POST" Path="/api/attendance/leave-requests/{id}/cancel" Permission="Attendance.Leave.CancelRequest" />
+    <Route Method="GET" Path="/api/attendance/leave-requests/{id}/approval-steps" Permission="Attendance.Leave.ViewRequests" />
+    <Route Method="GET" Path="/api/attendance/leave-requests/pending-approvals" Permission="Attendance.Leave.Approve" />
 
     <!-- ==================== Leave Approval Settings ==================== -->
 

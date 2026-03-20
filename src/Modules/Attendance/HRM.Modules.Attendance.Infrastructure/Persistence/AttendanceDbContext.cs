@@ -186,6 +186,7 @@ public sealed class AttendanceDbContext : ModuleDbContext, IAttendanceQueryConte
             entity.Property(s => s.LeaveRequestId).IsRequired();
             entity.Property(s => s.StepOrder).IsRequired();
             entity.Property(s => s.ApproverEmployeeId).IsRequired();
+            entity.Property(s => s.ApprovalLevelName).HasMaxLength(100);
             entity.Property(s => s.Status).IsRequired();
             entity.Property(s => s.DecisionDateUtc);
             entity.Property(s => s.Notes).HasMaxLength(1000);
