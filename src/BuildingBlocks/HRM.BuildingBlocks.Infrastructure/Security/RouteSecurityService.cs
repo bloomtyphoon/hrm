@@ -153,8 +153,8 @@ public sealed class RouteSecurityService : IRouteSecurityService
     {
         var isPublic = _publicRoutes.Any(r =>
             r.Method == method &&
-            (r.Path.Equals(path, StringComparison.OrdinalIgnoreCase) ||
-             (r.PathPattern != null && Regex.IsMatch(path, r.PathPattern, RegexOptions.IgnoreCase))));
+            (r.Path.Equals(path, StringComparison.Ordinal) ||
+             (r.PathPattern != null && Regex.IsMatch(path, r.PathPattern))));
 
         if (isPublic)
         {
@@ -180,10 +180,10 @@ public sealed class RouteSecurityService : IRouteSecurityService
     /// </summary>
     private RouteSecurityEntry? LookupProtectedRoute(string method, string path)
     {
-        // Try exact match first
+        // Try exact match first (case-sensitive to prevent auth bypass on Linux)
         var exactMatch = _protectedRoutes.FirstOrDefault(r =>
             r.Method == method &&
-            r.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+            r.Path.Equals(path, StringComparison.Ordinal));
 
         if (exactMatch != null)
         {
@@ -195,7 +195,7 @@ public sealed class RouteSecurityService : IRouteSecurityService
         var patternMatch = _protectedRoutes.FirstOrDefault(r =>
             r.Method == method &&
             r.PathPattern != null &&
-            Regex.IsMatch(path, r.PathPattern, RegexOptions.IgnoreCase));
+            Regex.IsMatch(path, r.PathPattern));
 
         if (patternMatch != null)
         {

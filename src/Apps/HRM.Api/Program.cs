@@ -49,8 +49,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins(corsOrigins)
-              .AllowAnyMethod()
-              .AllowAnyHeader()
+              .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+              .WithHeaders("Content-Type", "Authorization", "Accept", "X-Requested-With")
               .AllowCredentials();
     });
 });
@@ -90,6 +90,22 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Global exception handler - returns consistent ProblemDetails for unhandled exceptions
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+            title = "An unexpected error occurred.",
+            status = 500
+        });
+    });
+});
+
 // Enable HTTPS redirection
 app.UseHttpsRedirection();
 
@@ -117,8 +133,7 @@ app.MapModuleEndpoints();
 app.MapGet("/health", () => Results.Ok(new
 {
     Status = "Healthy",
-    Timestamp = DateTime.UtcNow,
-    Environment = app.Environment.EnvironmentName
+    Timestamp = DateTime.UtcNow
 }))
 .WithName("HealthCheck")
 .WithTags("System")

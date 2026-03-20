@@ -51,8 +51,11 @@ public sealed class RouteSecurityLoaderService : IHostedService
 
         if (sources.Count == 0)
         {
-            _logger.LogWarning("No RouteSecurityMap sources registered. Route-based security will not be active.");
-            return Task.CompletedTask;
+            _logger.LogCritical("No RouteSecurityMap sources registered. Route-based security will not be active. " +
+                "All routes will be blocked if DenyByDefault is enabled.");
+            throw new InvalidOperationException(
+                "No RouteSecurityMap sources registered. At least one module must provide a RouteSecurityMap.xml. " +
+                "Ensure modules are registered correctly in AddModules().");
         }
 
         foreach (var source in sources)

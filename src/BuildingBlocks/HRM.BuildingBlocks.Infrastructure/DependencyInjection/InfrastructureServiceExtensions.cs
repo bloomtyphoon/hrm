@@ -219,6 +219,21 @@ public static class InfrastructureServiceExtensions
             );
         }
 
+        // Reject well-known placeholder keys that should never be used in production
+        var knownPlaceholders = new[]
+        {
+            "your-super-secret-jwt-key-min-32-characters-for-production",
+            "your-256-bit-secret-key-min-32-characters"
+        };
+        if (knownPlaceholders.Any(p => secretKey.Equals(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                "JWT SecretKey is using a placeholder value. " +
+                "Generate a strong key (e.g., `openssl rand -base64 32`) and set it via " +
+                "environment variable JwtSettings__SecretKey or user-secrets."
+            );
+        }
+
         if (string.IsNullOrWhiteSpace(issuer))
         {
             throw new InvalidOperationException(

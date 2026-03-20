@@ -85,7 +85,13 @@ public class AuthController : Controller
         }
 
         // Login successful - extract AccountType from JWT payload
-        var accountType = ExtractClaimFromJwt(result.Data!.AccessToken, "AccountType") ?? "Employee";
+        if (result.Data is null)
+        {
+            ModelState.AddModelError(string.Empty, "Unexpected error: login succeeded but returned no data.");
+            return View(request);
+        }
+
+        var accountType = ExtractClaimFromJwt(result.Data.AccessToken, "AccountType") ?? "Employee";
 
         // Create authentication cookie
         var claims = new List<Claim>

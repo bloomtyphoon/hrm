@@ -55,7 +55,9 @@ public sealed class DataScopeService : IDataScopeService
         {
             ScopeCategory.Set => await ResolveSetScopeAsync(grant.Level, employeeId, cancellationToken),
             ScopeCategory.Dimension => await ResolveDimensionScopeAsync(grant.Level, employeeId, cancellationToken),
-            _ => DataScopeRule.None()
+            _ => throw new InvalidOperationException(
+                $"Unknown ScopeCategory '{grant.Level.Category}' for scope level '{grant.Level.Name}'. " +
+                "Ensure all scope categories have handlers registered.")
         };
     }
 
