@@ -32,6 +32,8 @@ public sealed class AttendanceDbContext : ModuleDbContext, IAttendanceQueryConte
     public IQueryable<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
     public IQueryable<LeaveApprovalSetting> LeaveApprovalSettings => Set<LeaveApprovalSetting>();
     public IQueryable<LeaveApprovalStep> LeaveApprovalSteps => Set<LeaveApprovalStep>();
+    public IQueryable<EmployeeOrganizationSnapshot> EmployeeOrganizationSnapshots => Set<EmployeeOrganizationSnapshot>();
+    public IQueryable<DepartmentSnapshot> DepartmentSnapshots => Set<DepartmentSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -197,6 +199,33 @@ public sealed class AttendanceDbContext : ModuleDbContext, IAttendanceQueryConte
 
             entity.HasIndex(s => s.ApproverEmployeeId)
                 .HasDatabaseName("IX_LeaveApprovalSteps_ApproverId");
+        });
+
+        // ── Local Read Model Snapshots (event-sourced from other modules) ──
+
+        modelBuilder.Entity<EmployeeOrganizationSnapshot>(entity =>
+        {
+            entity.HasKey(e => e.EmployeeId);
+            entity.Property(e => e.ManagerId);
+            entity.Property(e => e.PrimaryDepartmentId);
+            entity.Property(e => e.PrimaryCompanyId);
+            entity.Property(e => e.LastUpdatedUtc).IsRequired();
+
+            entity.HasIndex(e => e.ManagerId)
+                .HasDatabaseName("IX_EmployeeOrgSnapshots_ManagerId");
+
+            // No tenant filter — snapshots are global read models updated by integration events
+            entity.HasQueryFilter(_ => true);
+        });
+
+        modelBuilder.Entity<DepartmentSnapshot>(entity =>
+        {
+            entity.HasKey(d => d.DepartmentId);
+            entity.Property(d => d.ManagerEmployeeId);
+            entity.Property(d => d.LastUpdatedUtc).IsRequired();
+
+            // No tenant filter — snapshots are global read models updated by integration events
+            entity.HasQueryFilter(_ => true);
         });
     }
 }

@@ -17,4 +17,6 @@ public interface IAttendanceQueryContext
     IQueryable<LeaveRequest> LeaveRequests { get; }
     IQueryable<LeaveApprovalSetting> LeaveApprovalSettings { get; }
     IQueryable<LeaveApprovalStep> LeaveApprovalSteps { get; }
+    IQueryable<EmployeeOrganizationSnapshot> EmployeeOrganizationSnapshots { get; }
+    IQueryable<DepartmentSnapshot> DepartmentSnapshots { get; }
 }

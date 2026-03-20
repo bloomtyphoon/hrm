@@ -53,12 +53,6 @@ internal sealed class OrganizationQueryService : IOrganizationQuery
 
     #region Department Queries
 
-    public async Task<Guid?> GetDepartmentManagerIdAsync(Guid departmentId, CancellationToken cancellationToken = default)
-        => await _context.Departments
-            .Where(d => d.Id == departmentId)
-            .Select(d => d.ManagerId)
-            .FirstOrDefaultAsync(cancellationToken);
-
     public async Task<bool> DepartmentExistsAsync(Guid departmentId, CancellationToken cancellationToken = default)
         => await _context.Departments
             .AnyAsync(d => d.Id == departmentId, cancellationToken);

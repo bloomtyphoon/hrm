@@ -24,20 +24,4 @@ public interface IPersonnelQuery
         Guid employeeId,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Get employee's organizational info needed for approval chain resolution.
-    /// Returns null if employee not found.
-    /// </summary>
-    Task<EmployeeApprovalInfo?> GetEmployeeApprovalInfoAsync(
-        Guid employeeId,
-        CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Lightweight DTO for approval chain resolution.
-/// </summary>
-public sealed record EmployeeApprovalInfo(
-    Guid EmployeeId,
-    Guid? ManagerId,
-    Guid? PrimaryDepartmentId,
-    Guid? PrimaryCompanyId);

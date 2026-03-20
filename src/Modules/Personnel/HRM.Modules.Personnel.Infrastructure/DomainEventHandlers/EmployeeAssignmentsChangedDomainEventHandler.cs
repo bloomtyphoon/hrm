@@ -2,6 +2,7 @@ using HRM.Modules.Personnel.Domain.Events;
 using HRM.Modules.Personnel.Infrastructure.Persistence;
 using HRM.Modules.Personnel.IntegrationEvents;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Personnel.Infrastructure.DomainEventHandlers;
 
@@ -15,8 +16,14 @@ internal sealed class EmployeeAssignmentsChangedDomainEventHandler
         _dbContext = dbContext;
     }
 
-    public Task Handle(EmployeeAssignmentsChangedDomainEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(EmployeeAssignmentsChangedDomainEvent notification, CancellationToken cancellationToken)
     {
+        // Look up primary assignment IDs from the employee (already in change tracker)
+        var primaryIds = await _dbContext.Employees
+            .Where(e => e.Id == notification.EmployeeId)
+            .Select(e => new { e.PrimaryDepartmentId, e.PrimaryCompanyId })
+            .FirstOrDefaultAsync(cancellationToken);
+
         _dbContext.AddIntegrationEvent(
             new EmployeeAssignmentsChangedIntegrationEvent(
                 Id: Guid.NewGuid(),
@@ -24,8 +31,8 @@ internal sealed class EmployeeAssignmentsChangedDomainEventHandler
                 EmployeeId: notification.EmployeeId,
                 ActiveCompanyIds: notification.ActiveCompanyIds,
                 ActiveDepartmentIds: notification.ActiveDepartmentIds,
-                ActivePositionIds: notification.ActivePositionIds));
-
-        return Task.CompletedTask;
+                ActivePositionIds: notification.ActivePositionIds,
+                PrimaryDepartmentId: primaryIds?.PrimaryDepartmentId,
+                PrimaryCompanyId: primaryIds?.PrimaryCompanyId));
     }
 }

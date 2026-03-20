@@ -47,6 +47,12 @@ public static class DependencyInjection
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IPositionRepository, PositionRepository>();
 
+        // MediatR handlers in Infrastructure (domain event handlers)
+        services.AddMediatR(config =>
+        {
+            config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+        });
+
         // NOTE: IDataScopeService is NOT registered here.
         // Personnel module owns the single IDataScopeService implementation (DataScopeService)
         // and registers it after Organization. All modules share that one implementation.

@@ -1,35 +1,30 @@
-using HRM.BuildingBlocks.Application.Abstractions.Authorization;
-using HRM.BuildingBlocks.Application.Abstractions.Organization;
-using HRM.BuildingBlocks.Application.Abstractions.Personnel;
 using HRM.Modules.Attendance.Application.Abstractions;
+using HRM.Modules.Attendance.Application.Abstractions.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Modules.Attendance.Infrastructure.Services;
 
 /// <summary>
-/// Resolves the multi-level approval chain for a leave request.
+/// Resolves the multi-level approval chain for a leave request
+/// using LOCAL snapshots (no cross-module queries).
 ///
 /// Chain resolution logic:
-///   Level 1 (Manager):        Employee's direct manager
-///   Level 2 (DepartmentHead): Department.ManagerId from employee's primary department
-///   Level 3 (CompanyLevel):   Department head's manager (next level up in hierarchy)
+///   Level 1 (Manager):        Employee's direct manager (from EmployeeOrganizationSnapshot)
+///   Level 2 (DepartmentHead): Department's manager (from DepartmentSnapshot)
+///   Level 3 (CompanyLevel):   Last approver's manager (from EmployeeOrganizationSnapshot)
+///
+/// Snapshots are kept in sync via integration events from Personnel and Organization modules.
 ///
 /// Deduplication: If two levels resolve to the same person, the duplicate is skipped.
 /// Missing approvers: If a level has no approver, it is skipped.
 /// </summary>
 internal sealed class ApprovalChainResolver : IApprovalChainResolver
 {
-    private readonly IPersonnelQuery _personnelQuery;
-    private readonly IOrganizationQuery _organizationQuery;
-    private readonly IHierarchyScopeResolver _hierarchyResolver;
+    private readonly IAttendanceQueryContext _queryContext;
 
-    public ApprovalChainResolver(
-        IPersonnelQuery personnelQuery,
-        IOrganizationQuery organizationQuery,
-        IHierarchyScopeResolver hierarchyResolver)
+    public ApprovalChainResolver(IAttendanceQueryContext queryContext)
     {
-        _personnelQuery = personnelQuery;
-        _organizationQuery = organizationQuery;
-        _hierarchyResolver = hierarchyResolver;
+        _queryContext = queryContext;
     }
 
     public async Task<IReadOnlyList<ApprovalChainEntry>> ResolveAsync(
@@ -37,8 +32,10 @@ internal sealed class ApprovalChainResolver : IApprovalChainResolver
         int maxLevels,
         CancellationToken cancellationToken = default)
     {
-        var info = await _personnelQuery.GetEmployeeApprovalInfoAsync(employeeId, cancellationToken);
-        if (info is null)
+        var snapshot = await _queryContext.EmployeeOrganizationSnapshots
+            .FirstOrDefaultAsync(s => s.EmployeeId == employeeId, cancellationToken);
+
+        if (snapshot is null)
             return [];
 
         var chain = new List<ApprovalChainEntry>();
@@ -46,36 +43,35 @@ internal sealed class ApprovalChainResolver : IApprovalChainResolver
         var stepOrder = 0;
 
         // Level 1: Direct Manager
-        if (maxLevels >= 1 && info.ManagerId.HasValue && usedApprovers.Add(info.ManagerId.Value))
+        if (maxLevels >= 1 && snapshot.ManagerId.HasValue && usedApprovers.Add(snapshot.ManagerId.Value))
         {
-            chain.Add(new ApprovalChainEntry(++stepOrder, info.ManagerId.Value, ApprovalLevelNames.Manager));
+            chain.Add(new ApprovalChainEntry(++stepOrder, snapshot.ManagerId.Value, ApprovalLevelNames.Manager));
         }
 
-        // Level 2: Department Head
-        if (maxLevels >= 2 && info.PrimaryDepartmentId.HasValue)
+        // Level 2: Department Head (from local DepartmentSnapshot)
+        if (maxLevels >= 2 && snapshot.PrimaryDepartmentId.HasValue)
         {
-            var deptHeadId = await _organizationQuery.GetDepartmentManagerIdAsync(
-                info.PrimaryDepartmentId.Value, cancellationToken);
+            var deptSnapshot = await _queryContext.DepartmentSnapshots
+                .FirstOrDefaultAsync(d => d.DepartmentId == snapshot.PrimaryDepartmentId.Value, cancellationToken);
 
-            if (deptHeadId.HasValue && usedApprovers.Add(deptHeadId.Value))
+            if (deptSnapshot?.ManagerEmployeeId is not null && usedApprovers.Add(deptSnapshot.ManagerEmployeeId.Value))
             {
-                chain.Add(new ApprovalChainEntry(++stepOrder, deptHeadId.Value, ApprovalLevelNames.DepartmentHead));
+                chain.Add(new ApprovalChainEntry(++stepOrder, deptSnapshot.ManagerEmployeeId.Value, ApprovalLevelNames.DepartmentHead));
             }
         }
 
-        // Level 3: Company Level (department head's manager, i.e., next up in hierarchy)
+        // Level 3: Company Level (last approver's manager from local snapshot)
         if (maxLevels >= 3)
         {
-            // Use the last resolved approver to find the next level up
-            var lastApprover = chain.Count > 0 ? chain[^1].ApproverEmployeeId : info.ManagerId;
+            var lastApprover = chain.Count > 0 ? chain[^1].ApproverEmployeeId : snapshot.ManagerId;
             if (lastApprover.HasValue)
             {
-                var managerInfo = await _personnelQuery.GetEmployeeApprovalInfoAsync(
-                    lastApprover.Value, cancellationToken);
+                var managerSnapshot = await _queryContext.EmployeeOrganizationSnapshots
+                    .FirstOrDefaultAsync(s => s.EmployeeId == lastApprover.Value, cancellationToken);
 
-                if (managerInfo?.ManagerId is not null && usedApprovers.Add(managerInfo.ManagerId.Value))
+                if (managerSnapshot?.ManagerId is not null && usedApprovers.Add(managerSnapshot.ManagerId.Value))
                 {
-                    chain.Add(new ApprovalChainEntry(++stepOrder, managerInfo.ManagerId.Value, ApprovalLevelNames.CompanyLevel));
+                    chain.Add(new ApprovalChainEntry(++stepOrder, managerSnapshot.ManagerId.Value, ApprovalLevelNames.CompanyLevel));
                 }
             }
         }

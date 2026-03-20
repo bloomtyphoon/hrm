@@ -1,3 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <!-- Cross-module: consume Personnel and Organization integration events -->
+    <ProjectReference Include="..\..\Personnel\HRM.Modules.Personnel.IntegrationEvents\HRM.Modules.Personnel.IntegrationEvents.csproj" />
+    <ProjectReference Include="..\..\Organization\HRM.Modules.Organization.IntegrationEvents\HRM.Modules.Organization.IntegrationEvents.csproj" />
+  </ItemGroup>
+
 </Project>

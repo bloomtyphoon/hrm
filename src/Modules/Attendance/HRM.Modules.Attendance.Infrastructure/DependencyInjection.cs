@@ -1,3 +1,4 @@
+using HRM.BuildingBlocks.Application.Abstractions.EventBus;
 using HRM.BuildingBlocks.Domain.Abstractions.Permissions;
 using HRM.BuildingBlocks.Domain.Abstractions.UnitOfWork;
 using HRM.BuildingBlocks.Infrastructure.BackgroundServices;
@@ -6,8 +7,11 @@ using HRM.Modules.Attendance.Application;
 using HRM.Modules.Attendance.Application.Abstractions;
 using HRM.Modules.Attendance.Application.Abstractions.Data;
 using HRM.Modules.Attendance.Infrastructure.BackgroundServices;
+using HRM.Modules.Attendance.Infrastructure.IntegrationEventHandlers;
 using HRM.Modules.Attendance.Infrastructure.Persistence;
 using HRM.Modules.Attendance.Infrastructure.Persistence.Repositories;
+using HRM.Modules.Organization.IntegrationEvents;
+using HRM.Modules.Personnel.IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +57,12 @@ public static class DependencyInjection
 
         // Approval chain resolver (Manager → DepartmentHead → CompanyLevel)
         services.AddScoped<IApprovalChainResolver, Services.ApprovalChainResolver>();
+
+        // Integration event handlers (consume events from Personnel and Organization modules)
+        services.AddScoped<IIntegrationEventHandler<EmployeeCreatedIntegrationEvent>, EmployeeCreatedSyncHandler>();
+        services.AddScoped<IIntegrationEventHandler<ManagerChangedIntegrationEvent>, ManagerChangedSyncHandler>();
+        services.AddScoped<IIntegrationEventHandler<EmployeeAssignmentsChangedIntegrationEvent>, EmployeeAssignmentsChangedSyncHandler>();
+        services.AddScoped<IIntegrationEventHandler<DepartmentManagerChangedIntegrationEvent>, DepartmentManagerChangedSyncHandler>();
 
         // Outbox Processor
         services.AddHostedService<AttendanceOutboxProcessor>();

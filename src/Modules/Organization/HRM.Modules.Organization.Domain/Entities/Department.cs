@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Domain.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.BuildingBlocks.Domain.Entities;
+using HRM.Modules.Organization.Domain.Events;
 
 namespace HRM.Modules.Organization.Domain.Entities;
 
@@ -142,9 +143,15 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity, ITenan
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Department name is required", nameof(name));
 
+        var oldManagerId = ManagerId;
         Name = name.Trim();
         ManagerId = managerId;
         MarkAsModified();
+
+        if (oldManagerId != managerId)
+        {
+            AddDomainEvent(new DepartmentManagerChangedDomainEvent(Id, oldManagerId, managerId));
+        }
     }
 
     /// <summary>
@@ -169,8 +176,10 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity, ITenan
     /// </summary>
     public void AssignManager(Guid managerId)
     {
+        var oldManagerId = ManagerId;
         ManagerId = managerId;
         MarkAsModified();
+        AddDomainEvent(new DepartmentManagerChangedDomainEvent(Id, oldManagerId, managerId));
     }
 
     /// <summary>
@@ -178,8 +187,10 @@ public class Department : AuditableEntity, IAggregateRoot, IScopedEntity, ITenan
     /// </summary>
     public void RemoveManager()
     {
+        var oldManagerId = ManagerId;
         ManagerId = null;
         MarkAsModified();
+        AddDomainEvent(new DepartmentManagerChangedDomainEvent(Id, oldManagerId, null));
     }
 
     /// <summary>
