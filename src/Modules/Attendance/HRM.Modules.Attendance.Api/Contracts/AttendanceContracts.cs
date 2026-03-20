@@ -83,3 +83,13 @@ public sealed record ApproveLeaveRequestRequest(
     bool IsApproved,
     string? Notes = null
 );
+
+// ─── Leave Approval Settings Contracts ──────────────────────────────────────
+
+public sealed record UpdateLeaveApprovalSettingsRequest(
+    bool RequiresApproval,
+    int MaxApprovalLevels,
+    int? AutoApproveIfDaysLessThanOrEqual,
+    bool AllowSelfCancel,
+    bool NotifyOnDecision
+);

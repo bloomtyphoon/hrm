@@ -30,6 +30,8 @@ public sealed class AttendanceDbContext : ModuleDbContext, IAttendanceQueryConte
     public IQueryable<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public IQueryable<LeaveType> LeaveTypes => Set<LeaveType>();
     public IQueryable<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
+    public IQueryable<LeaveApprovalSetting> LeaveApprovalSettings => Set<LeaveApprovalSetting>();
+    public IQueryable<LeaveApprovalStep> LeaveApprovalSteps => Set<LeaveApprovalStep>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -158,6 +160,42 @@ public sealed class AttendanceDbContext : ModuleDbContext, IAttendanceQueryConte
 
             entity.HasIndex(lr => lr.CompanyId)
                 .HasDatabaseName("IX_LeaveRequests_CompanyId");
+        });
+
+        modelBuilder.Entity<LeaveApprovalSetting>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.TenantId).IsRequired();
+            entity.Property(s => s.RequiresApproval).IsRequired();
+            entity.Property(s => s.MaxApprovalLevels).IsRequired();
+            entity.Property(s => s.AutoApproveIfDaysLessThanOrEqual);
+            entity.Property(s => s.AllowSelfCancel).IsRequired();
+            entity.Property(s => s.NotifyOnDecision).IsRequired();
+
+            entity.HasIndex(s => s.TenantId)
+                .IsUnique()
+                .HasDatabaseName("UX_LeaveApprovalSettings_TenantId");
+        });
+
+        modelBuilder.Entity<LeaveApprovalStep>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.TenantId).IsRequired();
+            entity.Property(s => s.LeaveRequestId).IsRequired();
+            entity.Property(s => s.StepOrder).IsRequired();
+            entity.Property(s => s.ApproverEmployeeId).IsRequired();
+            entity.Property(s => s.Status).IsRequired();
+            entity.Property(s => s.DecisionDateUtc);
+            entity.Property(s => s.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(s => new { s.LeaveRequestId, s.StepOrder })
+                .IsUnique()
+                .HasDatabaseName("UX_LeaveApprovalSteps_RequestStep");
+
+            entity.HasIndex(s => s.ApproverEmployeeId)
+                .HasDatabaseName("IX_LeaveApprovalSteps_ApproverId");
         });
     }
 }

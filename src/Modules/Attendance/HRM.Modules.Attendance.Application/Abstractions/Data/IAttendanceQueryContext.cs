@@ -15,4 +15,6 @@ public interface IAttendanceQueryContext
     IQueryable<ShiftAssignment> ShiftAssignments { get; }
     IQueryable<LeaveType> LeaveTypes { get; }
     IQueryable<LeaveRequest> LeaveRequests { get; }
+    IQueryable<LeaveApprovalSetting> LeaveApprovalSettings { get; }
+    IQueryable<LeaveApprovalStep> LeaveApprovalSteps { get; }
 }

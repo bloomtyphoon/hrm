@@ -1,6 +1,7 @@
 using HRM.BuildingBlocks.Application.Abstractions.Authentication;
 using HRM.BuildingBlocks.Application.Abstractions.Authorization;
 using HRM.BuildingBlocks.Application.Abstractions.Commands;
+using HRM.BuildingBlocks.Application.Abstractions.Multitenancy;
 using HRM.BuildingBlocks.Domain.Abstractions.Results;
 using HRM.BuildingBlocks.Domain.Abstractions.Security;
 using HRM.Modules.Attendance.Application.Abstractions;
@@ -13,15 +14,21 @@ internal sealed class CancelLeaveRequestCommandHandler
     : ICommandHandler<CancelLeaveRequestCommand>
 {
     private readonly ILeaveRequestRepository _repository;
+    private readonly ILeaveApprovalSettingRepository _approvalSettingRepository;
+    private readonly ITenantContext _tenantContext;
     private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public CancelLeaveRequestCommandHandler(
         ILeaveRequestRepository repository,
+        ILeaveApprovalSettingRepository approvalSettingRepository,
+        ITenantContext tenantContext,
         IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _repository = repository;
+        _approvalSettingRepository = approvalSettingRepository;
+        _tenantContext = tenantContext;
         _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
@@ -37,10 +44,20 @@ internal sealed class CancelLeaveRequestCommandHandler
         var rule = await _dataScopeService.GetScopeRuleAsync(
             _executionContext.UserId, AttendancePermissions.Leave.Request, cancellationToken);
 
-        // Only the owner or someone with approve permission can cancel
         var isOwner = rule.SelfEmployeeId.HasValue && rule.SelfEmployeeId.Value == leaveRequest.EmployeeId;
-        if (!isOwner)
+
+        if (isOwner)
         {
+            // Check if self-cancel is allowed
+            var tenantId = _tenantContext.TenantId
+                ?? throw new InvalidOperationException("TenantId is required.");
+            var settings = await _approvalSettingRepository.GetByTenantIdAsync(tenantId, cancellationToken);
+            if (settings is not null && !settings.AllowSelfCancel)
+                return Result.Failure(LeaveErrors.SelfCancelNotAllowed());
+        }
+        else
+        {
+            // Non-owner needs approve permission
             var approveRule = await _dataScopeService.GetScopeRuleAsync(
                 _executionContext.UserId, AttendancePermissions.Leave.Approve, cancellationToken);
             if (approveRule.Level.Category == ScopeCategory.None)

@@ -198,6 +198,69 @@ public class LeaveController : Controller
         return RedirectToAction(nameof(Requests));
     }
 
+    // ─── Approval Settings ──────────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> ApprovalSettings(CancellationToken cancellationToken)
+    {
+        var response = await _attendanceClient.GetLeaveApprovalSettingsAsync(cancellationToken);
+
+        var model = new LeaveApprovalSettingsFormModel();
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            model.RequiresApproval = response.Data.RequiresApproval;
+            model.MaxApprovalLevels = response.Data.MaxApprovalLevels;
+            model.AutoApproveIfDaysLessThanOrEqual = response.Data.AutoApproveIfDaysLessThanOrEqual;
+            model.AllowSelfCancel = response.Data.AllowSelfCancel;
+            model.NotifyOnDecision = response.Data.NotifyOnDecision;
+        }
+        else
+        {
+            _logger.LogError("Failed to get approval settings: {ErrorMessage}", response.ErrorMessage);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to load approval settings";
+        }
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApprovalSettings(
+        LeaveApprovalSettingsFormModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var response = await _attendanceClient.UpdateLeaveApprovalSettingsAsync(
+            model.RequiresApproval,
+            model.MaxApprovalLevels,
+            model.AutoApproveIfDaysLessThanOrEqual,
+            model.AllowSelfCancel,
+            model.NotifyOnDecision,
+            cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Approval settings updated successfully!";
+            return RedirectToAction(nameof(ApprovalSettings));
+        }
+
+        if (response.ValidationErrors != null)
+        {
+            foreach (var (field, errors) in response.ValidationErrors)
+                foreach (var error in errors)
+                    ModelState.AddModelError(field, error);
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to update approval settings");
+        }
+
+        return View(model);
+    }
+
     private async Task LoadLeaveTypesAsync(
         SubmitLeaveRequestViewModel viewModel,
         CancellationToken cancellationToken)

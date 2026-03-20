@@ -13,15 +13,18 @@ internal sealed class ApproveLeaveRequestCommandHandler
     : ICommandHandler<ApproveLeaveRequestCommand>
 {
     private readonly ILeaveRequestRepository _repository;
+    private readonly ILeaveApprovalStepRepository _stepRepository;
     private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
 
     public ApproveLeaveRequestCommandHandler(
         ILeaveRequestRepository repository,
+        ILeaveApprovalStepRepository stepRepository,
         IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _repository = repository;
+        _stepRepository = stepRepository;
         _dataScopeService = dataScopeService;
         _executionContext = executionContext;
     }
@@ -42,6 +45,23 @@ internal sealed class ApproveLeaveRequestCommandHandler
 
         if (rule.SelfEmployeeId is null)
             return Result.Failure(LeaveErrors.EmployeeNotResolved());
+
+        // Track approval step if multi-level
+        if (leaveRequest.CurrentApprovalStep.HasValue)
+        {
+            var step = await _stepRepository.GetByRequestAndStepOrderAsync(
+                request.LeaveRequestId, leaveRequest.CurrentApprovalStep.Value, cancellationToken);
+
+            if (step is not null)
+            {
+                if (request.IsApproved)
+                    step.Approve(request.Notes);
+                else
+                    step.Reject(request.Notes);
+
+                _stepRepository.Update(step);
+            }
+        }
 
         if (request.IsApproved)
             leaveRequest.Approve(rule.SelfEmployeeId.Value, request.Notes);

@@ -63,5 +63,8 @@ public static class AttendancePermissions
 
         public static readonly PermissionDescriptor Approve =
             new(Module, "Leave", "Approve");
+
+        public static readonly PermissionDescriptor ManageSettings =
+            new(Module, "Leave", "ManageSettings");
     }
 }

@@ -367,3 +367,35 @@ public sealed class ApproveLeaveRequestFormModel
     [Display(Name = "Notes")]
     public string? Notes { get; set; }
 }
+
+// ─── Leave Approval Settings Models ────────────────────────────────────────
+
+public sealed class LeaveApprovalSettingsResponse
+{
+    public bool RequiresApproval { get; set; }
+    public int MaxApprovalLevels { get; set; }
+    public int? AutoApproveIfDaysLessThanOrEqual { get; set; }
+    public bool AllowSelfCancel { get; set; }
+    public bool NotifyOnDecision { get; set; }
+}
+
+public sealed class LeaveApprovalSettingsFormModel
+{
+    [Display(Name = "Requires Approval")]
+    public bool RequiresApproval { get; set; } = true;
+
+    [Required(ErrorMessage = "Max approval levels is required")]
+    [Range(1, 5, ErrorMessage = "Must be between 1 and 5")]
+    [Display(Name = "Max Approval Levels")]
+    public int MaxApprovalLevels { get; set; } = 1;
+
+    [Range(0, 365)]
+    [Display(Name = "Auto-approve if days <=")]
+    public int? AutoApproveIfDaysLessThanOrEqual { get; set; }
+
+    [Display(Name = "Allow Self-Cancel")]
+    public bool AllowSelfCancel { get; set; } = true;
+
+    [Display(Name = "Notify on Decision")]
+    public bool NotifyOnDecision { get; set; } = true;
+}

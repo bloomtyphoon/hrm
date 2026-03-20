@@ -16,6 +16,7 @@ internal sealed class SubmitLeaveRequestCommandHandler
 {
     private readonly ILeaveRequestRepository _leaveRequestRepository;
     private readonly ILeaveTypeRepository _leaveTypeRepository;
+    private readonly ILeaveApprovalSettingRepository _approvalSettingRepository;
     private readonly ITenantContext _tenantContext;
     private readonly IDataScopeService _dataScopeService;
     private readonly IExecutionContext _executionContext;
@@ -23,12 +24,14 @@ internal sealed class SubmitLeaveRequestCommandHandler
     public SubmitLeaveRequestCommandHandler(
         ILeaveRequestRepository leaveRequestRepository,
         ILeaveTypeRepository leaveTypeRepository,
+        ILeaveApprovalSettingRepository approvalSettingRepository,
         ITenantContext tenantContext,
         IDataScopeService dataScopeService,
         IExecutionContext executionContext)
     {
         _leaveRequestRepository = leaveRequestRepository;
         _leaveTypeRepository = leaveTypeRepository;
+        _approvalSettingRepository = approvalSettingRepository;
         _tenantContext = tenantContext;
         _dataScopeService = dataScopeService;
         _executionContext = executionContext;
@@ -58,6 +61,24 @@ internal sealed class SubmitLeaveRequestCommandHandler
             startDate: request.StartDate,
             endDate: request.EndDate,
             reason: request.Reason);
+
+        // Apply approval settings
+        var settings = await _approvalSettingRepository.GetByTenantIdAsync(tenantId, cancellationToken);
+
+        if (settings is not null && !settings.RequiresApproval)
+        {
+            leaveRequest.AutoApprove();
+        }
+        else if (settings is not null
+            && settings.AutoApproveIfDaysLessThanOrEqual.HasValue
+            && leaveRequest.TotalDays <= settings.AutoApproveIfDaysLessThanOrEqual.Value)
+        {
+            leaveRequest.AutoApprove();
+        }
+        else if (settings is not null && settings.MaxApprovalLevels > 1)
+        {
+            leaveRequest.InitializeApprovalChain(settings.MaxApprovalLevels);
+        }
 
         _leaveRequestRepository.Add(leaveRequest);
 

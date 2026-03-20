@@ -141,6 +141,13 @@
           </Scopes>
         </Action>
 
+        <Action name="ManageSettings" displayName="Quản lý cài đặt phê duyệt phép" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
       </Entity>
 
     </Module>

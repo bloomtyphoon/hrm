@@ -250,4 +250,30 @@ public sealed class AttendanceApiClient(
         CancellationToken cancellationToken = default)
         => PostAsync<object>($"/api/attendance/leave-requests/{leaveRequestId}/cancel",
             "Failed to cancel leave request", cancellationToken);
+
+    // ─── Leave Approval Settings ──────────────────────────────────────────────
+
+    public Task<ApiResponse<LeaveApprovalSettingsResponse>> GetLeaveApprovalSettingsAsync(
+        CancellationToken cancellationToken = default)
+        => GetAsync<LeaveApprovalSettingsResponse>(
+            "/api/attendance/leave-approval-settings",
+            "Failed to retrieve leave approval settings", cancellationToken);
+
+    public Task<ApiResponse<object>> UpdateLeaveApprovalSettingsAsync(
+        bool requiresApproval,
+        int maxApprovalLevels,
+        int? autoApproveIfDaysLessThanOrEqual,
+        bool allowSelfCancel,
+        bool notifyOnDecision,
+        CancellationToken cancellationToken = default)
+        => PutAsync<object>("/api/attendance/leave-approval-settings",
+            new
+            {
+                RequiresApproval = requiresApproval,
+                MaxApprovalLevels = maxApprovalLevels,
+                AutoApproveIfDaysLessThanOrEqual = autoApproveIfDaysLessThanOrEqual,
+                AllowSelfCancel = allowSelfCancel,
+                NotifyOnDecision = notifyOnDecision
+            },
+            "Failed to update leave approval settings", cancellationToken);
 }

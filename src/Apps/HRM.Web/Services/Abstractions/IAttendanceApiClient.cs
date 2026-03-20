@@ -128,4 +128,17 @@ public interface IAttendanceApiClient
     Task<ApiResponse<object>> CancelLeaveRequestAsync(
         Guid leaveRequestId,
         CancellationToken cancellationToken = default);
+
+    // ─── Leave Approval Settings ──────────────────────────────────────────────
+
+    Task<ApiResponse<LeaveApprovalSettingsResponse>> GetLeaveApprovalSettingsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> UpdateLeaveApprovalSettingsAsync(
+        bool requiresApproval,
+        int maxApprovalLevels,
+        int? autoApproveIfDaysLessThanOrEqual,
+        bool allowSelfCancel,
+        bool notifyOnDecision,
+        CancellationToken cancellationToken = default);
 }

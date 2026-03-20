@@ -5,6 +5,8 @@ using HRM.Modules.Attendance.Application.Commands.ApproveLeaveRequest;
 using HRM.Modules.Attendance.Application.Commands.CancelLeaveRequest;
 using HRM.Modules.Attendance.Application.Commands.CreateLeaveType;
 using HRM.Modules.Attendance.Application.Commands.SubmitLeaveRequest;
+using HRM.Modules.Attendance.Application.Commands.UpdateLeaveApprovalSettings;
+using HRM.Modules.Attendance.Application.Queries.GetLeaveApprovalSettings;
 using HRM.Modules.Attendance.Application.Queries.GetLeaveRequests;
 using HRM.Modules.Attendance.Application.Queries.GetLeaveTypes;
 using MediatR;
@@ -61,6 +63,22 @@ public static class LeaveEndpoints
             .WithSummary("Cancel a leave request")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Leave Approval Settings
+        var settings = app.MapGroup("/api/attendance/leave-approval-settings")
+            .WithTags("Leave Approval Settings")
+            .RequireAuthorization();
+
+        settings.MapGet("/", GetLeaveApprovalSettings)
+            .WithName("GetLeaveApprovalSettings")
+            .WithSummary("Get leave approval settings for the tenant")
+            .Produces<LeaveApprovalSettingsDto>(StatusCodes.Status200OK);
+
+        settings.MapPut("/", UpdateLeaveApprovalSettings)
+            .WithName("UpdateLeaveApprovalSettings")
+            .WithSummary("Update leave approval settings for the tenant")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         return app;
     }
@@ -141,6 +159,31 @@ public static class LeaveEndpoints
         CancellationToken cancellationToken)
     {
         var command = new CancelLeaveRequestCommand(id);
+        var result = await sender.Send(command, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetLeaveApprovalSettings(
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetLeaveApprovalSettingsQuery();
+        var result = await sender.Send(query, cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> UpdateLeaveApprovalSettings(
+        UpdateLeaveApprovalSettingsRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateLeaveApprovalSettingsCommand(
+            request.RequiresApproval,
+            request.MaxApprovalLevels,
+            request.AutoApproveIfDaysLessThanOrEqual,
+            request.AllowSelfCancel,
+            request.NotifyOnDecision);
+
         var result = await sender.Send(command, cancellationToken);
         return result.ToHttpResult();
     }

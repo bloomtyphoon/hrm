@@ -25,4 +25,10 @@ public static class LeaveErrors
 
     public static ConflictError DuplicateTypeName(string name) =>
         new("LeaveType.DuplicateName", $"A leave type with name '{name}' already exists.");
+
+    public static ForbiddenError SelfCancelNotAllowed() =>
+        new("LeaveRequest.SelfCancel.NotAllowed", "Self-cancellation of leave requests is not allowed per approval settings.");
+
+    public static ForbiddenError ManageSettingsForbidden() =>
+        new("LeaveApprovalSettings.Manage.Forbidden", "You don't have permission to manage leave approval settings.");
 }
