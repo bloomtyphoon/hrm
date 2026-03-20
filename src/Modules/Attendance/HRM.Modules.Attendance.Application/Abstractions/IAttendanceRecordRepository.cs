@@ -30,4 +30,5 @@ public interface IAttendanceRecordRepository
 
     void Add(AttendanceRecord record);
     void Update(AttendanceRecord record);
+    void Remove(AttendanceRecord record);
 }

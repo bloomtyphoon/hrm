@@ -144,6 +144,75 @@ public class AttendanceController : Controller
         return View(model);
     }
 
+    // ─── Team Attendance ─────────────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> TeamAttendance(
+        DateOnly? fromDate = null,
+        DateOnly? toDate = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var response = await _attendanceClient.GetTeamAttendanceAsync(
+            fromDate, toDate, pageNumber, pageSize, cancellationToken);
+
+        var viewModel = new TeamAttendanceViewModel
+        {
+            FromDate = fromDate,
+            ToDate = toDate,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            viewModel.Records = response.Data;
+        }
+        else
+        {
+            _logger.LogError("Failed to get team attendance: {ErrorMessage}", response.ErrorMessage);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to load team attendance records";
+            viewModel.Records = new PagedResult<AttendanceSummaryResponse>();
+        }
+
+        return View(viewModel);
+    }
+
+    // ─── Attendance Summary / Dashboard ──────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> Summary(
+        DateOnly? fromDate = null,
+        DateOnly? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _attendanceClient.GetAttendanceSummaryAsync(
+            fromDate, toDate, cancellationToken);
+
+        var viewModel = new AttendanceSummaryViewModel
+        {
+            FromDate = fromDate,
+            ToDate = toDate
+        };
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            viewModel.DailySummaries = response.Data;
+        }
+        else
+        {
+            _logger.LogError("Failed to get attendance summary: {ErrorMessage}", response.ErrorMessage);
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to load attendance summary";
+        }
+
+        return View(viewModel);
+    }
+
     // ─── Employee Attendance (HR/Manager view) ───────────────────────────────
 
     [HttpGet]
@@ -212,6 +281,98 @@ public class AttendanceController : Controller
             viewModel.EmployeeName = empResponse.Data.FullName;
 
         return View(viewModel);
+    }
+
+    // ─── Edit Attendance Record (HR) ─────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _attendanceClient.GetAttendanceByIdAsync(id, cancellationToken);
+
+        if (!response.IsSuccess || response.Data is null)
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Attendance record not found";
+            return RedirectToAction(nameof(MyAttendance));
+        }
+
+        var viewModel = new EditAttendanceViewModel
+        {
+            Form = new EditAttendanceFormModel
+            {
+                RecordId = response.Data.Id,
+                EmployeeId = response.Data.EmployeeId,
+                CheckInTimeUtc = response.Data.CheckInTimeUtc,
+                CheckOutTimeUtc = response.Data.CheckOutTimeUtc,
+                Notes = response.Data.Notes
+            }
+        };
+
+        var empResponse = await _personnelClient.GetEmployeeByIdAsync(response.Data.EmployeeId, cancellationToken);
+        if (empResponse.IsSuccess && empResponse.Data != null)
+            viewModel.EmployeeName = empResponse.Data.FullName;
+
+        return View(viewModel);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        EditAttendanceViewModel viewModel,
+        CancellationToken cancellationToken)
+    {
+        var model = viewModel.Form;
+        if (!ModelState.IsValid)
+            return View(viewModel);
+
+        var response = await _attendanceClient.UpdateAttendanceAsync(
+            model.RecordId,
+            model.CheckInTimeUtc,
+            model.CheckOutTimeUtc,
+            model.Notes,
+            cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Attendance record updated successfully!";
+            return RedirectToAction(nameof(Details), new { id = model.RecordId });
+        }
+
+        if (response.ValidationErrors != null)
+        {
+            foreach (var (field, errors) in response.ValidationErrors)
+                foreach (var error in errors)
+                    ModelState.AddModelError(field, error);
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, response.ErrorMessage ?? "Failed to update attendance record");
+        }
+
+        return View(viewModel);
+    }
+
+    // ─── Delete Attendance Record (HR) ───────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(Guid id, Guid? employeeId, CancellationToken cancellationToken)
+    {
+        var response = await _attendanceClient.DeleteAttendanceAsync(id, cancellationToken);
+
+        if (response.IsSuccess)
+        {
+            TempData["SuccessMessage"] = "Attendance record deleted successfully!";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response.ErrorMessage ?? "Failed to delete attendance record";
+        }
+
+        if (employeeId.HasValue)
+            return RedirectToAction(nameof(Index), new { employeeId = employeeId.Value });
+
+        return RedirectToAction(nameof(MyAttendance));
     }
 
     // ─── HR Manual Record ─────────────────────────────────────────────────────

@@ -27,5 +27,41 @@ public static class AttendancePermissions
 
         public static readonly PermissionDescriptor ManualRecord =
             new(Module, "Record", "ManualRecord");
+
+        public static readonly PermissionDescriptor Update =
+            new(Module, "Record", "Update");
+
+        public static readonly PermissionDescriptor Delete =
+            new(Module, "Record", "Delete");
+    }
+
+    public static class Shift
+    {
+        public static readonly PermissionDescriptor View =
+            new(Module, "Shift", "View");
+
+        public static readonly PermissionDescriptor Manage =
+            new(Module, "Shift", "Manage");
+
+        public static readonly PermissionDescriptor Assign =
+            new(Module, "Shift", "Assign");
+    }
+
+    public static class Leave
+    {
+        public static readonly PermissionDescriptor ViewTypes =
+            new(Module, "Leave", "ViewTypes");
+
+        public static readonly PermissionDescriptor ManageTypes =
+            new(Module, "Leave", "ManageTypes");
+
+        public static readonly PermissionDescriptor Request =
+            new(Module, "Leave", "Request");
+
+        public static readonly PermissionDescriptor ViewRequests =
+            new(Module, "Leave", "ViewRequests");
+
+        public static readonly PermissionDescriptor Approve =
+            new(Module, "Leave", "Approve");
     }
 }

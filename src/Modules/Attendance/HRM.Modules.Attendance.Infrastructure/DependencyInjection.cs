@@ -44,6 +44,10 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IAttendanceRecordRepository, AttendanceRecordRepository>();
+        services.AddScoped<IShiftRepository, ShiftRepository>();
+        services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
+        services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
+        services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 
         // Outbox Processor
         services.AddHostedService<AttendanceOutboxProcessor>();

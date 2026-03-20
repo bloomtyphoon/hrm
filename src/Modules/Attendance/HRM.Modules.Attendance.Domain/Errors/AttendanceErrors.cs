@@ -29,4 +29,12 @@ public static class AttendanceErrors
         new("Attendance.ManualRecord.Forbidden",
             $"You don't have permission to record attendance for employee '{employeeId}'. " +
             "The employee is outside your company scope.");
+
+    public static ForbiddenError UpdateForbidden(Guid id) =>
+        new("Attendance.Update.Forbidden",
+            $"You don't have permission to update attendance record '{id}'.");
+
+    public static ForbiddenError DeleteForbidden(Guid id) =>
+        new("Attendance.Delete.Forbidden",
+            $"You don't have permission to delete attendance record '{id}'.");
 }

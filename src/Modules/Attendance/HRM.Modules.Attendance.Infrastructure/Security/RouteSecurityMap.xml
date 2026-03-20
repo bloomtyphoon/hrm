@@ -54,6 +54,44 @@
         Path="/api/attendance/records"
         Permission="Attendance.Record.ManualRecord" />
 
+    <!-- ==================== HR Update / Delete Record ==================== -->
+
+    <!-- HR updates an existing attendance record -->
+    <Route
+        Method="PUT"
+        Path="/api/attendance/records/{id}"
+        Permission="Attendance.Record.Update" />
+
+    <!-- HR deletes an attendance record -->
+    <Route
+        Method="DELETE"
+        Path="/api/attendance/records/{id}"
+        Permission="Attendance.Record.Delete" />
+
+    <!-- ==================== Shifts ==================== -->
+
+    <Route Method="GET" Path="/api/attendance/shifts" Permission="Attendance.Shift.View" />
+    <Route Method="POST" Path="/api/attendance/shifts" Permission="Attendance.Shift.Manage" />
+    <Route Method="PUT" Path="/api/attendance/shifts/{id}" Permission="Attendance.Shift.Manage" />
+    <Route Method="DELETE" Path="/api/attendance/shifts/{id}" Permission="Attendance.Shift.Manage" />
+
+    <!-- ==================== Shift Assignments ==================== -->
+
+    <Route Method="GET" Path="/api/attendance/shift-assignments" Permission="Attendance.Shift.View" />
+    <Route Method="POST" Path="/api/attendance/shift-assignments" Permission="Attendance.Shift.Assign" />
+
+    <!-- ==================== Leave Types ==================== -->
+
+    <Route Method="GET" Path="/api/attendance/leave-types" Permission="Attendance.Leave.ViewTypes" />
+    <Route Method="POST" Path="/api/attendance/leave-types" Permission="Attendance.Leave.ManageTypes" />
+
+    <!-- ==================== Leave Requests ==================== -->
+
+    <Route Method="GET" Path="/api/attendance/leave-requests" Permission="Attendance.Leave.ViewRequests" />
+    <Route Method="POST" Path="/api/attendance/leave-requests" Permission="Attendance.Leave.Request" />
+    <Route Method="POST" Path="/api/attendance/leave-requests/{id}/approve" Permission="Attendance.Leave.Approve" />
+    <Route Method="POST" Path="/api/attendance/leave-requests/{id}/cancel" Permission="Attendance.Leave.ViewRequests" />
+
   </ProtectedRoutes>
 
 </RouteSecurityMap>

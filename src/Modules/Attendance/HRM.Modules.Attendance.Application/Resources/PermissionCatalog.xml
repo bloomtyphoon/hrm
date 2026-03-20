@@ -57,6 +57,90 @@
           </Scopes>
         </Action>
 
+        <Action name="Update" displayName="Cập nhật bản ghi chấm công" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
+        <Action name="Delete" displayName="Xóa bản ghi chấm công" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+      <!-- Shift Entity -->
+      <Entity name="Shift" displayName="Ca làm việc">
+
+        <Action name="View" displayName="Xem ca làm việc" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="Manage" displayName="Quản lý ca làm việc" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
+        <Action name="Assign" displayName="Phân ca" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="EmployeeSet" displayName="Nhân viên cấp dưới" />
+          </Scopes>
+        </Action>
+
+      </Entity>
+
+      <!-- Leave Entity -->
+      <Entity name="Leave" displayName="Nghỉ phép">
+
+        <Action name="ViewTypes" displayName="Xem loại nghỉ phép" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
+        <Action name="ManageTypes" displayName="Quản lý loại nghỉ phép" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+          </Scopes>
+        </Action>
+
+        <Action name="Request" displayName="Gửi đơn nghỉ phép" defaultScope="Self">
+          <Scopes>
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="ViewRequests" displayName="Xem đơn nghỉ phép" defaultScope="Self">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="EmployeeSet" displayName="Nhân viên cấp dưới" />
+            <Scope value="Self" displayName="Chỉ bản thân" />
+          </Scopes>
+        </Action>
+
+        <Action name="Approve" displayName="Phê duyệt nghỉ phép" defaultScope="Company">
+          <Scopes>
+            <Scope value="Global" displayName="Toàn hệ thống" />
+            <Scope value="Company" displayName="Toàn công ty" />
+            <Scope value="EmployeeSet" displayName="Nhân viên cấp dưới" />
+          </Scopes>
+        </Action>
+
       </Entity>
 
     </Module>

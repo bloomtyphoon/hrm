@@ -40,4 +40,7 @@ internal sealed class AttendanceRecordRepository : IAttendanceRecordRepository
 
     public void Update(AttendanceRecord record)
         => _context.Set<AttendanceRecord>().Update(record);
+
+    public void Remove(AttendanceRecord record)
+        => _context.Set<AttendanceRecord>().Remove(record);
 }

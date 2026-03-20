@@ -135,4 +135,18 @@ public class AttendanceRecord : AuditableEntity, IAggregateRoot, IScopedEntity, 
         AddDomainEvent(new AttendanceCheckedOutDomainEvent(
             TenantId, EmployeeId, Id, Date, CheckInTimeUtc, checkOutTimeUtc));
     }
+
+    public void Update(DateTime checkInTimeUtc, DateTime? checkOutTimeUtc, string? notes)
+    {
+        if (checkOutTimeUtc.HasValue && checkOutTimeUtc.Value <= checkInTimeUtc)
+            throw new InvalidOperationException("CheckOutTimeUtc must be after CheckInTimeUtc.");
+
+        CheckInTimeUtc = checkInTimeUtc;
+        Date = DateOnly.FromDateTime(checkInTimeUtc);
+        CheckOutTimeUtc = checkOutTimeUtc;
+        Status = checkOutTimeUtc.HasValue ? AttendanceStatus.CheckedOut : AttendanceStatus.CheckedIn;
+
+        if (notes is not null)
+            Notes = notes;
+    }
 }

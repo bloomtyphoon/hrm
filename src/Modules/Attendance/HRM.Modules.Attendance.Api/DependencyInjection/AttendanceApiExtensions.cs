@@ -8,6 +8,8 @@ public static class AttendanceApiExtensions
     public static IEndpointRouteBuilder MapAttendanceEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapAttendanceRecordEndpoints();
+        app.MapShiftEndpoints();
+        app.MapLeaveEndpoints();
         return app;
     }
 }

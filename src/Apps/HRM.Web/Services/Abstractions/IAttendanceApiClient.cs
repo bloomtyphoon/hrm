@@ -41,4 +41,91 @@ public interface IAttendanceApiClient
         Guid? companyId = null,
         string? notes = null,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> UpdateAttendanceAsync(
+        Guid id,
+        DateTime checkInTimeUtc,
+        DateTime? checkOutTimeUtc = null,
+        string? notes = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> DeleteAttendanceAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PagedResult<AttendanceSummaryResponse>>> GetTeamAttendanceAsync(
+        DateOnly? fromDate = null,
+        DateOnly? toDate = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<IReadOnlyList<AttendanceDailySummaryResponse>>> GetAttendanceSummaryAsync(
+        DateOnly? fromDate = null,
+        DateOnly? toDate = null,
+        CancellationToken cancellationToken = default);
+
+    // ─── Shifts ──────────────────────────────────────────────────────────────
+
+    Task<ApiResponse<PagedResult<ShiftResponse>>> GetShiftsAsync(
+        bool? isActive = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<Guid>> CreateShiftAsync(
+        string name, TimeOnly startTime, TimeOnly endTime,
+        Guid? companyId = null, string? description = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> UpdateShiftAsync(
+        Guid id, string name, TimeOnly startTime, TimeOnly endTime,
+        string? description = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> DeleteShiftAsync(
+        Guid id, CancellationToken cancellationToken = default);
+
+    // ─── Shift Assignments ───────────────────────────────────────────────────
+
+    Task<ApiResponse<PagedResult<ShiftAssignmentResponse>>> GetShiftAssignmentsAsync(
+        Guid? employeeId = null, Guid? shiftId = null,
+        int pageNumber = 1, int pageSize = 20,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<Guid>> AssignShiftAsync(
+        Guid shiftId, Guid employeeId, DateOnly effectiveFrom,
+        DateOnly? effectiveTo = null, Guid? companyId = null,
+        CancellationToken cancellationToken = default);
+
+    // ─── Leave Types ─────────────────────────────────────────────────────────
+
+    Task<ApiResponse<IReadOnlyList<LeaveTypeResponse>>> GetLeaveTypesAsync(
+        bool? isActive = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<Guid>> CreateLeaveTypeAsync(
+        string name, int defaultDaysPerYear, bool isPaid = true,
+        string? description = null,
+        CancellationToken cancellationToken = default);
+
+    // ─── Leave Requests ──────────────────────────────────────────────────────
+
+    Task<ApiResponse<PagedResult<LeaveRequestResponse>>> GetLeaveRequestsAsync(
+        Guid? employeeId = null, string? status = null,
+        int pageNumber = 1, int pageSize = 20,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<Guid>> SubmitLeaveRequestAsync(
+        Guid leaveTypeId, DateOnly startDate, DateOnly endDate,
+        string? reason = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> ApproveLeaveRequestAsync(
+        Guid leaveRequestId, bool isApproved, string? notes = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<object>> CancelLeaveRequestAsync(
+        Guid leaveRequestId,
+        CancellationToken cancellationToken = default);
 }

@@ -11,4 +11,8 @@ namespace HRM.Modules.Attendance.Application.Abstractions.Data;
 public interface IAttendanceQueryContext
 {
     IQueryable<AttendanceRecord> AttendanceRecords { get; }
+    IQueryable<Shift> Shifts { get; }
+    IQueryable<ShiftAssignment> ShiftAssignments { get; }
+    IQueryable<LeaveType> LeaveTypes { get; }
+    IQueryable<LeaveRequest> LeaveRequests { get; }
 }
