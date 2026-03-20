@@ -54,32 +54,48 @@ public sealed class GetLeaveRequestsQueryHandler
         if (request.EmployeeId.HasValue)
             query = query.Where(x => x.Request.EmployeeId == request.EmployeeId.Value);
 
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            query = query.Where(x => x.Request.Status.ToString() == request.Status);
+        if (!string.IsNullOrWhiteSpace(request.Status)
+            && Enum.TryParse<Domain.Entities.LeaveStatus>(request.Status, ignoreCase: true, out var statusFilter))
+            query = query.Where(x => x.Request.Status == statusFilter);
 
         query = query.OrderByDescending(x => x.Request.StartDate);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
+        var rows = await query
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(x => new LeaveRequestDto
+            .Select(x => new
             {
-                Id = x.Request.Id,
-                EmployeeId = x.Request.EmployeeId,
-                LeaveTypeId = x.Request.LeaveTypeId,
-                LeaveTypeName = x.TypeName,
-                StartDate = x.Request.StartDate,
-                EndDate = x.Request.EndDate,
-                TotalDays = x.Request.TotalDays,
-                Reason = x.Request.Reason,
-                Status = x.Request.Status.ToString(),
-                ApprovedByEmployeeId = x.Request.ApprovedByEmployeeId,
-                DecisionDateUtc = x.Request.DecisionDateUtc,
-                DecisionNotes = x.Request.DecisionNotes
+                x.Request.Id,
+                x.Request.EmployeeId,
+                x.Request.LeaveTypeId,
+                x.TypeName,
+                x.Request.StartDate,
+                x.Request.EndDate,
+                x.Request.Reason,
+                x.Request.Status,
+                x.Request.ApprovedByEmployeeId,
+                x.Request.DecisionDateUtc,
+                x.Request.DecisionNotes
             })
             .ToListAsync(cancellationToken);
+
+        var items = rows.Select(x => new LeaveRequestDto
+        {
+            Id = x.Id,
+            EmployeeId = x.EmployeeId,
+            LeaveTypeId = x.LeaveTypeId,
+            LeaveTypeName = x.TypeName,
+            StartDate = x.StartDate,
+            EndDate = x.EndDate,
+            TotalDays = x.EndDate.DayNumber - x.StartDate.DayNumber + 1,
+            Reason = x.Reason,
+            Status = x.Status.ToString(),
+            ApprovedByEmployeeId = x.ApprovedByEmployeeId,
+            DecisionDateUtc = x.DecisionDateUtc,
+            DecisionNotes = x.DecisionNotes
+        }).ToList();
 
         return new PagedResult<LeaveRequestDto>
         {
